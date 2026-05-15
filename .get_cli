@@ -1,0 +1,11 @@
+{
+  "language": "dart",
+  "structure": "getx_pattern",
+  "customStructure": {
+    "lib": {
+      "presentation": "app/modules",
+      "infrastructure": "app/routes",
+      "application": "app/data"
+    }
+  }
+}

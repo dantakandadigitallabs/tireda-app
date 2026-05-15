@@ -1,0 +1,18 @@
+{
+  "project_structure": {
+    "lib": {
+      "app": {
+        "modules": {},
+        "routes": {},
+        "data": {}
+      }
+    }
+  },
+  "structure": {
+    "module": {
+      "bindings": true,
+      "controller": true,
+      "view": true
+    }
+  }
+}

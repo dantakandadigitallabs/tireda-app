@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "928414054579",
+    "project_id": "tiredamkt",
+    "storage_bucket": "tiredamkt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928414054579:android:efe3c81dd9c49991c818c6",
+        "android_client_info": {
+          "package_name": "com.tireda.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "928414054579-rslglpnutscsmtf098bsbmdbhojtf1tl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tireda.app",
+            "certificate_hash": "63ac386d12eeab8f883fa523f162cac390688b10"
+          }
+        },
+        {
+          "client_id": "928414054579-9tuiejj2r5oucjvth4eejj71u8n2a8b2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1bFKE2uC6eiceoySx6d2urv57te5G2Is"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "928414054579-9tuiejj2r5oucjvth4eejj71u8n2a8b2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "928414054579-0p6qbvfq6m3qbrnf4pfabmmavl9u6lai.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.esellify"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
