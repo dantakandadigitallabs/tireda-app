@@ -1,5 +1,4 @@
 import 'package:eSellify/app/constant/constants.dart';
-import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
@@ -10,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../controllers/payment_method_controller.dart';
 
@@ -113,14 +113,22 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                             spaceH(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.access_time, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                                HugeIcon(
+                                  icon: HugeIcons.strokeRoundedTime02,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  size: 14.0,
+                                ),
                                 spaceW(width: 6),
                                 Text(
                                   pkg.isUnlimited == true ? 'Unlimited Duration' : '${pkg.packageDuration ?? 0} Days',
                                   style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8)),
                                 ),
                                 spaceW(width: 16),
-                                Icon(Icons.inventory_2_outlined, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                                HugeIcon(
+                                  icon: HugeIcons.strokeRoundedArchive,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  size: 14.0,
+                                ),
                                 spaceW(width: 6),
                                 Text(
                                   pkg.isItemLimitUnlimited == true ? 'Unlimited Ads' : '${pkg.itemLimit ?? 0} Ads',
@@ -144,7 +152,11 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                           decoration: BoxDecoration(color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite, borderRadius: BorderRadius.circular(14)),
                           child: Column(
                             children: [
-                              Icon(Icons.payment, size: 48, color: isDark ? AppThemeData.grey5 : AppThemeData.grey5),
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedCreditCard,
+                                color: isDark ? AppThemeData.grey5 : AppThemeData.grey5,
+                                size: 48.0,
+                              ),
                               spaceH(height: 12),
                               TextCustom(title: "No payment methods available", fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             ],
@@ -181,16 +193,34 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                       child: Center(
                                         child: hasImage
                                             ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: Image.asset(gateway['icon'], height: 28, width: 28, fit: BoxFit.contain),
-                                              )
-                                            : Icon(
-                                                isWallet ? Icons.account_balance_wallet_rounded : isCash ? Icons.money_rounded : Icons.payment_rounded,
-                                                size: 22,
-                                                color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                                              ),
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Image.asset(gateway['icon'], height: 28, width: 28, fit: BoxFit.contain),
+                                        )
+                                            : HugeIcon(
+                                          icon: isWallet
+                                              ? HugeIcons.strokeRoundedWallet01
+                                              : isCash
+                                              ? HugeIcons.strokeRoundedMoney01
+                                              : HugeIcons.strokeRoundedCreditCard,
+                                          color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                          size: 22.0,
+                                        ),
                                       ),
                                     ),
+
+                                    spaceW(width: 14),
+
+                                    Expanded(
+                                      child: Text(
+                                        gateway['name'] ?? gateway['key'].toString().capitalizeFirst ?? 'Payment Method',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontFamily: FontFamily.medium,
+                                          color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                                        ),
+                                      ),
+                                    ),
+
                                     // Radio
                                     Container(
                                       height: 22,
@@ -200,7 +230,13 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                         border: Border.all(color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey6 : AppThemeData.grey5), width: 2),
                                         color: isSelected ? AppThemeData.primary4 : Colors.transparent,
                                       ),
-                                      child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+                                      child: isSelected
+                                          ? const HugeIcon(
+                                        icon: HugeIcons.strokeRoundedTick01,
+                                        color: Colors.white,
+                                        size: 14.0,
+                                      )
+                                          : null,
                                     ),
                                   ],
                                 ),
@@ -228,20 +264,20 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                     ),
                     child: controller.isProcessing.value
                         ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                              spaceW(width: 12),
-                              const Text(
-                                "Processing...",
-                                style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
-                              ),
-                            ],
-                          )
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                        spaceW(width: 12),
+                        const Text(
+                          "Processing...",
+                          style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                        ),
+                      ],
+                    )
                         : Text(
-                            "Pay $currencySymbol${finalPrice.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
-                          ),
+                      "Pay $currencySymbol${finalPrice.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                    ),
                   ),
                 ),
               ),

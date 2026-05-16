@@ -362,7 +362,7 @@ class PaymentMethodController extends GetxController {
           'tx_ref': txRef,
           'amount': amount.toString(),
           'currency': currencyCode,
-          'redirect_url': fw.callBackUrl ?? 'https://esellify.com/callback',
+          'redirect_url': fw.callBackUrl ?? 'https://tireda.ng/callback',
           'customer': {'email': user?.email ?? '', 'name': user?.fullNameString() ?? ''},
           'payment_options': 'card,banktransfer,ussd',
         }),
@@ -373,7 +373,7 @@ class PaymentMethodController extends GetxController {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success' && data['data']?['link'] != null) {
-          final payResult = await Get.to(() => FlutterWaveScreen(initialURl: data['data']['link'], callBackUrl: fw.callBackUrl ?? 'https://esellify.com/callback'));
+          final payResult = await Get.to(() => FlutterWaveScreen(initialURl: data['data']['link'], callBackUrl: fw.callBackUrl ?? 'https://tireda.ng/callback'));
 
           if (payResult == true) {
             await _onPaymentSuccess('flutterwave', txRef);
