@@ -83,7 +83,7 @@ class HomeView extends StatelessWidget {
                           SvgPicture.asset("assets/icons/ic_map_pin.svg"),
                           spaceW(width: 4),
                           Obx(
-                            () => Expanded(
+                                () => Expanded(
                               child: TextCustom(
                                 title: Constant.currentLocation.value?.getFullAddress() ?? "Select Location".tr,
                                 fontSize: 14,
@@ -138,21 +138,25 @@ class HomeView extends StatelessWidget {
                       spaceH(height: 16),
                     ],
 
-                    // Categories
+                    // Categories (Compact Grid View)
                     if (controller.categoryList.isNotEmpty) ...[
-                      _buildSectionHeader("Categories", onViewAll: () => Get.to(() => const CategoriesView()), isDark: isDark),
+                      // Notice we removed the onViewAll parameter to hide the button
+                      _buildSectionHeader("Categories", isDark: isDark),
                       spaceH(height: 12),
-                      SizedBox(
-                        height: 200,
-                        child: GridView.builder(
-                          scrollDirection: Axis.horizontal,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.1),
-                          itemCount: controller.categoryList.length > 8 ? 8 : controller.categoryList.length,
-                          itemBuilder: (context, index) {
-                            CategoryModel category = controller.categoryList[index];
-                            return _buildCategoryChip(category, themeChange);
-                          },
+                      GridView.builder(
+                        shrinkWrap: true, // Forces grid to take exact height
+                        physics: const NeverScrollableScrollPhysics(), // Disables internal scroll
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4, // 4 columns for a compact look
+                          crossAxisSpacing: 8, // Tighter horizontal spacing
+                          mainAxisSpacing: 8, // Tighter vertical spacing
+                          childAspectRatio: 0.85, // Adjusts height vs width of each chip
                         ),
+                        itemCount: controller.categoryList.length, // Shows ALL categories
+                        itemBuilder: (context, index) {
+                          CategoryModel category = controller.categoryList[index];
+                          return _buildCategoryChip(category, themeChange);
+                        },
                       ),
                       spaceH(height: 20),
                     ],
@@ -481,44 +485,44 @@ class HomeView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                    TextCustom(
-                      title: ad.title ?? '',
-                      fontSize: 13,
-                      fontFamily: FontFamily.medium,
-                      color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                      // 1 line — keeps every card the same height. Long
-                      // titles ellipsize. Bumping to 2 caused 4px overflow.
-                      maxLine: 1,
-                    ),
-                    spaceH(height: 6),
-                    TextCustom(
-                      title: _formatPrice(ad),
-                      fontSize: 15,
-                      fontFamily: FontFamily.bold,
-                      color: AppThemeData.primary4,
-                      maxLine: 1,
-                    ),
-                    spaceH(height: 4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                        spaceW(width: 4),
-                        Expanded(
-                          child: TextCustom(
-                            title: ad.address.toString(),
-                            fontSize: 11,
-                            color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                            // Keep at 1 line — the cell height won't fit
-                            // a second line and would overflow.
-                            maxLine: 1,
-                          ),
+                  TextCustom(
+                    title: ad.title ?? '',
+                    fontSize: 13,
+                    fontFamily: FontFamily.medium,
+                    color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                    // 1 line — keeps every card the same height. Long
+                    // titles ellipsize. Bumping to 2 caused 4px overflow.
+                    maxLine: 1,
+                  ),
+                  spaceH(height: 6),
+                  TextCustom(
+                    title: _formatPrice(ad),
+                    fontSize: 15,
+                    fontFamily: FontFamily.bold,
+                    color: AppThemeData.primary4,
+                    maxLine: 1,
+                  ),
+                  spaceH(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      spaceW(width: 4),
+                      Expanded(
+                        child: TextCustom(
+                          title: ad.address.toString(),
+                          fontSize: 11,
+                          color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                          // Keep at 1 line — the cell height won't fit
+                          // a second line and would overflow.
+                          maxLine: 1,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -545,18 +549,18 @@ class HomeView extends StatelessWidget {
   Widget _adImage(AdModel ad, bool isDark, {required double height, double? width}) {
     return (ad.mainImage != null && ad.mainImage!.isNotEmpty)
         ? CachedNetworkImage(
-            imageUrl: ad.mainImage!,
-            height: height,
-            width: width,
-            fit: BoxFit.cover,
-            placeholder: (_, _) => Container(height: height, width: width, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-          )
+      imageUrl: ad.mainImage!,
+      height: height,
+      width: width,
+      fit: BoxFit.cover,
+      placeholder: (_, _) => Container(height: height, width: width, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+    )
         : Container(
-            height: height,
-            width: width,
-            color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-            child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-          );
+      height: height,
+      width: width,
+      color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+      child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+    );
   }
 
   // ─── Reusable: Like Icon ───────────────────────────────────
@@ -605,10 +609,10 @@ class HomeView extends StatelessWidget {
           children: [
             (ad.mainImage != null && ad.mainImage!.isNotEmpty)
                 ? CachedNetworkImage(
-                    imageUrl: ad.mainImage!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-                  )
+              imageUrl: ad.mainImage!,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+            )
                 : Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
             // Gradient overlay
             Container(
@@ -646,29 +650,32 @@ class HomeView extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8), // Slightly sharper corners
           border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              height: 42,
-              width: 42,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
+              height: 36, // Smaller image container
+              width: 36,
+              padding: const EdgeInsets.all(4), // Tighter padding around the image
+              decoration: BoxDecoration(
+                  color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                  borderRadius: BorderRadius.circular(8)
+              ),
               child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
             ),
-            spaceH(height: 6),
+            spaceH(height: 4), // Less space between image and text
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 2),
               child: TextCustom(
                 title: category.categoryName.toString(),
-                fontSize: 11,
+                fontSize: 10, // Smaller text size
                 fontFamily: FontFamily.medium,
                 color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                 textAlign: TextAlign.center,
-                maxLine: 2,
+                maxLine: 2, // Keeps text from overflowing the compact box
               ),
             ),
           ],
@@ -702,22 +709,22 @@ class HomeView extends StatelessWidget {
               return GestureDetector(
                 onTap: () => controller.onBannerTap(banner),
                 child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: (banner.image != null && banner.image!.startsWith('http'))
-                        ? CachedNetworkImage(
-                      imageUrl: banner.image!,
-                      fit: BoxFit.fill,
-                      width: double.infinity,
-                      placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-                      errorWidget: (_, _, _) => Container(
-                        color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                        child: Center(child: Icon(Icons.image_outlined, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-                      ),
-                    )
-                        : Container(
-                            decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(14)),
-                            child: Center(child: Icon(Icons.image_outlined, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-                          ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: (banner.image != null && banner.image!.startsWith('http'))
+                      ? CachedNetworkImage(
+                    imageUrl: banner.image!,
+                    fit: BoxFit.fill,
+                    width: double.infinity,
+                    placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+                    errorWidget: (_, _, _) => Container(
+                      color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                      child: Center(child: Icon(Icons.image_outlined, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+                    ),
+                  )
+                      : Container(
+                    decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(14)),
+                    child: Center(child: Icon(Icons.image_outlined, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+                  ),
                 ),
               );
             },
@@ -726,7 +733,7 @@ class HomeView extends StatelessWidget {
         if (controller.bannerList.length > 1) ...[
           spaceH(height: 10),
           Obx(
-            () => Row(
+                () => Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(controller.bannerList.length, (index) {
                 final isActive = controller.currentBannerIndex.value == index;
