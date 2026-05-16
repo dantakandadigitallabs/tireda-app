@@ -81,7 +81,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           builder: (context, value, child) {
             return GetMaterialApp(
               navigatorKey: navigatorKey,
-              title: 'eSellify Customer'.tr,
+              title: 'Tireda'.tr,
               debugShowCheckedModeBanner: false,
               theme: Styles.themeData(
                 themeChangeProvider.darkTheme == 0

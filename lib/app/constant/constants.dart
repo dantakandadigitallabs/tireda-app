@@ -31,7 +31,7 @@ import 'package:uuid/uuid.dart';
 enum Status { active, inactive }
 
 class Constant {
-  static RxString appName = "eSellify".obs;
+  static RxString appName = "Tireda".obs;
   static String? appIconLight;
   static String? appIconDark;
 
@@ -81,7 +81,7 @@ class Constant {
 
   static String jsonFileURL = "";
   static String googleMapKey = "";
-  static String? countryCode = '+91';
+  static String? countryCode = '+234';
   static String termsAndConditions = "";
   static String privacyPolicy = "";
   static String aboutApp = "";

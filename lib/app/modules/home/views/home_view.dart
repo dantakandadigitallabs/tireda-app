@@ -22,6 +22,7 @@ import 'package:eSellify/widgets/shimmer_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/home_controller.dart';
@@ -52,7 +53,8 @@ class HomeView extends StatelessWidget {
                     ? NetworkImage(Constant.userModel!.profilePic!)
                     : null,
                 child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
-                    ? Icon(Icons.person, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
+                    ? HugeIcon(icon: HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
+
                     : null,
               ),
             ),
@@ -91,7 +93,7 @@ class HomeView extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Icon(Icons.keyboard_arrow_down, color: isDark ? AppThemeData.grey5 : AppThemeData.grey7, size: 20),
+                          HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey7, size: 20),
                         ],
                       ),
                     ],
@@ -226,7 +228,7 @@ class HomeView extends StatelessWidget {
           Center(
             child: OutlinedButton.icon(
               onPressed: () => Get.to(() => const AdsListingView()),
-              icon: Icon(Icons.grid_view_rounded, size: 18, color: AppThemeData.primary4),
+              icon: HugeIcon(icon: HugeIcons.strokeRoundedGridView, size: 18, color: AppThemeData.primary4),
               label: TextCustom(
                 title: 'Browse all ads'.tr,
                 fontSize: 14,
@@ -332,7 +334,7 @@ class HomeView extends StatelessWidget {
                           spaceH(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                              HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                               spaceW(width: 4),
                               Expanded(
                                 child: TextCustom(title: ad.address.toString(), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
@@ -553,7 +555,7 @@ class HomeView extends StatelessWidget {
             height: height,
             width: width,
             color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-            child: Center(child: Icon(Icons.image_outlined, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+            child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
           );
   }
 
@@ -585,7 +587,7 @@ class HomeView extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.all(size * 0.3),
             decoration: BoxDecoration(color: (isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite).withOpacity(0.85), shape: BoxShape.circle),
-            child: Icon(liked ? Icons.favorite : Icons.favorite_border, size: size, color: liked ? Colors.red : AppThemeData.primary4),
+            child: HugeIcon(icon: liked ? HugeIcons.strokeRoundedHeartCheck : HugeIcons.strokeRoundedFavourite, size: size, color: liked ? Colors.red : AppThemeData.primary4),
           ),
         );
       },

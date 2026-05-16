@@ -75,7 +75,7 @@ class MapViewWidget extends StatelessWidget {
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.esellify.app',
+            userAgentPackageName: 'com.tireda.app',
           ),
           MarkerLayer(
             markers: [

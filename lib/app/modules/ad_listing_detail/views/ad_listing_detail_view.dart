@@ -87,7 +87,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                                   child: TextCustom(title: ad.title ?? '', fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                                 ),
                                 Obx(
-                                  () => GestureDetector(
+                                      () => GestureDetector(
                                     onTap: controller.toggleLike,
                                     child: Icon(
                                       controller.isLiked.value ? Icons.favorite : Icons.favorite_border,
@@ -284,11 +284,11 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                       child: ad.mainImage != null && ad.mainImage!.isNotEmpty
                           ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
                           : Container(
-                              width: 50,
-                              height: 50,
-                              color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                              child: const Icon(Icons.image, color: AppThemeData.grey5),
-                            ),
+                        width: 50,
+                        height: 50,
+                        color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                        child: const Icon(Icons.image, color: AppThemeData.grey5),
+                      ),
                     ),
                     spaceW(width: 12),
                     Expanded(
@@ -408,12 +408,12 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
           child: iconUrl.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: iconUrl,
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
-                  errorWidget: (_, _, _) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
-                )
+            imageUrl: iconUrl,
+            width: 24,
+            height: 24,
+            fit: BoxFit.contain,
+            errorWidget: (_, _, _) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
+          )
               : Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
         ),
         spaceW(width: 10),
@@ -467,19 +467,19 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                     style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                   ),
                   Obx(
-                    () => controller.isSellerVerified.value == true
+                        () => controller.isSellerVerified.value == true
                         ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset("assets/icons/ic_crown.svg", height: 14, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
-                                spaceW(width: 6),
-                                TextCustom(title: "Verified", fontSize: 12, color: AppThemeData.primaryWhite),
-                              ],
-                            ),
-                          ).paddingOnly(right: 10)
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SvgPicture.asset("assets/icons/ic_crown.svg", height: 14, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
+                          spaceW(width: 6),
+                          TextCustom(title: "Verified", fontSize: 12, color: AppThemeData.primaryWhite),
+                        ],
+                      ),
+                    ).paddingOnly(right: 10)
                         : SizedBox(),
                   ),
                 ],
@@ -765,7 +765,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
 
                       // Reason chips
                       Obx(
-                        () => Wrap(
+                            () => Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: reasons.map((reason) {
@@ -831,48 +831,48 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Obx(
-                  () => SizedBox(
+                      () => SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       onPressed: isSubmitting.value
                           ? null
                           : () async {
-                              if (selectedReason.value == null) {
-                                ShowToastDialog.showWarning("Please select a report reason");
-                                return;
-                              }
+                        if (selectedReason.value == null) {
+                          ShowToastDialog.showWarning("Please select a report reason");
+                          return;
+                        }
 
-                              isSubmitting.value = true;
-                              final user = Constant.userModel;
-                              final report = AdReportModel(
-                                id: const Uuid().v4(),
-                                adId: ad.id,
-                                adTitle: ad.title,
-                                adImage: ad.mainImage,
-                                reporterId: uid,
-                                reporterName: user?.fullNameString(),
-                                reporterEmail: user?.email,
-                                sellerId: ad.sellerId,
-                                sellerName: ad.sellerName,
-                                reasonId: selectedReason.value!.id,
-                                reasonTitle: selectedReason.value!.title,
-                                description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
-                                status: 'pending',
-                                createdAt: Timestamp.now(),
-                              );
+                        isSubmitting.value = true;
+                        final user = Constant.userModel;
+                        final report = AdReportModel(
+                          id: const Uuid().v4(),
+                          adId: ad.id,
+                          adTitle: ad.title,
+                          adImage: ad.mainImage,
+                          reporterId: uid,
+                          reporterName: user?.fullNameString(),
+                          reporterEmail: user?.email,
+                          sellerId: ad.sellerId,
+                          sellerName: ad.sellerName,
+                          reasonId: selectedReason.value!.id,
+                          reasonTitle: selectedReason.value!.title,
+                          description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
+                          status: 'pending',
+                          createdAt: Timestamp.now(),
+                        );
 
-                              final success = await FireStoreUtils.submitAdReport(report);
-                              isSubmitting.value = false;
+                        final success = await FireStoreUtils.submitAdReport(report);
+                        isSubmitting.value = false;
 
-                              if (success) {
-                                Get.back();
-                                controller.onReportSubmitted(report);
-                                ShowToastDialog.showSuccess("Report submitted. Thank you!");
-                              } else {
-                                ShowToastDialog.showError("Failed to submit report. Please try again.");
-                              }
-                            },
+                        if (success) {
+                          Get.back();
+                          controller.onReportSubmitted(report);
+                          ShowToastDialog.showSuccess("Report submitted. Thank you!");
+                        } else {
+                          ShowToastDialog.showError("Failed to submit report. Please try again.");
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isSubmitting.value ? AppThemeData.grey5 : AppThemeData.danger300,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -893,7 +893,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
   }
 }
 
-// ─── IMAGE GALLERY WITH LIKE BUTTON ──────────────────────────────────────────
+// ─── IMAGE GALLERY WITH TAP TO FULLSCREEN ────────────────────────────────────
 class _ImageGallery extends StatefulWidget {
   final List<String> images;
   final bool isDark;
@@ -920,6 +920,22 @@ class _ImageGalleryState extends State<_ImageGallery> {
     super.dispose();
   }
 
+  // ─── Open full screen viewer ──────────────────────────────
+  void _openFullScreen(BuildContext context, int initialIndex) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (_, __, ___) => _FullScreenGallery(
+          images: widget.images,
+          initialIndex: initialIndex,
+        ),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -929,19 +945,22 @@ class _ImageGalleryState extends State<_ImageGallery> {
           width: double.infinity,
           child: widget.images.isEmpty
               ? Container(
-                  color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3,
-                  child: Center(child: Icon(Icons.image_outlined, size: 64, color: widget.isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-                )
+            color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3,
+            child: Center(child: Icon(Icons.image_outlined, size: 64, color: widget.isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+          )
               : PageView.builder(
-                  controller: _pageController,
-                  itemCount: widget.images.length,
-                  onPageChanged: (i) => setState(() => _current = i),
-                  itemBuilder: (_, i) => CachedNetworkImage(
-                    imageUrl: widget.images[i],
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
-                  ),
-                ),
+            controller: _pageController,
+            itemCount: widget.images.length,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (_, i) => GestureDetector(
+              onTap: () => _openFullScreen(context, i),
+              child: CachedNetworkImage(
+                imageUrl: widget.images[i],
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
+              ),
+            ),
+          ),
         ),
         // Dot indicators
         if (widget.images.length > 1)
@@ -953,7 +972,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 widget.images.length,
-                (i) => AnimatedContainer(
+                    (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: i == _current ? 16 : 6,
@@ -963,7 +982,89 @@ class _ImageGalleryState extends State<_ImageGallery> {
               ),
             ),
           ),
+
+        // Tap hint icon (shown only when images exist)
+        if (widget.images.isNotEmpty)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.zoom_out_map_rounded, size: 18, color: Colors.white),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+// ─── FULL SCREEN GALLERY WITH ZOOM ───────────────────────────────────────────
+class _FullScreenGallery extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _FullScreenGallery({required this.images, required this.initialIndex});
+
+  @override
+  State<_FullScreenGallery> createState() => _FullScreenGalleryState();
+}
+
+class _FullScreenGalleryState extends State<_FullScreenGallery> {
+  late int _current;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(
+          '${_current + 1} / ${widget.images.length}',
+          style: const TextStyle(fontSize: 14, color: Colors.white),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.images.length,
+        onPageChanged: (i) => setState(() => _current = i),
+        itemBuilder: (_, i) => InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4.0,
+          child: Center(
+            child: CachedNetworkImage(
+              imageUrl: widget.images[i],
+              fit: BoxFit.contain,
+              placeholder: (_, _) => const Center(
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              ),
+              errorWidget: (_, _, _) => const Center(
+                child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 64),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

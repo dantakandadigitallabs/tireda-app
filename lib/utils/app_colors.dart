@@ -6,21 +6,25 @@ class AppThemeData {
   static Color primaryWhite = Color(0xffFFFFFF);
   static Color primaryBlack = Color(0xff0D0D0D);
 
-  static const Color primary1 = Color(0xffE5ECFF);
-  static const Color primary2 = Color(0xffA8C0FF);
-  static const Color primary3 = Color(0xff6C94FF);
-  static Color primary4 = const Color(0xff3068FF);
-  static const Color primary5 = Color(0xff2047B2);
-  static const Color primary6 = Color(0xff102766);
-  static const Color primary7 = Color(0xff00071A);
+  // Tireda Teal Primary Palette
+  static const Color primary1 = Color(0xffE1F5EE);
+  static const Color primary2 = Color(0xff9FE1CB);
+  static const Color primary3 = Color(0xff5DCAA5);
+  static Color primary4 = const Color(0xff1D9E75);
+  static const Color primary5 = Color(0xff0F6E56);
+  static const Color primary6 = Color(0xff085041);
+  static const Color primary7 = Color(0xff002E25);
 
-  static const Color secondary1 = Color(0xffFEEDE2);
-  static const Color secondary2 = Color(0xffFCC4A0);
-  static const Color secondary3 = Color(0xffFA985B);
-  static const Color secondary4 = Color(0xffF86C16);
-  static const Color secondary5 = Color(0xffAD4C0F);
-  static const Color secondary6 = Color(0xff632B08);
-  static const Color secondary7 = Color(0xff190A01);
+  // Tireda Amber Secondary Palette
+  static const Color secondary1 = Color(0xffFEF3E2);
+  static const Color secondary2 = Color(0xffFCDFA0);
+  static const Color secondary3 = Color(0xffF5C05B);
+  static const Color secondary4 = Color(0xffEF9F27);
+  static const Color secondary5 = Color(0xffAD7210);
+  static const Color secondary6 = Color(0xff634208);
+  static const Color secondary7 = Color(0xff191001);
+
+  // ... rest unchanged
 
   static const Color grey10 = Color(0xff1A1A1A);
   static const Color grey9 = Color(0xff2A2A2A);

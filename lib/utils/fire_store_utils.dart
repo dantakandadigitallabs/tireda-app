@@ -81,7 +81,7 @@ class FireStoreUtils {
       final constantDoc = results[0];
       if (constantDoc.exists) {
         final data = constantDoc.data()!;
-        Constant.appName.value = data["appName"] ?? "eSellify";
+        Constant.appName.value = data["appName"] ?? "Tireda";
         Constant.appIconLight = data["appIconLight"];
         Constant.appIconDark = data["appIconDark"];
         Constant.termsAndConditions = data["termsAndConditions"];
