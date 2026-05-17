@@ -61,6 +61,7 @@ class HomeView extends StatelessWidget {
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                Navigator.of(context).canPop() ? const SizedBox.shrink() : const SizedBox.shrink(),
                 GestureDetector(
                   onTap: () async {
                     dynamic result;
@@ -140,19 +141,18 @@ class HomeView extends StatelessWidget {
 
                     // Categories (Compact Grid View)
                     if (controller.categoryList.isNotEmpty) ...[
-                      // Notice we removed the onViewAll parameter to hide the button
                       _buildSectionHeader("Categories", isDark: isDark),
                       spaceH(height: 12),
                       GridView.builder(
-                        shrinkWrap: true, // Forces grid to take exact height
-                        physics: const NeverScrollableScrollPhysics(), // Disables internal scroll
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4, // 4 columns for a compact look
-                          crossAxisSpacing: 8, // Tighter horizontal spacing
-                          mainAxisSpacing: 8, // Tighter vertical spacing
-                          childAspectRatio: 0.85, // Adjusts height vs width of each chip
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 0.85,
                         ),
-                        itemCount: controller.categoryList.length, // Shows ALL categories
+                        itemCount: controller.categoryList.length,
                         itemBuilder: (context, index) {
                           CategoryModel category = controller.categoryList[index];
                           return _buildCategoryChip(category, themeChange);
@@ -180,7 +180,6 @@ class HomeView extends StatelessWidget {
                               child: TextCustom(title: section.description!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             ),
                           spaceH(height: 8),
-                          // Render based on style
                           _buildAdSection(ads, section.styleIndex ?? 0, isDark, context),
                           spaceH(height: 20),
                         ],
@@ -188,9 +187,6 @@ class HomeView extends StatelessWidget {
                     }),
 
                     // ─── All Ads section ───
-                    // Preview of all active ads (same paginated query as the
-                    // listing page). "View All" → full listing with filters
-                    // and infinite-scroll pagination.
                     _buildAllAdsSection(controller, isDark, context),
                   ],
                 ),
@@ -228,7 +224,6 @@ class HomeView extends StatelessWidget {
           spaceH(height: 8),
           _buildGridStyle(ads, isDark, context),
           spaceH(height: 16),
-          // CTA → full paginated listing page
           Center(
             child: OutlinedButton.icon(
               onPressed: () => Get.to(() => const AdsListingView()),
@@ -304,7 +299,6 @@ class HomeView extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // Image with like + featured badge
                   Stack(
                     children: [
                       ClipRRect(
@@ -312,10 +306,8 @@ class HomeView extends StatelessWidget {
                         child: _adImage(ad, isDark, width: 100, height: 120),
                       ),
                       if (ad.isFeatured == true) Positioned(top: 6, left: 6, child: _featuredBadge()),
-                      Positioned(top: 6, right: 6, child: _likeIcon(ad, isDark, size: 18)),
                     ],
                   ),
-                  // Details
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(10),
@@ -380,7 +372,6 @@ class HomeView extends StatelessWidget {
                       child: _adImage(ad, isDark, width: 120, height: 120),
                     ),
                     if (ad.isFeatured == true) Positioned(top: 6, left: 6, child: _featuredBadge()),
-                    Positioned(top: 6, right: 6, child: _likeIcon(ad, isDark, size: 18)),
                   ],
                 ),
                 Expanded(
@@ -420,12 +411,13 @@ class HomeView extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: ads.length,
-      // Fixed pixel height (responsive across all phone widths). Title is
-      // capped to 1 line below so EVERY card has identical content height —
-      // no overflow, no internal gap. Content budget at extent 220:
-      // image 130 + padding 20 + 1-line title 17 + spacer 6 + price 22 +
-      // spacer 4 + 1-line address 16 = 215. ~5px breathing.
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, mainAxisExtent: 220),
+      // Fixed: Extended dimension buffer limit to 235 so layout frames never pinch text boundaries
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          mainAxisExtent: 235
+      ),
       itemBuilder: (_, index) => GestureDetector(
         onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ads[index]})),
         child: _buildAdCard(ads[index], isDark),
@@ -451,80 +443,82 @@ class HomeView extends StatelessWidget {
 
   // ─── Ad Card (used in Grid + List) ─────────────────────────
   Widget _buildAdCard(AdModel ad, bool isDark) {
-    return GestureDetector(
-      onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
-        ),
-        child: Column(
-          // Critical: Column shrinks to fit children (image + content). Without
-          // this, the column stretches to fill the cell and `Expanded` on the
-          // content area absorbs the leftover height — creating the visible
-          // gap between title and price for short-title cards.
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image + Like + Featured
-            Stack(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Expanded forces image area frame to fill upper layout gracefully
+          Expanded(
+            child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: _adImage(ad, isDark, height: 130, width: double.infinity),
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppThemeData.primary4, width: 1.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: _adImage(ad, isDark, height: double.infinity, width: double.infinity),
+                  ),
                 ),
                 if (ad.isFeatured == true) Positioned(top: 6, left: 6, child: _featuredBadge(fontSize: 8, iconSize: 10)),
-                Positioned(top: 8, right: 8, child: _likeIcon(ad, isDark)),
               ],
             ),
-            // Details — no Expanded, content takes its natural height.
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextCustom(
-                    title: ad.title ?? '',
-                    fontSize: 13,
-                    fontFamily: FontFamily.medium,
-                    color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                    // 1 line — keeps every card the same height. Long
-                    // titles ellipsize. Bumping to 2 caused 4px overflow.
-                    maxLine: 1,
-                  ),
-                  spaceH(height: 6),
-                  TextCustom(
-                    title: _formatPrice(ad),
-                    fontSize: 15,
-                    fontFamily: FontFamily.bold,
-                    color: AppThemeData.primary4,
-                    maxLine: 1,
-                  ),
-                  spaceH(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                      spaceW(width: 4),
-                      Expanded(
-                        child: TextCustom(
-                          title: ad.address.toString(),
-                          fontSize: 11,
-                          color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                          // Keep at 1 line — the cell height won't fit
-                          // a second line and would overflow.
-                          maxLine: 1,
-                        ),
+          ),
+          // Details Area sits natively with proper padding values underneath
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 1. PRICE
+                TextCustom(
+                  title: _formatPrice(ad),
+                  fontSize: 14,
+                  fontFamily: FontFamily.bold,
+                  color: AppThemeData.primary4,
+                  maxLine: 1,
+                ),
+                spaceH(height: 2),
+
+                // 2. TITLE
+                TextCustom(
+                  title: ad.title ?? '',
+                  fontSize: 12,
+                  fontFamily: FontFamily.medium,
+                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                  maxLine: 1,
+                ),
+                spaceH(height: 2),
+
+                // 3. LOCATION
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    spaceW(width: 4),
+                    Expanded(
+                      child: TextCustom(
+                        title: ad.address.toString(),
+                        fontSize: 11,
+                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                        maxLine: 1,
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -554,47 +548,18 @@ class HomeView extends StatelessWidget {
       width: width,
       fit: BoxFit.cover,
       placeholder: (_, _) => Container(height: height, width: width, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+      errorWidget: (_, __, ___) => Container(
+        height: height,
+        width: width,
+        color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+        child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+      ),
     )
         : Container(
       height: height,
       width: width,
       color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
       child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-    );
-  }
-
-  // ─── Reusable: Like Icon ───────────────────────────────────
-  Widget _likeIcon(AdModel ad, bool isDark, {double size = 20}) {
-    final uid = FireStoreUtils.getCurrentUid();
-    final isLiked = uid != null && (ad.likedUser?.contains(uid) ?? false);
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        final liked = uid != null && (ad.likedUser?.contains(uid) ?? false);
-
-        return GestureDetector(
-          onTap: () async {
-            if (uid == null || ad.id == null) return;
-            final result = await FireStoreUtils.toggleLike(ad.id!, uid);
-
-            // Update local model
-            if (result) {
-              ad.likedUser ??= [];
-              if (!ad.likedUser!.contains(uid)) ad.likedUser!.add(uid);
-              ad.likes = (ad.likes ?? 0) + 1;
-            } else {
-              ad.likedUser?.remove(uid);
-              ad.likes = ((ad.likes ?? 0) - 1).clamp(0, 999999);
-            }
-            setState(() {});
-          },
-          child: Container(
-            padding: EdgeInsets.all(size * 0.3),
-            decoration: BoxDecoration(color: (isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite).withOpacity(0.85), shape: BoxShape.circle),
-            child: HugeIcon(icon: liked ? HugeIcons.strokeRoundedHeartCheck : HugeIcons.strokeRoundedFavourite, size: size, color: liked ? Colors.red : AppThemeData.primary4),
-          ),
-        );
-      },
     );
   }
 
@@ -614,15 +579,12 @@ class HomeView extends StatelessWidget {
               placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
             )
                 : Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-            // Gradient overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.7)]),
               ),
             ),
-            // Featured badge
             if (ad.isFeatured == true) Positioned(top: 10, left: 10, child: _featuredBadge(fontSize: 10, iconSize: 12)),
-            // Content
             Positioned(
               left: 12,
               right: 12,
@@ -650,32 +612,32 @@ class HomeView extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-          borderRadius: BorderRadius.circular(8), // Slightly sharper corners
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              height: 36, // Smaller image container
+              height: 36,
               width: 36,
-              padding: const EdgeInsets.all(4), // Tighter padding around the image
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                   color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                   borderRadius: BorderRadius.circular(8)
               ),
               child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
             ),
-            spaceH(height: 4), // Less space between image and text
+            spaceH(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: TextCustom(
                 title: category.categoryName.toString(),
-                fontSize: 10, // Smaller text size
+                fontSize: 10,
                 fontFamily: FontFamily.medium,
                 color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                 textAlign: TextAlign.center,
-                maxLine: 2, // Keeps text from overflowing the compact box
+                maxLine: 2,
               ),
             ),
           ],
@@ -758,14 +720,19 @@ class HomeView extends StatelessWidget {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.SEARCH),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
         decoration: BoxDecoration(
+          color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
         ),
         child: Row(
           children: [
-            SvgPicture.asset("assets/icons/ic_search.svg", height: 20, colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey5 : AppThemeData.grey6, BlendMode.srcIn)),
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedSearch01,
+              size: 20,
+              color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+            ),
             spaceW(width: 12),
             TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
           ],
