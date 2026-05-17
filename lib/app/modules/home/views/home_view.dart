@@ -1,12 +1,15 @@
+import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/constant/constants.dart';
+import 'package:eSellify/app/data/nigeria_locations.dart';
 import 'package:eSellify/app/models/ad_model.dart';
+import 'package:eSellify/app/models/add_address_model.dart';
 import 'package:eSellify/app/models/category_model.dart';
+import 'package:eSellify/app/models/location_lat_lng.dart';
 import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 import 'package:eSellify/app/modules/ads_listing/views/ads_listing_view.dart';
 import 'package:eSellify/app/modules/categories/views/categories_view.dart';
-import 'package:eSellify/app/modules/my_address/views/my_address_view.dart';
-import 'package:eSellify/app/modules/signup_screen/views/enter_location_view.dart';
 import 'package:eSellify/app/modules/sub_category/views/sub_category_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/app_colors.dart';
@@ -14,6 +17,7 @@ import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/ad_service.dart';
+import 'package:eSellify/utils/preferences.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
@@ -54,25 +58,57 @@ class HomeView extends StatelessWidget {
                     : null,
                 child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
                     ? HugeIcon(icon: HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
-
                     : null,
               ),
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Navigator.of(context).canPop() ? const SizedBox.shrink() : const SizedBox.shrink(),
                 GestureDetector(
                   onTap: () async {
-                    dynamic result;
+                    // ── Nigerian State / LGA picker ──
+                    final result = await _showNigeriaLocationPicker(context, isDark);
+                    if (result == null) return;
+
+                    final address = result.lga.name == "All Nigeria"
+                        ? "All Nigeria"
+                        : "${result.lga.name}, ${result.state.state}";
+
+                    final model = AddAddressModel(
+                      id: Constant.getUuid(),
+                      address: address,
+                      locality: result.lga.name == "All Nigeria" ? "" : result.lga.name,
+                      landmark: result.lga.name == "All Nigeria" ? "" : result.state.state,  addressAs: "Home",
+                      isDefault: true,
+                      name: FireStoreUtils.getCurrentUid() != null
+                          ? Constant.userModel?.fullNameString() ?? ""
+                          : "",
+                      location: LocationLatLng(
+                        latitude: result.lga.lat,
+                        longitude: result.lga.lng,
+                      ),
+                    );
+
+                    Constant.currentLocation.value = model;
+
                     if (FireStoreUtils.getCurrentUid() != null) {
-                      result = await Get.to(() => MyAddressView());
+                      Constant.userModel?.addAddresses ??= [];
+                      final existing = Constant.userModel!.addAddresses!
+                          .indexWhere((a) => a.isDefault == true);
+                      if (existing >= 0) {
+                        Constant.userModel!.addAddresses![existing] = model;
+                      } else {
+                        Constant.userModel!.addAddresses!.add(model);
+                      }
+                      await FireStoreUtils.updateUser(Constant.userModel!);
                     } else {
-                      result = await Get.to(EnterLocationView(isRedirectDashboard: false));
+                      Preferences.setString(
+                        Preferences.selectedAddressKey,
+                        jsonEncode(model.toJson()),
+                      );
                     }
-                    if (result == true) {
-                      controller.getData();
-                    }
+
+                    controller.getData();
                   },
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -139,7 +175,7 @@ class HomeView extends StatelessWidget {
                       spaceH(height: 16),
                     ],
 
-                    // Categories (Compact Grid View)
+                    // Categories
                     if (controller.categoryList.isNotEmpty) ...[
                       _buildSectionHeader("Categories", isDark: isDark),
                       spaceH(height: 12),
@@ -186,7 +222,7 @@ class HomeView extends StatelessWidget {
                       );
                     }),
 
-                    // ─── All Ads section ───
+                    // All Ads section
                     _buildAllAdsSection(controller, isDark, context),
                   ],
                 ),
@@ -262,7 +298,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Ad Section (3 styles) ─────────────────────────────────
+  // ─── Ad Section (4 styles) ─────────────────────────────────
   Widget _buildAdSection(List<AdModel> ads, int styleIndex, bool isDark, BuildContext context) {
     switch (styleIndex) {
       case 0:
@@ -278,7 +314,7 @@ class HomeView extends StatelessWidget {
     }
   }
 
-  // ─── Style 0: Horizontal List (Near You style) ─────────────
+  // ─── Style 0: Horizontal List ──────────────────────────────
   Widget _buildHorizontalList(List<AdModel> ads, bool isDark) {
     return SizedBox(
       height: 120,
@@ -386,7 +422,7 @@ class HomeView extends StatelessWidget {
                         spaceH(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                            HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             spaceW(width: 4),
                             Expanded(
                               child: TextCustom(title: ad.address.toString(), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
@@ -411,12 +447,11 @@ class HomeView extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: ads.length,
-      // Fixed: Extended dimension buffer limit to 235 so layout frames never pinch text boundaries
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          mainAxisExtent: 235
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        mainAxisExtent: 235,
       ),
       itemBuilder: (_, index) => GestureDetector(
         onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ads[index]})),
@@ -441,7 +476,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Ad Card (used in Grid + List) ─────────────────────────
+  // ─── Ad Card (Grid) ────────────────────────────────────────
   Widget _buildAdCard(AdModel ad, bool isDark) {
     return Container(
       decoration: BoxDecoration(
@@ -452,7 +487,6 @@ class HomeView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Expanded forces image area frame to fill upper layout gracefully
           Expanded(
             child: Stack(
               children: [
@@ -472,46 +506,23 @@ class HomeView extends StatelessWidget {
               ],
             ),
           ),
-          // Details Area sits natively with proper padding values underneath
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. PRICE
-                TextCustom(
-                  title: _formatPrice(ad),
-                  fontSize: 14,
-                  fontFamily: FontFamily.bold,
-                  color: AppThemeData.primary4,
-                  maxLine: 1,
-                ),
+                TextCustom(title: _formatPrice(ad), fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.primary4, maxLine: 1),
                 spaceH(height: 2),
-
-                // 2. TITLE
-                TextCustom(
-                  title: ad.title ?? '',
-                  fontSize: 12,
-                  fontFamily: FontFamily.medium,
-                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                  maxLine: 1,
-                ),
+                TextCustom(title: ad.title ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
                 spaceH(height: 2),
-
-                // 3. LOCATION
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     spaceW(width: 4),
                     Expanded(
-                      child: TextCustom(
-                        title: ad.address.toString(),
-                        fontSize: 11,
-                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                        maxLine: 1,
-                      ),
+                      child: TextCustom(title: ad.address.toString(), fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
                     ),
                   ],
                 ),
@@ -523,7 +534,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Reusable: Featured Badge ───────────────────────────────
+  // ─── Featured Badge ────────────────────────────────────────
   Widget _featuredBadge({double fontSize = 9, double iconSize = 11}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -539,7 +550,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Reusable: Ad Image ────────────────────────────────────
+  // ─── Ad Image ──────────────────────────────────────────────
   Widget _adImage(AdModel ad, bool isDark, {required double height, double? width}) {
     return (ad.mainImage != null && ad.mainImage!.isNotEmpty)
         ? CachedNetworkImage(
@@ -563,7 +574,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Carousel Card (large, overlay text) ───────────────────
+  // ─── Carousel Card ─────────────────────────────────────────
   Widget _buildCarouselCard(AdModel ad, bool isDark) {
     return GestureDetector(
       onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
@@ -622,10 +633,7 @@ class HomeView extends StatelessWidget {
               height: 36,
               width: 36,
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                  color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                  borderRadius: BorderRadius.circular(8)
-              ),
+              decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
               child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
             ),
             spaceH(height: 4),
@@ -646,7 +654,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Helpers ───────────────────────────────────────────────
+  // ─── Price Helper ──────────────────────────────────────────
   String _formatPrice(AdModel ad) {
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
     final currency = ad.currency;
@@ -656,7 +664,7 @@ class HomeView extends StatelessWidget {
     return currency?.symbolAtRight == true ? "$price $symbol".trim() : "$symbol$price".trim();
   }
 
-  // ─── Banner Carousel ────────────────────────────────────────
+  // ─── Banner Carousel ───────────────────────────────────────
   Widget _buildBannerCarousel(HomeController controller, bool isDark) {
     return Column(
       children: [
@@ -728,15 +736,281 @@ class HomeView extends StatelessWidget {
         ),
         child: Row(
           children: [
-            HugeIcon(
-              icon: HugeIcons.strokeRoundedSearch01,
-              size: 20,
-              color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-            ),
+            HugeIcon(icon: HugeIcons.strokeRoundedSearch01, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
             spaceW(width: 12),
             TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Nigeria Location Picker ──────────────────────────────────────────────────
+
+class _LocationResult {
+  final NigeriaLocation state;
+  final NigeriaLGA lga;
+  const _LocationResult({required this.state, required this.lga});
+}
+
+Future<_LocationResult?> _showNigeriaLocationPicker(
+    BuildContext context,
+    bool isDark,
+    ) async {
+  return await Navigator.of(context).push<_LocationResult>(
+    MaterialPageRoute(
+      builder: (_) => _NigeriaStatePicker(isDark: isDark),
+    ),
+  );
+}
+
+// ── Step 1: State Picker ──────────────────────────────────────────────────────
+class _NigeriaStatePicker extends StatefulWidget {
+  final bool isDark;
+  const _NigeriaStatePicker({required this.isDark});
+
+  @override
+  State<_NigeriaStatePicker> createState() => _NigeriaStatePickerState();
+}
+
+class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
+  final TextEditingController _search = TextEditingController();
+  List<NigeriaLocation> _filtered = NigeriaLocations.states;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      _filtered = NigeriaLocations.searchStates(query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isDark ? AppThemeData.grey10 : AppThemeData.grey1;
+    final cardBg = widget.isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite;
+    final textColor = widget.isDark ? AppThemeData.grey1 : AppThemeData.grey10;
+    final subColor = widget.isDark ? AppThemeData.grey5 : AppThemeData.grey6;
+    final borderColor = widget.isDark ? AppThemeData.grey8 : AppThemeData.grey3;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: cardBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text("Select State", style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: textColor)),
+      ),
+      body: Column(
+        children: [
+          // Search
+          Container(
+            color: cardBg,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _search,
+              onChanged: _onSearch,
+              style: TextStyle(color: textColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "Find state...",
+                hintStyle: TextStyle(color: subColor, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: subColor, size: 20),
+                filled: true,
+                fillColor: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Divider(height: 1, color: borderColor),
+          // All Nigeria option
+          InkWell(
+            onTap: () {
+              final allNigeriaLGA = NigeriaLGA(name: "All Nigeria", lat: NigeriaLocations.allNigeriaLat, lng: NigeriaLocations.allNigeriaLng);
+              final allNigeriaState = NigeriaLocation(state: "All Nigeria", stateLat: NigeriaLocations.allNigeriaLat, stateLng: NigeriaLocations.allNigeriaLng, lgas: []);
+              Navigator.of(context).pop(_LocationResult(state: allNigeriaState, lga: allNigeriaLGA));
+            },
+            child: Container(
+              color: cardBg,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.language_rounded, size: 20, color: AppThemeData.primary4),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("All Nigeria", style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: AppThemeData.primary4)),
+                        const SizedBox(height: 2),
+                        Text("Browse ads across Nigeria", style: TextStyle(fontSize: 12, color: subColor)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.check, color: AppThemeData.primary4, size: 20),
+                ],
+              ),
+            ),
+          ),
+          Divider(height: 1, color: borderColor),
+          // States list
+          Expanded(
+            child: ListView.separated(
+              itemCount: _filtered.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: borderColor),
+              itemBuilder: (_, i) {
+                final state = _filtered[i];
+                return InkWell(
+                  onTap: () async {
+                    final result = await Navigator.of(context).push<_LocationResult>(
+                      MaterialPageRoute(builder: (_) => _NigeriaLGAPicker(state: state, isDark: widget.isDark)),
+                    );
+                    if (result != null && context.mounted) {
+                      Navigator.of(context).pop(result);
+                    }
+                  },
+                  child: Container(
+                    color: cardBg,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_city_rounded, size: 20, color: subColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(state.state, style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: textColor)),
+                              const SizedBox(height: 2),
+                              Text("${state.lgas.length} LGAs", style: TextStyle(fontSize: 12, color: subColor)),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: subColor, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Step 2: LGA Picker ────────────────────────────────────────────────────────
+class _NigeriaLGAPicker extends StatefulWidget {
+  final NigeriaLocation state;
+  final bool isDark;
+  const _NigeriaLGAPicker({required this.state, required this.isDark});
+
+  @override
+  State<_NigeriaLGAPicker> createState() => _NigeriaLGAPickerState();
+}
+
+class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
+  final TextEditingController _search = TextEditingController();
+  late List<NigeriaLGA> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.state.lgas;
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      _filtered = NigeriaLocations.searchLGAs(widget.state, query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isDark ? AppThemeData.grey10 : AppThemeData.grey1;
+    final cardBg = widget.isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite;
+    final textColor = widget.isDark ? AppThemeData.grey1 : AppThemeData.grey10;
+    final subColor = widget.isDark ? AppThemeData.grey5 : AppThemeData.grey6;
+    final borderColor = widget.isDark ? AppThemeData.grey8 : AppThemeData.grey3;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: cardBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Select LGA", style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: textColor)),
+            Text(widget.state.state, style: TextStyle(fontSize: 12, color: AppThemeData.primary4)),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: cardBg,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _search,
+              onChanged: _onSearch,
+              style: TextStyle(color: textColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "Find LGA...",
+                hintStyle: TextStyle(color: subColor, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: subColor, size: 20),
+                filled: true,
+                fillColor: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Divider(height: 1, color: borderColor),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _filtered.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: borderColor),
+              itemBuilder: (_, i) {
+                final lga = _filtered[i];
+                return InkWell(
+                  onTap: () => Navigator.of(context).pop(_LocationResult(state: widget.state, lga: lga)),
+                  child: Container(
+                    color: cardBg,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 20, color: subColor),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(lga.name, style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: textColor))),
+                        Icon(Icons.chevron_right, color: subColor, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

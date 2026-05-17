@@ -8,6 +8,7 @@ import 'package:eSellify/app/models/ad_report_model.dart';
 import 'package:eSellify/app/modules/seller_reviews/views/seller_reviews_view.dart';
 import 'package:eSellify/app/models/report_reason_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
+import 'package:eSellify/utils/price_formatter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:uuid/uuid.dart';
@@ -17,11 +18,11 @@ import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/map_view_widget.dart';
 import 'package:eSellify/widgets/safety_tips_bottom_sheet.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -45,15 +46,38 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
 
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(
-            context,
-            themeChange,
-            "",
-            actions: [
-              IconButton(
-                icon: Icon(Icons.share_outlined, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                onPressed: controller.shareAd,
+          appBar: AppBar(
+            backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+            elevation: 0,
+            leadingWidth: 120,
+            leading: GestureDetector(
+              onTap: () => Get.back(),
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  Icon(Icons.arrow_back, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
+                  const SizedBox(width: 4),
+                  TextCustom(title: "Homepage", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                ],
               ),
+            ),
+            actions: [
+              Obx(
+                    () => GestureDetector(
+                  onTap: controller.toggleLike,
+                  child: Icon(
+                    controller.isLiked.value ? Icons.favorite : Icons.favorite_border,
+                    color: controller.isLiked.value ? Colors.red : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              GestureDetector(
+                onTap: controller.shareAd,
+                child: Icon(Icons.share_outlined, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
+              ),
+              const SizedBox(width: 16),
             ],
           ),
           body: Column(
@@ -64,62 +88,71 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Image Gallery (clean, no overlay) ──
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: _ImageGallery(images: images, isDark: isDark),
-                        ),
-                      ),
+                      // ── Image Gallery (Edge-to-Edge) ──
+                      _ImageGallery(images: images, isDark: isDark),
 
-                      // ── Title + Like + Price + Description + Location Card ──
+                      // ── Hero Section (Title -> Location -> Price) ──
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Title + Like
+                            // Title + Featured Badge
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
-                                  child: TextCustom(title: ad.title ?? '', fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                  child: TextCustom(title: ad.title ?? '', fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                                 ),
-                                Obx(
-                                      () => GestureDetector(
-                                    onTap: controller.toggleLike,
-                                    child: Icon(
-                                      controller.isLiked.value ? Icons.favorite : Icons.favorite_border,
-                                      color: controller.isLiked.value ? Colors.red : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                                      size: 26,
+                                if (ad.isFeatured == true)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(color: const Color(0xffFF9500), borderRadius: BorderRadius.circular(4)),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.star_rounded, size: 12, color: Colors.white),
+                                        const SizedBox(width: 4),
+                                        Text("Featured", style: TextStyle(fontSize: 10, fontFamily: FontFamily.bold, color: Colors.white)),
+                                      ],
                                     ),
                                   ),
-                                ),
                               ],
                             ),
-                            spaceH(height: 6),
-
-                            // Price
-                            TextCustom(title: _formatPrice(ad), fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                            spaceH(height: 6),
-
-                            // Short description
-                            if (ad.description != null && ad.description!.isNotEmpty)
-                              TextCustom(title: ad.description!, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 2),
                             spaceH(height: 8),
 
-                            // Location
+                            // Location (Clickable, but no visual hint)
                             if (ad.address != null && ad.address!.isNotEmpty)
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on_outlined, size: 16, color: AppThemeData.primary4),
-                                  spaceW(width: 4),
-                                  Expanded(
-                                    child: TextCustom(title: ad.address!, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 3),
-                                  ),
-                                ],
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () async {
+                                  String query;
+                                  if (hasLocation) {
+                                    query = '${ad.location!.latitude},${ad.location!.longitude}';
+                                  } else {
+                                    query = Uri.encodeComponent(ad.address!);
+                                  }
+                                  final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.location_on_outlined, size: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                    spaceW(width: 4),
+                                    Expanded(
+                                      child: TextCustom(title: ad.address!, fontSize: 12, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 2),
+                                    ),
+                                  ],
+                                ),
                               ),
+                            spaceH(height: 12),
+
+                            // Price
+                            TextCustom(title: PriceFormatter.format(ad), fontSize: 18, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
                           ],
                         ),
                       ),
@@ -131,7 +164,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            // Custom Fields
+                            // Custom Fields (Limited to 6)
                             if (hasCustomFields) ...[
                               Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
                               spaceH(height: 8),
@@ -151,22 +184,15 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                               TextCustom(title: ad.description!, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 50),
                             ],
 
-                            // Seller Info
+                            // Seller Info Trust Card
                             spaceH(height: 8),
                             Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
                             spaceH(height: 12),
                             _buildSellerInfo(ad, isDark),
-                            // Location Map
-                            if (hasLocation) ...[
-                              spaceH(height: 8),
-                              Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                              spaceH(height: 12),
-                              _buildLocationSection(ad, isDark),
-                            ],
 
-                            // Report
+                            // Action Row (Mark Unavailable / Report Abuse)
                             spaceH(height: 16),
-                            _buildReportSection(ad, isDark),
+                            _buildActionRow(ad, isDark),
                             spaceH(height: 16),
                           ],
                         ),
@@ -176,37 +202,44 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                 ),
               ),
 
-              // ── Bottom Bar ─────────────────────────────
+              // ── 3-Button Sticky Bottom Bar ─────────────────────────────
               Container(
                 color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
                 padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => SafetyTipsBottomSheet.show(
-                          context,
-                          continueLabel: "Continue to offer",
-                          onContinue: () => _showMakeOfferSheet(context, controller, isDark),
-                        ),
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.local_offer_outlined, size: 18, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                "Make an offer",
-                                style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
-                              ),
-                            ],
+                    // 1. Call Button (Only if phone number exists)
+                    if (ad.phoneNumber != null && ad.phoneNumber!.isNotEmpty) ...[
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final phone = '${ad.countryCode ?? ''}${ad.phoneNumber}';
+                            final uri = Uri.parse('tel:$phone');
+                            if (await canLaunchUrl(uri)) launchUrl(uri);
+                          },
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppThemeData.primary4, width: 1.5),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.phone_outlined, size: 16, color: AppThemeData.primary4),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text("Call", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4), overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    spaceW(width: 12),
+                      spaceW(width: 8),
+                    ],
+
+                    // 2. Chat Button
                     Expanded(
                       child: GestureDetector(
                         onTap: () => SafetyTipsBottomSheet.show(
@@ -215,7 +248,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                           onContinue: controller.openChat,
                         ),
                         child: Container(
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppThemeData.primary4, width: 1.5),
@@ -223,11 +256,36 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppThemeData.primary4),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Chat",
-                                style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
+                              Icon(Icons.chat_bubble_outline_rounded, size: 16, color: AppThemeData.primary4),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text("Chat", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4), overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    spaceW(width: 8),
+
+                    // 3. Offer Button (Primary Solid)
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => SafetyTipsBottomSheet.show(
+                          context,
+                          continueLabel: "Continue to offer",
+                          onContinue: () => _showMakeOfferSheet(context, controller, isDark),
+                        ),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.local_offer_outlined, size: 16, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text("Offer", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
                               ),
                             ],
                           ),
@@ -297,7 +355,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                         children: [
                           TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.medium, maxLine: 1),
                           spaceH(height: 2),
-                          TextCustom(title: "Listed: ${_formatPrice(ad)}", fontSize: 13, color: AppThemeData.grey5),
+                          TextCustom(title: "Listed: ${PriceFormatter.format(ad)}", fontSize: 13, color: AppThemeData.grey5),
                         ],
                       ),
                     ),
@@ -362,17 +420,9 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
 
   List<String> _getImages(AdModel ad) => [if (ad.mainImage != null && ad.mainImage!.isNotEmpty) ad.mainImage!, ...?ad.otherImages?.where((u) => u.isNotEmpty)];
 
-  String _formatPrice(AdModel ad) {
-    if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
-    final c = ad.currency;
-    final s = c?.symbol ?? '';
-    final d = c?.decimalDigits ?? 0;
-    final p = ad.price!.toStringAsFixed(d);
-    return c?.symbolAtRight == true ? "$p $s".trim() : "$s$p".trim();
-  }
-
   Widget _buildCustomFields(List<Map<String, dynamic>> fields, bool isDark) {
-    final items = fields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).toList();
+    // Limited to maximum 6 items
+    final items = fields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).take(6).toList();
     if (items.isEmpty) return const SizedBox.shrink();
 
     final List<Widget> rows = [];
@@ -421,11 +471,11 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextCustom(title: name, fontSize: 12, color: AppThemeData.grey5),
+              TextCustom(title: name, fontSize: 11, color: AppThemeData.grey5),
               spaceH(height: 2),
               Text(
                 value,
-                style: TextStyle(fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                style: TextStyle(fontSize: 13, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ),
             ],
           ),
@@ -446,124 +496,98 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
   }
 
   Widget _buildSellerInfo(AdModel ad, bool isDark) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-          backgroundImage: (ad.sellerProfile != null && ad.sellerProfile!.isNotEmpty) ? CachedNetworkImageProvider(ad.sellerProfile!) : null,
-          child: (ad.sellerProfile == null || ad.sellerProfile!.isEmpty) ? Icon(Icons.person, color: AppThemeData.grey5) : null,
+    return GestureDetector(
+      onTap: () {
+        if (ad.sellerId != null) {
+          Get.to(() => const SellerReviewsView(), arguments: {'sellerId': ad.sellerId, 'sellerName': ad.sellerName ?? 'Seller'});
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
         ),
-        spaceW(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+              backgroundImage: (ad.sellerProfile != null && ad.sellerProfile!.isNotEmpty) ? CachedNetworkImageProvider(ad.sellerProfile!) : null,
+              child: (ad.sellerProfile == null || ad.sellerProfile!.isEmpty) ? Icon(Icons.person, color: AppThemeData.grey5) : null,
+            ),
+            spaceW(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    ad.sellerName ?? 'Seller',
-                    style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                  ),
-                  Obx(
-                        () => controller.isSellerVerified.value == true
-                        ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset("assets/icons/ic_crown.svg", height: 14, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
-                          spaceW(width: 6),
-                          TextCustom(title: "Verified", fontSize: 12, color: AppThemeData.primaryWhite),
-                        ],
-                      ),
-                    ).paddingOnly(right: 10)
-                        : SizedBox(),
-                  ),
-                ],
-              ),
-              spaceH(height: 2),
-              Obx(() {
-                final rating = controller.sellerRating.value;
-                final count = controller.sellerReviewCount.value;
-                return GestureDetector(
-                  onTap: () {
-                    if (ad.sellerId != null) {
-                      Get.to(() => const SellerReviewsView(), arguments: {'sellerId': ad.sellerId, 'sellerName': ad.sellerName ?? 'Seller'});
-                    }
-                  },
-                  child: Row(
+                  Row(
                     children: [
-                      if (count > 0) ...[
-                        Icon(Icons.star_rounded, size: 16, color: const Color(0xffFF9500)),
-                        spaceW(width: 4),
-                        TextCustom(title: rating.toStringAsFixed(1), fontSize: 13, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
-                        spaceW(width: 4),
-                        TextCustom(title: '($count ${count == 1 ? 'review' : 'reviews'})', fontSize: 12, color: AppThemeData.primary4),
-                      ] else
-                        TextCustom(title: 'No reviews yet', fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                      spaceW(width: 8),
-                      TextCustom(title: '·', fontSize: 12, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                      spaceW(width: 8),
-                      TextCustom(title: "${controller.viewCount.value} views", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      Flexible(
+                        child: Text(
+                          ad.sellerName ?? 'Seller',
+                          style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (ad.sellerId != null)
+                        Obx(
+                              () => Get.find<AdListingDetailController>().isSellerVerified.value == true
+                              ? Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SvgPicture.asset("assets/icons/ic_crown.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
+                                spaceW(width: 4),
+                                TextCustom(title: "Verified", fontSize: 10, color: AppThemeData.primaryWhite),
+                              ],
+                            ),
+                          )
+                              : const SizedBox(),
+                        ),
                     ],
                   ),
-                );
-              }),
-            ],
-          ),
-        ),
-        // Call button
-        if (ad.phoneNumber != null && ad.phoneNumber!.isNotEmpty)
-          GestureDetector(
-            onTap: () async {
-              final phone = '${ad.countryCode ?? ''}${ad.phoneNumber}';
-              final uri = Uri.parse('tel:$phone');
-              if (await canLaunchUrl(uri)) launchUrl(uri);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+                  spaceH(height: 4),
+                  Obx(() {
+                    final controller = Get.find<AdListingDetailController>();
+                    final rating = controller.sellerRating.value;
+                    final count = controller.sellerReviewCount.value;
+                    return Row(
+                      children: [
+                        if (count > 0) ...[
+                          Icon(Icons.star_rounded, size: 14, color: const Color(0xffFF9500)),
+                          spaceW(width: 4),
+                          TextCustom(title: rating.toStringAsFixed(1), fontSize: 12, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
+                          spaceW(width: 4),
+                          TextCustom(title: '($count)', fontSize: 11, color: AppThemeData.primary4),
+                        ] else
+                          TextCustom(title: 'No reviews', fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                        spaceW(width: 6),
+                        TextCustom(title: '·', fontSize: 12, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                        spaceW(width: 6),
+                        TextCustom(title: "${controller.viewCount.value} views", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      ],
+                    );
+                  }),
+                ],
               ),
-              child: Icon(Icons.phone_outlined, color: AppThemeData.primary4, size: 22),
             ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildLocationSection(AdModel ad, bool isDark) {
-    final lat = ad.location!.latitude!;
-    final lng = ad.location!.longitude!;
-
-    return GestureDetector(
-      onTap: () async {
-        final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
-        if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Location",
-            style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-          ),
-          spaceH(height: 10),
-          MapViewWidget(latitude: lat, longitude: lng, height: 160, zoom: 13),
-        ],
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, size: 20),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildReportSection(AdModel ad, bool isDark) {
+  Widget _buildActionRow(AdModel ad, bool isDark) {
     return Obx(() {
+      final controller = Get.find<AdListingDetailController>();
       final report = controller.existingReport.value;
 
-      // Already reported — show report status
       if (controller.hasReported.value && report != null) {
         return Container(
           padding: const EdgeInsets.all(14),
@@ -580,7 +604,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                   Icon(Icons.flag_rounded, size: 18, color: AppThemeData.danger300),
                   spaceW(width: 8),
                   Expanded(
-                    child: TextCustom(title: "You reported this ad", fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
+                    child: TextCustom(title: "You flagged this ad", fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
                   ),
                   _reportStatusBadge(report.status),
                 ],
@@ -598,67 +622,135 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                 spaceH(height: 4),
                 TextCustom(title: report.description!, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
               ],
-              if (report.adminNotes != null && report.adminNotes!.isNotEmpty) ...[
-                spaceH(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.admin_panel_settings_outlined, size: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: TextCustom(title: report.adminNotes!, fontSize: 11, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 3),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         );
       }
 
-      // Not reported — show report button
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Did you find any problem with this ad?",
-                    style: TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                  ),
-                  spaceH(height: 4),
-                  TextCustom(title: "ID #${ad.id?.substring(0, 6) ?? ''}", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                ],
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => _markAsUnavailable(Get.context!, ad, isDark),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text("Mark unavailable", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: Color(0xFF2196F3))),
+            ),
+          ),
+          spaceW(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _showReportDialog(Get.context!, ad, isDark),
+              icon: Icon(Icons.flag_outlined, size: 18, color: AppThemeData.danger300),
+              label: Text("Report abuse", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: AppThemeData.danger300, width: 1.2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
-            GestureDetector(
-              onTap: () => _showReportDialog(Get.context!, ad, isDark),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: AppThemeData.danger50, borderRadius: BorderRadius.circular(8)),
-                child: const Text(
-                  "Report this ad",
-                  style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     });
+  }
+
+  void _markAsUnavailable(BuildContext context, AdModel ad, bool isDark) async {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) {
+      ShowToastDialog.showError("Please login to perform this action");
+      return;
+    }
+
+    final alreadyReported = await FireStoreUtils.hasUserReportedAd(ad.id!, uid);
+    if (alreadyReported) {
+      ShowToastDialog.showWarning("You have already reported this ad");
+      return;
+    }
+
+    Get.dialog(
+        Dialog(
+          backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 48, color: Color(0xFF2196F3)),
+                spaceH(height: 16),
+                Text(
+                    "Mark as Unavailable?",
+                    style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack)
+                ),
+                spaceH(height: 8),
+                Text(
+                    "Did the seller mention this item is already sold? Let us know so we can update the community.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6)
+                ),
+                spaceH(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Get.back(),
+                        child: Text("Cancel", style: TextStyle(color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, fontFamily: FontFamily.semiBold)),
+                      ),
+                    ),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Get.back();
+                          ShowToastDialog.showLoader("Submitting...");
+
+                          final user = Constant.userModel;
+                          final controller = Get.find<AdListingDetailController>();
+
+                          final report = AdReportModel(
+                            id: const Uuid().v4(),
+                            adId: ad.id,
+                            adTitle: ad.title,
+                            adImage: ad.mainImage,
+                            reporterId: uid,
+                            reporterName: user?.fullNameString(),
+                            reporterEmail: user?.email,
+                            sellerId: ad.sellerId,
+                            sellerName: ad.sellerName,
+                            reasonId: "system_unavailable_flag",
+                            reasonTitle: "Item Marked as Unavailable",
+                            description: "A buyer flagged this item as sold/unavailable.",
+                            status: 'pending',
+                            createdAt: Timestamp.now(),
+                          );
+
+                          final success = await FireStoreUtils.submitAdReport(report);
+                          ShowToastDialog.closeLoader();
+
+                          if (success) {
+                            controller.onReportSubmitted(report);
+                            ShowToastDialog.showSuccess("Thank you for letting us know!");
+                          } else {
+                            ShowToastDialog.showError("Failed to submit. Please try again.");
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2196F3),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text("Yes, Mark it", style: TextStyle(color: Colors.white, fontFamily: FontFamily.semiBold)),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        )
+    );
   }
 
   Widget _reportStatusBadge(String? status) {
@@ -694,14 +786,12 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
       return;
     }
 
-    // Check if already reported
     final alreadyReported = await FireStoreUtils.hasUserReportedAd(ad.id!, uid);
     if (alreadyReported) {
       ShowToastDialog.showWarning("You have already reported this ad");
       return;
     }
 
-    // Fetch reasons
     ShowToastDialog.showLoader("Loading...");
     final reasons = await FireStoreUtils.getActiveReportReasons();
     ShowToastDialog.closeLoader();
@@ -725,7 +815,6 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -749,8 +838,6 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                   ],
                 ),
               ),
-
-              // Body
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -762,8 +849,6 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack),
                       ),
                       spaceH(height: 12),
-
-                      // Reason chips
                       Obx(
                             () => Wrap(
                           spacing: 8,
@@ -792,7 +877,6 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                           }).toList(),
                         ),
                       ),
-
                       spaceH(height: 20),
                       Text(
                         "Additional details (optional)",
@@ -826,8 +910,6 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                   ),
                 ),
               ),
-
-              // Submit button
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Obx(
@@ -845,6 +927,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
 
                         isSubmitting.value = true;
                         final user = Constant.userModel;
+                        final controller = Get.find<AdListingDetailController>();
                         final report = AdReportModel(
                           id: const Uuid().v4(),
                           adId: ad.id,
@@ -920,7 +1003,6 @@ class _ImageGalleryState extends State<_ImageGallery> {
     super.dispose();
   }
 
-  // ─── Open full screen viewer ──────────────────────────────
   void _openFullScreen(BuildContext context, int initialIndex) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -962,7 +1044,6 @@ class _ImageGalleryState extends State<_ImageGallery> {
             ),
           ),
         ),
-        // Dot indicators
         if (widget.images.length > 1)
           Positioned(
             bottom: 12,
@@ -982,8 +1063,6 @@ class _ImageGalleryState extends State<_ImageGallery> {
               ),
             ),
           ),
-
-        // Tap hint icon (shown only when images exist)
         if (widget.images.isNotEmpty)
           Positioned(
             top: 12,

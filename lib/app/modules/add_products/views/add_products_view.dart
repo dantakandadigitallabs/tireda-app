@@ -1,10 +1,9 @@
 import 'dart:io';
 
 import 'package:eSellify/app/constant/constants.dart';
-import 'package:eSellify/app/constant/osm_place_picker/osm_location_picker_screen.dart';
-import 'package:eSellify/app/constant/place_picker/location_picker_screen.dart';
 import 'package:eSellify/app/constant/round_shape_button.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
+import 'package:eSellify/app/data/nigeria_locations.dart';
 import 'package:eSellify/app/dependency/dotted_border/dotted_border.dart';
 import 'package:eSellify/app/models/category_model.dart';
 import 'package:eSellify/app/models/currency_model.dart';
@@ -20,7 +19,6 @@ import 'package:eSellify/widgets/text_field_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -54,7 +52,6 @@ class AddProductsView extends GetView<AddProductsController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ── Category breadcrumb ───────────────────────────
-                      // Wrapped in Obx so AI category re-classification triggers a rebuild.
                       Obx(() => _CategoryBreadcrumb(path: controller.categoryPath.toList(), isDark: isDark)),
                       spaceH(height: 16),
 
@@ -82,9 +79,6 @@ class AddProductsView extends GetView<AddProductsController> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // AI Generate button — shown whenever admin has enabled
-                            // OpenAI. Disabled-look until a main photo is added so the
-                            // user discovers the feature even before uploading.
                             Obx(() {
                               if (!controller.isAiEnabled) return const SizedBox.shrink();
                               final ready = controller.canUseAi;
@@ -117,8 +111,8 @@ class AddProductsView extends GetView<AddProductsController> {
                                           busy
                                               ? "Generating..."
                                               : ready
-                                                  ? "Generate with AI from photos"
-                                                  : "Add a photo to generate with AI",
+                                              ? "Generate with AI from photos"
+                                              : "Add a photo to generate with AI",
                                           style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: FontFamily.semiBold),
                                         ),
                                       ],
@@ -166,7 +160,7 @@ class AddProductsView extends GetView<AddProductsController> {
                       _SectionCard(
                         isDark: isDark,
                         child: Obx(
-                          () => MobileNumberTextField(
+                              () => MobileNumberTextField(
                             title: "Mobile Number *",
                             controller: controller.mobileController,
                             countryCode: controller.countryCode.value.toString(),
@@ -177,43 +171,22 @@ class AddProductsView extends GetView<AddProductsController> {
                       ),
                       spaceH(height: 12),
 
-                      // ── Location ──────────────────────────────────────
+                      // ── Location — Nigerian State / LGA Picker ────────
                       _SectionCard(
                         isDark: isDark,
                         child: TextFieldWidget(
                           title: "Location *",
-                          hintText: "Select Location",
+                          hintText: "Select State & LGA",
                           controller: controller.locationController,
-                          onPress: () {
-                            Constant.checkPermission(() async {
-                              try {
-                                dynamic value;
-                                if (Constant.selectedMap == "Google Map") {
-                                  value = await Get.to(LocationPickerScreen());
-                                } else {
-                                  value = await Get.to(OSMLocationPickerScreen());
-                                }
-
-                                if (value == null || value.latLng == null) {
-                                  ShowToastDialog.showError("Location not selected properly. Please try again.".tr);
-                                  return;
-                                }
-
-                                final latLng = value.latLng!;
-                                final placeMarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
-
-                                if (placeMarks.isNotEmpty) {
-                                  final result = placeMarks.first;
-                                  final address = "${result.name}, ${result.locality}, ${result.administrativeArea}, ${result.postalCode}, ${result.country}";
-                                  // Store address + coordinates in controller
-                                  controller.setLocation(address: address, latitude: latLng.latitude, longitude: latLng.longitude);
-                                } else {
-                                  ShowToastDialog.showError("Could not determine address from coordinates.".tr);
-                                }
-                              } catch (e) {
-                                ShowToastDialog.showError("Something went wrong while fetching address.".tr);
-                              }
-                            });
+                          onPress: () async {
+                            final result = await _showNigeriaLocationPicker(context, isDark);
+                            if (result == null) return;
+                            final address = "${result.lga.name}, ${result.state.state}";
+                            controller.setLocation(
+                              address: address,
+                              latitude: result.lga.lat,
+                              longitude: result.lga.lng,
+                            );
                           },
                         ),
                       ),
@@ -253,6 +226,253 @@ class AddProductsView extends GetView<AddProductsController> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NIGERIA LOCATION PICKER (reusable within this file)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LocationResult {
+  final NigeriaLocation state;
+  final NigeriaLGA lga;
+  const _LocationResult({required this.state, required this.lga});
+}
+
+Future<_LocationResult?> _showNigeriaLocationPicker(
+    BuildContext context,
+    bool isDark,
+    ) async {
+  return await Navigator.of(context).push<_LocationResult>(
+    MaterialPageRoute(
+      builder: (_) => _NigeriaStatePicker(isDark: isDark),
+    ),
+  );
+}
+
+// ── Step 1: State Picker ──────────────────────────────────────────────────────
+class _NigeriaStatePicker extends StatefulWidget {
+  final bool isDark;
+  const _NigeriaStatePicker({required this.isDark});
+
+  @override
+  State<_NigeriaStatePicker> createState() => _NigeriaStatePickerState();
+}
+
+class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
+  final TextEditingController _search = TextEditingController();
+  List<NigeriaLocation> _filtered = NigeriaLocations.states;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      _filtered = NigeriaLocations.searchStates(query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isDark ? AppThemeData.grey10 : AppThemeData.grey1;
+    final cardBg = widget.isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite;
+    final textColor = widget.isDark ? AppThemeData.grey1 : AppThemeData.grey10;
+    final subColor = widget.isDark ? AppThemeData.grey5 : AppThemeData.grey6;
+    final borderColor = widget.isDark ? AppThemeData.grey8 : AppThemeData.grey3;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: cardBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          "Select State",
+          style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: textColor),
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: cardBg,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _search,
+              onChanged: _onSearch,
+              style: TextStyle(color: textColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "Find state...",
+                hintStyle: TextStyle(color: subColor, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: subColor, size: 20),
+                filled: true,
+                fillColor: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Divider(height: 1, color: borderColor),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _filtered.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: borderColor),
+              itemBuilder: (_, i) {
+                final state = _filtered[i];
+                return InkWell(
+                  onTap: () async {
+                    final result = await Navigator.of(context).push<_LocationResult>(
+                      MaterialPageRoute(
+                        builder: (_) => _NigeriaLGAPicker(state: state, isDark: widget.isDark),
+                      ),
+                    );
+                    if (result != null && context.mounted) {
+                      Navigator.of(context).pop(result);
+                    }
+                  },
+                  child: Container(
+                    color: cardBg,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_city_rounded, size: 20, color: subColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(state.state, style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: textColor)),
+                              const SizedBox(height: 2),
+                              Text("${state.lgas.length} LGAs", style: TextStyle(fontSize: 12, color: subColor)),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: subColor, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Step 2: LGA Picker ────────────────────────────────────────────────────────
+class _NigeriaLGAPicker extends StatefulWidget {
+  final NigeriaLocation state;
+  final bool isDark;
+  const _NigeriaLGAPicker({required this.state, required this.isDark});
+
+  @override
+  State<_NigeriaLGAPicker> createState() => _NigeriaLGAPickerState();
+}
+
+class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
+  final TextEditingController _search = TextEditingController();
+  late List<NigeriaLGA> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.state.lgas;
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      _filtered = NigeriaLocations.searchLGAs(widget.state, query);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isDark ? AppThemeData.grey10 : AppThemeData.grey1;
+    final cardBg = widget.isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite;
+    final textColor = widget.isDark ? AppThemeData.grey1 : AppThemeData.grey10;
+    final subColor = widget.isDark ? AppThemeData.grey5 : AppThemeData.grey6;
+    final borderColor = widget.isDark ? AppThemeData.grey8 : AppThemeData.grey3;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: cardBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Select LGA", style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: textColor)),
+            Text(widget.state.state, style: TextStyle(fontSize: 12, color: AppThemeData.primary4)),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: cardBg,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _search,
+              onChanged: _onSearch,
+              style: TextStyle(color: textColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "Find LGA...",
+                hintStyle: TextStyle(color: subColor, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: subColor, size: 20),
+                filled: true,
+                fillColor: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Divider(height: 1, color: borderColor),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _filtered.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: borderColor),
+              itemBuilder: (_, i) {
+                final lga = _filtered[i];
+                return InkWell(
+                  onTap: () => Navigator.of(context).pop(_LocationResult(state: widget.state, lga: lga)),
+                  child: Container(
+                    color: cardBg,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 20, color: subColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(lga.name, style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: textColor)),
+                        ),
+                        Icon(Icons.chevron_right, color: subColor, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // STEP 2 — Custom Fields + Submit
 // ─────────────────────────────────────────────────────────────────────────────
 class AddProductsViewStep2 extends GetView<AddProductsController> {
@@ -276,52 +496,52 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
                 child: controller.customFields.isEmpty
                     ? _EmptyCustomFields(isDark: isDark)
                     : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionCard(
+                        isDark: isDark,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _SectionCard(
-                              isDark: isDark,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextCustom(
-                                    title: "Tell us more about your item",
-                                    fontSize: 14,
-                                    fontFamily: FontFamily.medium,
-                                    color: isDark ? AppThemeData.grey3 : AppThemeData.grey7,
-                                  ),
-                                  spaceH(height: 16),
-                                  ...controller.customFields.map((field) {
-                                    switch (field.type) {
-                                      case "Radio":
-                                        return _RadioField(field: field, controller: controller, isDark: isDark);
-                                      case "Text Input":
-                                        return _TextInputField(field: field, controller: controller, isDark: isDark);
-                                      case "Number Input":
-                                        return _NumberInputField(field: field, controller: controller, isDark: isDark);
-                                      case "Dropdown":
-                                        return _DropdownField(field: field, controller: controller, context: context, isDark: isDark, themeChange: themeChange);
-                                      case "Checkboxes":
-                                        return _CheckboxField(field: field, controller: controller, isDark: isDark);
-                                      case "File Input":
-                                        return _FileInputField(field: field, controller: controller, isDark: isDark);
-                                      default:
-                                        return const SizedBox.shrink();
-                                    }
-                                  }),
-                                ],
-                              ),
+                            TextCustom(
+                              title: "Tell us more about your item",
+                              fontSize: 14,
+                              fontFamily: FontFamily.medium,
+                              color: isDark ? AppThemeData.grey3 : AppThemeData.grey7,
                             ),
-                            spaceH(height: 24),
+                            spaceH(height: 16),
+                            ...controller.customFields.map((field) {
+                              switch (field.type) {
+                                case "Radio":
+                                  return _RadioField(field: field, controller: controller, isDark: isDark);
+                                case "Text Input":
+                                  return _TextInputField(field: field, controller: controller, isDark: isDark);
+                                case "Number Input":
+                                  return _NumberInputField(field: field, controller: controller, isDark: isDark);
+                                case "Dropdown":
+                                  return _DropdownField(field: field, controller: controller, context: context, isDark: isDark, themeChange: themeChange);
+                                case "Checkboxes":
+                                  return _CheckboxField(field: field, controller: controller, isDark: isDark);
+                                case "File Input":
+                                  return _FileInputField(field: field, controller: controller, isDark: isDark);
+                                default:
+                                  return const SizedBox.shrink();
+                              }
+                            }),
                           ],
                         ),
                       ),
+                      spaceH(height: 24),
+                    ],
+                  ),
+                ),
               ),
 
               // ── Post Ad Button ────────────────────────────────────────
               Obx(
-                () => Row(
+                    () => Row(
                   children: [
                     Expanded(
                       child: Padding(
@@ -386,7 +606,6 @@ class _StepIndicator extends StatelessWidget {
   }
 }
 
-/// N-level category breadcrumb:  Electronics  >  Phones  >  Samsung
 class _CategoryBreadcrumb extends StatelessWidget {
   final List<CategoryModel> path;
   final bool isDark;
@@ -493,7 +712,6 @@ class _PriceLoadingSkeleton extends StatelessWidget {
   }
 }
 
-/// Currency dropdown — wrapped in Obx so it rebuilds when selectedCurrency changes
 class _CurrencyDropdown extends StatelessWidget {
   final AddProductsController controller;
 
@@ -503,7 +721,7 @@ class _CurrencyDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     return Obx(
-      () => DropdownButton<CurrencyModel>(
+          () => DropdownButton<CurrencyModel>(
         value: controller.selectedCurrency.value,
         underline: const SizedBox(),
         isDense: true,
@@ -554,41 +772,41 @@ class _MainImagePicker extends StatelessWidget {
           ),
           child: !hasImage
               ? Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Column(
-                    children: [
-                      Icon(Icons.add_photo_alternate_outlined, size: 36, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                      spaceH(height: 6),
-                      TextCustom(title: "Tap to add main photo", fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
-                    ],
-                  ),
-                )
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                Icon(Icons.add_photo_alternate_outlined, size: 36, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                spaceH(height: 6),
+                TextCustom(title: "Tap to add main photo", fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+              ],
+            ),
+          )
               : Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Stack(
-                    alignment: Alignment.topRight,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: file != null
-                            ? Image.file(file, height: 110, width: 110, fit: BoxFit.cover)
-                            : NetworkImageWidget(imageUrl: existingUrl, height: 110, width: 110, fit: BoxFit.cover),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          controller.mainImage.value = null;
-                          controller.existingMainImageUrl.value = '';
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                          child: const Icon(Icons.close, size: 14, color: Colors.white),
-                        ),
-                      ),
-                    ],
+            padding: const EdgeInsets.all(8),
+            child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: file != null
+                      ? Image.file(file, height: 110, width: 110, fit: BoxFit.cover)
+                      : NetworkImageWidget(imageUrl: existingUrl, height: 110, width: 110, fit: BoxFit.cover),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    controller.mainImage.value = null;
+                    controller.existingMainImageUrl.value = '';
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 14, color: Colors.white),
                   ),
                 ),
+              ],
+            ),
+          ),
         );
       }),
     );
@@ -610,16 +828,8 @@ class _MainImagePicker extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _SourceOption(
-                    icon: Icons.camera_alt,
-                    label: "Camera",
-                    onTap: () => controller.pickMainImage(source: ImageSource.camera),
-                  ),
-                  _SourceOption(
-                    icon: Icons.photo_library,
-                    label: "Gallery",
-                    onTap: () => controller.pickMainImage(source: ImageSource.gallery),
-                  ),
+                  _SourceOption(icon: Icons.camera_alt, label: "Camera", onTap: () => controller.pickMainImage(source: ImageSource.camera)),
+                  _SourceOption(icon: Icons.photo_library, label: "Gallery", onTap: () => controller.pickMainImage(source: ImageSource.gallery)),
                 ],
               ),
               spaceH(height: 8),
@@ -667,7 +877,7 @@ class _OtherImagesPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(
-      () => Wrap(
+          () => Wrap(
         spacing: 10,
         runSpacing: 10,
         children: [
@@ -844,7 +1054,7 @@ class _DropdownField extends StatelessWidget {
           _FieldHeader(field: field, isDark: isDark),
           spaceH(height: 10),
           Obx(
-            () => DropdownButtonFormField<String>(
+                () => DropdownButtonFormField<String>(
               initialValue: controller.selectedDropdownValues[field.id],
               hint: Text("Select ${field.name}", style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
               items: field.options?.map((option) {
@@ -862,9 +1072,6 @@ class _DropdownField extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NUMBER INPUT FIELD — numeric keyboard + optional min/max hint
-// ─────────────────────────────────────────────────────────────────────────────
 class _NumberInputField extends StatelessWidget {
   final CustomFieldModel field;
   final AddProductsController controller;
@@ -878,7 +1085,6 @@ class _NumberInputField extends StatelessWidget {
       controller.textControllers[field.id!] = TextEditingController();
     }
 
-    // Build hint: e.g.  "Enter Year  (1990 – 2025)"
     String hint = "Enter ${field.name}";
     if (field.min != null && field.max != null) {
       hint += "  (${field.min} – ${field.max})";
@@ -908,11 +1114,9 @@ class _NumberInputField extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  if (field.min != null)
-                    TextCustom(title: "Min: ${field.min}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  if (field.min != null) TextCustom(title: "Min: ${field.min}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                   if (field.min != null && field.max != null) spaceW(width: 12),
-                  if (field.max != null)
-                    TextCustom(title: "Max: ${field.max}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  if (field.max != null) TextCustom(title: "Max: ${field.max}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 ],
               ),
             ),
@@ -922,9 +1126,6 @@ class _NumberInputField extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CHECKBOXES FIELD — multi-select chip grid (same style as Radio)
-// ─────────────────────────────────────────────────────────────────────────────
 class _CheckboxField extends StatelessWidget {
   final CustomFieldModel field;
   final AddProductsController controller;
@@ -956,10 +1157,7 @@ class _CheckboxField extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected ? AppThemeData.primary4.withOpacity(0.1) : (isDark ? AppThemeData.grey9 : AppThemeData.grey2),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
-                        width: isSelected ? 1.5 : 1,
-                      ),
+                      border: Border.all(color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4), width: isSelected ? 1.5 : 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -995,9 +1193,6 @@ class _CheckboxField extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE INPUT FIELD — pick image from gallery, show preview
-// ─────────────────────────────────────────────────────────────────────────────
 class _FileInputField extends StatelessWidget {
   final CustomFieldModel field;
   final AddProductsController controller;
@@ -1032,43 +1227,32 @@ class _FileInputField extends StatelessWidget {
                 ),
                 child: file == null
                     ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.upload_file_outlined, size: 28, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                          spaceH(height: 6),
-                          TextCustom(
-                            title: "Tap to upload",
-                            fontSize: 13,
-                            color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                          ),
-                        ],
-                      )
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.upload_file_outlined, size: 28, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    spaceH(height: 6),
+                    TextCustom(title: "Tap to upload", fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  ],
+                )
                     : Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Image.file(file, width: double.infinity, height: 140, fit: BoxFit.cover),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Row(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(11),
-                            child: Image.file(file, width: double.infinity, height: 140, fit: BoxFit.cover),
-                          ),
-                          // Change / Remove overlay
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Row(
-                              children: [
-                                _FileActionButton(
-                                  icon: Icons.edit_outlined,
-                                  onTap: () => controller.pickFileForField(field.id!),
-                                ),
-                                spaceW(width: 8),
-                                _FileActionButton(
-                                  icon: Icons.close,
-                                  onTap: () => controller.selectedFileValues[field.id!] = null,
-                                ),
-                              ],
-                            ),
-                          ),
+                          _FileActionButton(icon: Icons.edit_outlined, onTap: () => controller.pickFileForField(field.id!)),
+                          spaceW(width: 8),
+                          _FileActionButton(icon: Icons.close, onTap: () => controller.selectedFileValues[field.id!] = null),
                         ],
                       ),
+                    ),
+                  ],
+                ),
               ),
             );
           }),
