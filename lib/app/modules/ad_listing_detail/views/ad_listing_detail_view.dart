@@ -56,8 +56,8 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                 children: [
                   const SizedBox(width: 16),
                   Icon(Icons.arrow_back, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
-                  const SizedBox(width: 4),
-                  TextCustom(title: "Homepage", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                  const SizedBox(width: 6),
+                  TextCustom(title: "Homepage", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                 ],
               ),
             ),
@@ -114,13 +114,13 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                                       children: [
                                         const Icon(Icons.star_rounded, size: 12, color: Colors.white),
                                         const SizedBox(width: 4),
-                                        Text("Featured", style: TextStyle(fontSize: 10, fontFamily: FontFamily.bold, color: Colors.white)),
+                                        Text("Promoted", style: TextStyle(fontSize: 10, fontFamily: FontFamily.bold, color: Colors.white)),
                                       ],
                                     ),
                                   ),
                               ],
                             ),
-                            spaceH(height: 8),
+                            spaceH(height: 6),
 
                             // Location (Clickable, but no visual hint)
                             if (ad.address != null && ad.address!.isNotEmpty)
@@ -149,10 +149,10 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                                   ],
                                 ),
                               ),
-                            spaceH(height: 12),
+                            spaceH(height: 8),
 
                             // Price
-                            TextCustom(title: PriceFormatter.format(ad), fontSize: 18, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                            TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
                           ],
                         ),
                       ),
@@ -167,18 +167,18 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                             // Custom Fields (Limited to 6)
                             if (hasCustomFields) ...[
                               Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                              spaceH(height: 8),
+                              spaceH(height: 6),
                               _buildCustomFields(ad.customFields!, isDark),
                             ],
 
                             // Description
                             if (ad.description != null && ad.description!.isNotEmpty) ...[
-                              spaceH(height: 8),
+                              spaceH(height: 6),
                               Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
                               spaceH(height: 12),
                               Text(
-                                "About this advertisement",
-                                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                "Description",
+                                style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                               ),
                               spaceH(height: 6),
                               TextCustom(title: ad.description!, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 50),

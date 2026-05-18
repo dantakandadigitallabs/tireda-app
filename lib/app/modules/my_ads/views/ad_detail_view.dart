@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/app/models/ad_model.dart';
@@ -6,6 +8,7 @@ import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
+import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/map_view_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
@@ -63,8 +66,8 @@ class _AdDetailBody extends StatelessWidget {
                   Container(
                     width: 64,
                     height: 64,
-                    decoration: BoxDecoration(color: AppThemeData.danger50, shape: BoxShape.circle),
-                    child: const Icon(Icons.delete_outline_rounded, color: AppThemeData.danger300, size: 32),
+                    decoration: BoxDecoration(color: AppThemeData.danger50, shape: BoxShape.circle), // Removed const
+                    child: Icon(Icons.delete_outline_rounded, color: AppThemeData.danger300, size: 32), // Removed const
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -105,10 +108,10 @@ class _AdDetailBody extends StatelessWidget {
                           child: Container(
                             height: 48,
                             decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.danger300),
-                            child: const Center(
+                            child: Center( // Removed const
                               child: Text(
                                 "Delete",
-                                style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
+                                style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white), // Removed const from Text
                               ),
                             ),
                           ),
@@ -139,18 +142,21 @@ class _AdDetailBody extends StatelessWidget {
     if (result == true) Get.back(result: true);
   }
 
+  Future<void> _makeFeatured() async {
+    await controller.featureAd();
+  }
+
   Widget _buildFeaturedBanner(bool isDark) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [const Color(0xffE0F7FA), const Color(0xffE0F2F1)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(colors: [Color(0xffE0F7FA), Color(0xffE0F2F1)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xff00BCD4).withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          // Ad icon
           Container(
             height: 48,
             width: 48,
@@ -159,26 +165,25 @@ class _AdDetailBody extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
             ),
-            child: const Center(
-              child: Text(
+            child: Center( // Removed const
+              child: Text( // Removed const
                 "AD",
-                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: Color(0xffFF6B35)),
+                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: const Color(0xffFF6B35)),
               ),
             ),
           ),
           spaceW(width: 16),
-          // Text + button
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Feature your ad, attract\nmore clients and sell faster",
-                  style: TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: Color(0xff37474F), height: 1.4),
+                Text( // Removed const
+                  "Promote your ad, attract\nmore clients and sell faster",
+                  style: TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: const Color(0xff37474F), height: 1.4),
                 ),
                 spaceH(height: 10),
                 GestureDetector(
-                  onTap: () => controller.featureAd(),
+                  onTap: _makeFeatured,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
                     decoration: BoxDecoration(
@@ -186,8 +191,8 @@ class _AdDetailBody extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [BoxShadow(color: const Color(0xff00BCD4).withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
                     ),
-                    child: const Text(
-                      "Create Featured Ad",
+                    child: Text( // Removed const
+                      "Promote Ad",
                       style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
                   ),
@@ -203,95 +208,129 @@ class _AdDetailBody extends StatelessWidget {
   Widget _buildBottomBar(BuildContext context, bool isDark) {
     final status = (ad.status ?? '').toLowerCase();
 
-    // 5. Sold Out / Expired / Inactive / Permanent Rejected → only status shown
+    // Reusable Delete Button
+    final Widget deleteButton = Expanded(
+      child: GestureDetector(
+        onTap: () => _deleteAd(context),
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppThemeData.danger300, width: 1.5),
+          ),
+          child: Center( // Removed const
+            child: Text(
+              "Delete",
+              style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final Widget editButton = Expanded(
+      child: GestureDetector(
+        onTap: _editAd,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppThemeData.primary4, width: 1.5),
+          ),
+          child: Center( // Removed const
+            child: Text(
+              "Edit",
+              style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final Widget soldOutButton = Expanded(
+      child: GestureDetector(
+        onTap: _markAsSold,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: const Color(0xff4CAF50)),
+          child: Center( // Removed const
+            child: Text(
+              "Sold Out",
+              style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Terminal statuses (Sold / Expired / Inactive / Permanent Rejected)
     if (['sold', 'expired', 'inactive', 'permanent_rejected'].contains(status)) {
       return Container(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
         padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
-        child: Container(
-          width: double.infinity,
-          height: 50,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: _getStatusColor(status).withOpacity(0.1),
-            border: Border.all(color: _getStatusColor(status).withOpacity(0.3)),
-          ),
-          child: Center(
-            child: Text(
-              _getStatusLabel(status),
-              style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: _getStatusColor(status)),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: _getStatusColor(status).withOpacity(0.1),
+                  border: Border.all(color: _getStatusColor(status).withOpacity(0.3)),
+                ),
+                child: Center(
+                  child: Text(
+                    _getStatusLabel(status),
+                    style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: _getStatusColor(status)),
+                  ),
+                ),
+              ),
             ),
-          ),
+            spaceW(width: 12),
+            deleteButton,
+          ],
         ),
       );
     }
 
-    // Determine buttons
-    final bool showEdit = ['pending', 'active', 'soft_rejected', 'resubmitted'].contains(status);
-    final bool showRemove = ['pending', 'soft_rejected'].contains(status);
-    final bool showSoldOut = ['active', 'resubmitted'].contains(status);
+    // Active / Resubmitted listings
+    if (['active', 'resubmitted'].contains(status)) {
+      return Container(
+        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+        child: Row(
+          children: [
+            editButton,
+            spaceW(width: 8),
+            soldOutButton,
+            spaceW(width: 8),
+            deleteButton,
+          ],
+        ),
+      );
+    }
 
-    if (!showEdit && !showRemove && !showSoldOut) return const SizedBox.shrink();
+    // Pending / Soft Rejected listings
+    if (['pending', 'soft_rejected'].contains(status)) {
+      return Container(
+        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+        child: Row(
+          children: [
+            editButton,
+            spaceW(width: 12),
+            deleteButton,
+          ],
+        ),
+      );
+    }
 
+    // Baseline Fallback (Just Delete)
     return Container(
       color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
       padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
-      child: Row(
-        children: [
-          if (showEdit)
-            Expanded(
-              child: GestureDetector(
-                onTap: _editAd,
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppThemeData.primary4, width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "Edit",
-                      style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (showEdit && (showRemove || showSoldOut)) spaceW(width: 12),
-          if (showRemove)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _deleteAd(context),
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.danger300),
-                  child: const Center(
-                    child: Text(
-                      "Remove",
-                      style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (showSoldOut)
-            Expanded(
-              child: GestureDetector(
-                onTap: _markAsSold,
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: const Color(0xff4CAF50)),
-                  child: const Center(
-                    child: Text(
-                      "Sold Out",
-                      style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      child: Row(children: [deleteButton]),
     );
   }
 
@@ -349,237 +388,234 @@ class _AdDetailBody extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-      appBar: UiInterface.customAppBar(context, themeChange, "", isBack: true),
+      appBar: AppBar(
+        backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        elevation: 0,
+        leadingWidth: 120,
+        leading: GestureDetector(
+          onTap: () => Get.back(),
+          child: Row(
+            children: [
+              const SizedBox(width: 16),
+              Icon(Icons.arrow_back, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
+              const SizedBox(width: 4),
+              TextCustom(title: "My Ads", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+            ],
+          ),
+        ),
+        centerTitle: true,
+        title: TextCustom(title: "", fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+      ),
       body: Column(
         children: [
-          // ── Scrollable body ─────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Featured Ad Banner ──────────────────────────────────────
+                  // ── Image gallery (Edge-to-Edge Integration) ──
+                  Obx(
+                        () => _ImageGallery(
+                      images: _images,
+                      currentIndex: controller.currentIndex.value,
+                      pageController: controller.pageController,
+                      isDark: isDark,
+                      onPageChanged: (i) => controller.currentIndex.value = i,
+                    ),
+                  ),
+
+                  // ── Featured Ad Banner ──
                   if ((ad.status ?? '').toLowerCase() == 'active') Obx(() => controller.isFeatured.value ? const SizedBox.shrink() : _buildFeaturedBanner(isDark)),
-                  // ── Main Content Card ────────────────────────────
+
+                  // ── Details Flow Block ──
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ── Image gallery ────────────────────────
-                          Obx(
-                            () => _ImageGallery(
-                              images: _images,
-                              currentIndex: controller.currentIndex.value,
-                              pageController: controller.pageController,
-                              isDark: isDark,
-                              onPageChanged: (i) => controller.currentIndex.value = i,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Views + Likes indicators
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _StatPill(icon: Icons.remove_red_eye_outlined, label: "Views : ${ad.views ?? 0}", isDark: isDark),
+                            ),
+                            spaceW(width: 12),
+                            Expanded(
+                              child: _StatPill(icon: Icons.favorite_border_rounded, label: "Likes : ${ad.likes ?? 0}", isDark: isDark),
+                            ),
+                          ],
+                        ),
+                        spaceH(height: 8),
+                        Obx(
+                              () => controller.reportCount.value > 0
+                              ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppThemeData.danger300.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppThemeData.danger300.withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.flag_outlined, size: 16, color: AppThemeData.danger300), // Removed const
+                                spaceW(width: 8),
+                                TextCustom(
+                                  title: "${controller.reportCount.value} ${controller.reportCount.value == 1 ? 'report' : 'reports'} on this ad",
+                                  fontSize: 12,
+                                  fontFamily: FontFamily.medium,
+                                  color: AppThemeData.danger300,
+                                ),
+                              ],
+                            ),
+                          )
+                              : const SizedBox.shrink(),
+                        ),
+                        spaceH(height: 16),
+
+                        // Title
+                        TextCustom(title: ad.title ?? 'Untitled', fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                        spaceH(height: 8),
+
+                        // Synchronized Brand Price + Status Chip Layout
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: TextCustom(
+                                title: PriceFormatter.format(ad),
+                                fontSize: 22,
+                                fontFamily: FontFamily.bold,
+                                color: AppThemeData.primary4,
+                              ),
+                            ),
+                            _StatusChip(ad: ad),
+                          ],
+                        ),
+                        spaceH(height: 12),
+
+                        // Rejection Reason Area
+                        if ((ad.status == 'soft_rejected' || ad.status == 'permanent_rejected') && ad.rejectionReason != null && ad.rejectionReason!.isNotEmpty)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppThemeData.danger300.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppThemeData.danger300.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline, size: 18, color: AppThemeData.danger300), // Removed const
+                                spaceW(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      TextCustom(title: "Rejection Reason", fontSize: 12, fontFamily: FontFamily.bold, color: AppThemeData.danger300), // Removed const
+                                      spaceH(height: 2),
+                                      TextCustom(title: ad.rejectionReason!, fontSize: 13, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 5),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                        // Location details row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Icon(Icons.location_on_outlined, size: 16, color: AppThemeData.primary4), // Removed const
+                            spaceW(width: 4),
+                            Expanded(
+                              child: TextCustom(title: ad.address.toString(), fontSize: 14, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 3),
+                            ),
+                            TextCustom(title: controller.formatDate(), fontSize: 12, color: AppThemeData.grey5),
+                          ],
+                        ),
+
+                        // Custom Fields Section
+                        if (hasCustomFields) ...[_Divider(isDark: isDark), _CustomFieldsSection(customFields: ad.customFields!, isDark: isDark)],
+
+                        // Description Section
+                        if (hasDescription) ...[
+                          _Divider(isDark: isDark),
+                          TextCustom(
+                            title: "Description",
+                            fontSize: 14,
+                            fontFamily: FontFamily.medium,
+                            color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                          ),
+                          spaceH(height: 6),
+                          TextCustom(title: ad.description!, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 100),
+                        ],
+
+                        // Full Map Block
+                        if (hasLocation) ...[
+                          _Divider(isDark: isDark),
+                          GestureDetector(
+                            onTap: () async {
+                              final lat = ad.location!.latitude!;
+                              final lng = ad.location!.longitude!;
+                              final googleUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                              final osmUri = Uri.parse('https://www.openstreetmap.org/?mlat=$lat&mlon=$lng&zoom=15');
+                              if (await canLaunchUrl(googleUri)) {
+                                await launchUrl(googleUri, mode: LaunchMode.externalApplication);
+                              } else if (await canLaunchUrl(osmUri)) {
+                                await launchUrl(osmUri, mode: LaunchMode.externalApplication);
+                              }
+                            },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // ── Views + Likes pills ───────────
                                 Row(
-                                  children: [
-                                    Expanded(
-                                      child: _StatPill(icon: Icons.remove_red_eye_outlined, label: "Views : ${ad.views ?? 0}", isDark: isDark),
-                                    ),
-                                    spaceW(width: 12),
-                                    Expanded(
-                                      child: _StatPill(icon: Icons.favorite_border_rounded, label: "Likes : ${ad.likes ?? 0}", isDark: isDark),
-                                    ),
-                                  ],
-                                ),
-                                spaceH(height: 8),
-                                Obx(
-                                  () => controller.reportCount.value > 0
-                                      ? Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: AppThemeData.danger300.withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: Border.all(color: AppThemeData.danger300.withValues(alpha: 0.2)),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.flag_outlined, size: 16, color: AppThemeData.danger300),
-                                              spaceW(width: 8),
-                                              TextCustom(
-                                                title: "${controller.reportCount.value} ${controller.reportCount.value == 1 ? 'report' : 'reports'} on this ad",
-                                                fontSize: 12,
-                                                fontFamily: FontFamily.medium,
-                                                color: AppThemeData.danger300,
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : const SizedBox.shrink(),
-                                ),
-                                spaceH(height: 16),
-
-                                // ── Title ─────────────────────────
-                                TextCustom(title: ad.title ?? 'Untitled', fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                                spaceH(height: 8),
-
-                                // ── Price + Status ────────────────
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Expanded(
                                       child: TextCustom(
-                                        title: controller.formatPrice(),
-                                        fontSize: 22,
+                                        title: "Location",
+                                        fontSize: 15,
                                         fontFamily: FontFamily.bold,
                                         color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                                       ),
                                     ),
-                                    _StatusChip(ad: ad),
+                                    Icon(Icons.open_in_new, size: 16, color: AppThemeData.primary4), // Removed const
                                   ],
                                 ),
-                                spaceH(height: 10),
-
-                                // ── Rejection Reason ──────────────
-                                if ((ad.status == 'soft_rejected' || ad.status == 'permanent_rejected') && ad.rejectionReason != null && ad.rejectionReason!.isNotEmpty)
-                                  Container(
-                                    width: double.infinity,
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppThemeData.danger300.withOpacity(0.08),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: AppThemeData.danger300.withOpacity(0.2)),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(Icons.info_outline, size: 18, color: AppThemeData.danger300),
-                                        spaceW(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              TextCustom(title: "Rejection Reason", fontSize: 12, fontFamily: FontFamily.bold, color: AppThemeData.danger300),
-                                              spaceH(height: 2),
-                                              TextCustom(title: ad.rejectionReason!, fontSize: 13, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 5),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                // ── Location + Date ───────────────
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Icon(Icons.location_on_outlined, size: 16, color: AppThemeData.primary4),
-                                    spaceW(width: 4),
-                                    Expanded(
-                                      child: TextCustom(title: ad.address.toString(), fontSize: 14, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 3),
-                                    ),
-                                    TextCustom(title: controller.formatDate(), fontSize: 12, color: AppThemeData.grey5),
-                                  ],
-                                ),
-
-                                // ── Custom Fields ─────────────────
-                                if (hasCustomFields) ...[_Divider(isDark: isDark), _CustomFieldsSection(customFields: ad.customFields!, isDark: isDark)],
-
-                                // ── Description ───────────────────
-                                if (hasDescription) ...[
-                                  _Divider(isDark: isDark),
-                                  TextCustom(
-                                    title: "About this Advertisement",
-                                    fontSize: 15,
-                                    fontFamily: FontFamily.bold,
-                                    color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                                  ),
+                                if (ad.address != null && ad.address!.isNotEmpty) ...[
                                   spaceH(height: 6),
-                                  TextCustom(title: ad.description!, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 100),
-                                ],
-
-                                // ── Location ──────────────────────
-                                if (hasLocation) ...[
-                                  _Divider(isDark: isDark),
-                                  GestureDetector(
-                                    onTap: () async {
-                                      final lat = ad.location!.latitude!;
-                                      final lng = ad.location!.longitude!;
-                                      // Try Google Maps first, fallback to OSM
-                                      final googleUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
-                                      final osmUri = Uri.parse('https://www.openstreetmap.org/?mlat=$lat&mlon=$lng&zoom=15');
-                                      if (await canLaunchUrl(googleUri)) {
-                                        await launchUrl(googleUri, mode: LaunchMode.externalApplication);
-                                      } else if (await canLaunchUrl(osmUri)) {
-                                        await launchUrl(osmUri, mode: LaunchMode.externalApplication);
-                                      }
-                                    },
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: TextCustom(
-                                                title: "Location",
-                                                fontSize: 15,
-                                                fontFamily: FontFamily.bold,
-                                                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                                              ),
-                                            ),
-                                            Icon(Icons.open_in_new, size: 16, color: AppThemeData.primary4),
-                                          ],
-                                        ),
-                                        if (ad.address != null && ad.address!.isNotEmpty) ...[
-                                          spaceH(height: 6),
-                                          Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Icon(Icons.location_on, size: 16, color: AppThemeData.primary4),
-                                              spaceW(width: 6),
-                                              Expanded(
-                                                child: TextCustom(title: ad.address!, fontSize: 13, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 3),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                        spaceH(height: 10),
-                                        MapViewWidget(
-                                          latitude: ad.location!.latitude!,
-                                          longitude: ad.location!.longitude!,
-                                          height: 120,
-                                        ),
-                                      ],
-                                    ),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.location_on, size: 16, color: AppThemeData.primary4), // Removed const
+                                      spaceW(width: 6),
+                                      Expanded(
+                                        child: TextCustom(title: ad.address!, fontSize: 13, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 3),
+                                      ),
+                                    ],
                                   ),
                                 ],
-
-                                spaceH(height: 4),
+                                spaceH(height: 10),
+                                MapViewWidget(
+                                  latitude: ad.location!.latitude!,
+                                  longitude: ad.location!.longitude!,
+                                  height: 140,
+                                ),
                               ],
                             ),
                           ),
                         ],
-                      ),
+                        spaceH(height: 4),
+                      ],
                     ),
                   ),
-                  spaceH(height: 24),
                 ],
               ),
             ),
           ),
-
-          // ── Bottom Action Bar ──────────────────────────────────────
           _buildBottomBar(context, isDark),
         ],
       ),
@@ -588,7 +624,7 @@ class _AdDetailBody extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// IMAGE GALLERY
+// IMAGE GALLERY (With Ported Fullscreen Tap-To-Zoom Support)
 // ─────────────────────────────────────────────────────────────────────────────
 class _ImageGallery extends StatelessWidget {
   final List<String> images;
@@ -599,57 +635,151 @@ class _ImageGallery extends StatelessWidget {
 
   const _ImageGallery({required this.images, required this.currentIndex, required this.pageController, required this.isDark, required this.onPageChanged});
 
+  void _openFullScreen(BuildContext context, int initialIndex) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (_, __, ___) => _FullScreenGallery(
+          images: images,
+          initialIndex: initialIndex,
+        ),
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      child: Stack(
-        children: [
-          SizedBox(
-            height: 270,
-            width: double.infinity,
-            child: images.isEmpty
-                ? Container(
-                    color: isDark ? AppThemeData.grey9 : AppThemeData.grey3,
-                    child: Center(child: Icon(Icons.image_outlined, size: 64, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-                  )
-                : PageView.builder(
-                    controller: pageController,
-                    itemCount: images.length,
-                    onPageChanged: onPageChanged,
-                    itemBuilder: (_, i) => CachedNetworkImage(
-                      imageUrl: images[i],
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey3),
-                      errorWidget: (_, __, ___) => Container(
-                        color: isDark ? AppThemeData.grey9 : AppThemeData.grey3,
-                        child: const Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-          ),
-
-          // Dot indicators
-          if (images.length > 1)
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  images.length,
-                  (i) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: i == currentIndex ? 16 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(color: i == currentIndex ? Colors.white : Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(3)),
-                  ),
+    return Stack(
+      children: [
+        SizedBox(
+          height: 300,
+          width: double.infinity,
+          child: images.isEmpty
+              ? Container(
+            color: isDark ? AppThemeData.grey9 : AppThemeData.grey3,
+            child: Center(child: Icon(Icons.image_outlined, size: 64, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+          )
+              : PageView.builder(
+            controller: pageController,
+            itemCount: images.length,
+            onPageChanged: onPageChanged,
+            itemBuilder: (_, i) => GestureDetector(
+              onTap: () => _openFullScreen(context, i),
+              child: CachedNetworkImage(
+                imageUrl: images[i],
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey3),
+                errorWidget: (_, __, ___) => Container(
+                  color: isDark ? AppThemeData.grey9 : AppThemeData.grey3,
+                  child: const Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey),
                 ),
               ),
             ),
-        ],
+          ),
+        ),
+        if (images.length > 1)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                images.length,
+                    (i) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: i == currentIndex ? 16 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(color: i == currentIndex ? Colors.white : Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(3)),
+                ),
+              ),
+            ),
+          ),
+        if (images.isNotEmpty)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.zoom_out_map_rounded, size: 18, color: Colors.white),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FULL SCREEN GALLERY WITH ZOOM
+// ─────────────────────────────────────────────────────────────────────────────
+class _FullScreenGallery extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _FullScreenGallery({required this.images, required this.initialIndex});
+
+  @override
+  State<_FullScreenGallery> createState() => _FullScreenGalleryState();
+}
+
+class _FullScreenGalleryState extends State<_FullScreenGallery> {
+  late int _current;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(
+          '${_current + 1} / ${widget.images.length}',
+          style: const TextStyle(fontSize: 14, color: Colors.white),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.images.length,
+        onPageChanged: (i) => setState(() => _current = i),
+        itemBuilder: (_, i) => InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4.0,
+          child: Center(
+            child: CachedNetworkImage(
+              imageUrl: widget.images[i],
+              fit: BoxFit.contain,
+              placeholder: (_, _) => const Center(
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              ),
+              errorWidget: (_, _, _) => const Center(
+                child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 64),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -780,8 +910,7 @@ class _Divider extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CUSTOM FIELDS SECTION — 2-column grid
-// Each item in customFields: { 'name': String, 'icon': String, 'value': String }
+// CUSTOM FIELDS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 class _CustomFieldsSection extends StatelessWidget {
   final List<Map<String, dynamic>> customFields;
@@ -791,11 +920,9 @@ class _CustomFieldsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Keep only items that have a non-empty value
-    final items = customFields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).toList();
+    final items = customFields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).take(6).toList();
     if (items.isEmpty) return const SizedBox.shrink();
 
-    // Build rows of 2
     final List<Widget> rows = [];
     for (int i = 0; i < items.length; i += 2) {
       rows.add(
@@ -825,7 +952,6 @@ class _CustomFieldsSection extends StatelessWidget {
 }
 
 class _FieldCell extends StatelessWidget {
-  /// item = { 'name': String, 'icon': String, 'value': String }
   final Map<String, dynamic> item;
   final bool isDark;
 
@@ -841,22 +967,21 @@ class _FieldCell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        // Icon box — network image if URL present, else fallback Material icon
         Container(
           width: 32,
           height: 32,
-          padding: EdgeInsets.all(6),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
           child: iconUrl.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: iconUrl,
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => const SizedBox.shrink(),
-                  errorWidget: (_, __, ___) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
-                )
-              : Center(child: Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5)),
+            imageUrl: iconUrl,
+            width: 32,
+            height: 32,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => const SizedBox.shrink(),
+            errorWidget: (_, __, ___) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
+          )
+              : Center(child: Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5)), // Removed const
         ),
         spaceW(width: 10),
         Expanded(
@@ -865,12 +990,12 @@ class _FieldCell extends StatelessWidget {
             children: [
               Text(
                 name,
-                style: TextStyle(fontSize: 11, fontFamily: FontFamily.regular, color: AppThemeData.grey5),
+                style: TextStyle(fontSize: 11, fontFamily: FontFamily.regular, color: AppThemeData.grey5), // Removed const
               ),
               spaceH(height: 2),
               Text(
                 value,
-                style: TextStyle(fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                style: TextStyle(fontSize: 13, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ),
             ],
           ),
@@ -897,7 +1022,7 @@ class _FieldCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INLINE MAP (small, right-aligned next to "Location" label)
+// INLINE MAP
 // ─────────────────────────────────────────────────────────────────────────────
 class _InlineMap extends StatelessWidget {
   final double latitude;
@@ -924,7 +1049,7 @@ class _InlineMap extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WHO BOUGHT? — Full screen buyer selection
+// WHO BOUGHT?
 // ─────────────────────────────────────────────────────────────────────────────
 class WhoBoughtScreen extends StatelessWidget {
   final AdModel ad;
@@ -950,7 +1075,6 @@ class WhoBoughtScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Ad info header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -964,22 +1088,20 @@ class WhoBoughtScreen extends StatelessWidget {
                   child: (ad.mainImage != null && ad.mainImage!.isNotEmpty)
                       ? CachedNetworkImage(imageUrl: ad.mainImage!, height: 56, width: 56, fit: BoxFit.cover)
                       : Container(
-                          height: 56,
-                          width: 56,
-                          color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                          child: const Icon(Icons.image, color: AppThemeData.grey5),
-                        ),
+                    height: 56,
+                    width: 56,
+                    color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                    child: Icon(Icons.image, color: AppThemeData.grey5), // Removed const
+                  ),
                 ),
-                spaceW(width: 14),
+                spaceW(width: 12),
                 Expanded(
-                  child: TextCustom(title: ad.title ?? '', fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
+                  child: TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
                 ),
-                TextCustom(title: wbController.formatPrice(), fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                TextCustom(title: PriceFormatter.format(ad), fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ],
             ),
           ),
-
-          // Buyer list
           Expanded(
             child: Obx(() {
               if (wbController.isLoading.value) return _buildBuyerShimmer(isDark);
@@ -1004,7 +1126,7 @@ class WhoBoughtScreen extends StatelessWidget {
                           child: Center(
                             child: TextCustom(
                               title: "None of above",
-                              fontSize: 15,
+                              fontSize: 14,
                               fontFamily: FontFamily.semiBold,
                               color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey3 : AppThemeData.grey8),
                             ),
@@ -1031,7 +1153,7 @@ class WhoBoughtScreen extends StatelessWidget {
                               radius: 24,
                               backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.primary4.withValues(alpha: 0.15),
                               backgroundImage: buyerProfile.isNotEmpty ? CachedNetworkImageProvider(buyerProfile) : null,
-                              child: buyerProfile.isEmpty ? Icon(Icons.person, size: 24, color: isDark ? AppThemeData.grey5 : AppThemeData.primary4) : null,
+                              child: buyerProfile.isEmpty ? Icon(Icons.person, size: 24, color: isDark ? AppThemeData.grey5 : AppThemeData.primary4) : null, // Removed const
                             ),
                             spaceW(width: 14),
                             Expanded(
@@ -1056,8 +1178,6 @@ class WhoBoughtScreen extends StatelessWidget {
               );
             }),
           ),
-
-          // Mark as Sold button
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -1069,16 +1189,16 @@ class WhoBoughtScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: hasSelection
                         ? () async {
-                            final ok = await wbController.markSold();
-                            if (ok) Get.back(result: true);
-                          }
+                      final ok = await wbController.markSold();
+                      if (ok) Get.back(result: true);
+                    }
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: hasSelection ? const Color(0xff4CAF50) : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: const Text(
+                    child: Text( // Removed const
                       "Mark As Sold Out",
                       style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
@@ -1125,65 +1245,6 @@ class WhoBoughtScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BOTTOM BAR — Edit + Remove
-// ─────────────────────────────────────────────────────────────────────────────
-class _BottomBar extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback onDelete;
-  final VoidCallback onEdit;
-
-  const _BottomBar({required this.isDark, required this.onDelete, required this.onEdit});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
-      child: Row(
-        children: [
-          // Edit button (outlined)
-          Expanded(
-            child: GestureDetector(
-              onTap: onEdit,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppThemeData.primary4, width: 1.5),
-                ),
-                child: Center(
-                  child: Text(
-                    "Edit",
-                    style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          spaceW(width: 12),
-          // Remove button (filled)
-          Expanded(
-            child: GestureDetector(
-              onTap: onDelete,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
-                child: const Center(
-                  child: Text(
-                    "Remove",
-                    style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
