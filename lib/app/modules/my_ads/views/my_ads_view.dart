@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/modules/add_products/views/add_products_view.dart';
@@ -39,6 +41,10 @@ class MyAdsView extends GetView<MyAdsController> {
           body: Column(
             children: [
               const Center(child: AdBannerWidget()),
+
+              // ── Search Bar ──────────────────────────────────
+              _SearchBar(controller: controller, isDark: isDark),
+
               // ── Filter Bar ──────────────────────────────────
               _FilterBar(controller: controller, isDark: isDark),
 
@@ -47,26 +53,70 @@ class MyAdsView extends GetView<MyAdsController> {
                 child: controller.isLoading.value
                     ? _LoadingList(isDark: isDark)
                     : list.isEmpty
-                    ? _EmptyState(isDark: isDark, hasFilter: controller.selectedStatus.value != 'all', onClear: () => controller.setStatusFilter('all'))
+                    ? _EmptyState(isDark: isDark, hasFilter: controller.selectedStatus.value != 'all' || controller.searchQuery.value.isNotEmpty, onClear: () {
+                  controller.setStatusFilter('all');
+                  controller.clearSearch();
+                })
                     : RefreshIndicator(
-                        color: AppThemeData.primary4,
-                        onRefresh: () async {
-                          await Future.delayed(const Duration(milliseconds: 500));
-                        },
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-                          itemCount: list.length,
-                          separatorBuilder: (_, _) => spaceH(height: 10),
-                          itemBuilder: (context, index) {
-                            return _AdCard(ad: list[index], controller: controller, isDark: isDark);
-                          },
-                        ),
-                      ),
+                  color: AppThemeData.primary4,
+                  onRefresh: () async {
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+                    itemCount: list.length,
+                    separatorBuilder: (_, _) => spaceH(height: 10),
+                    itemBuilder: (context, index) {
+                      return _AdCard(ad: list[index], controller: controller, isDark: isDark);
+                    },
+                  ),
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEARCH BAR
+// ─────────────────────────────────────────────────────────────────────────────
+class _SearchBar extends StatelessWidget {
+  final MyAdsController controller;
+  final bool isDark;
+
+  const _SearchBar({required this.controller, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: TextField(
+        controller: controller.searchController,
+        onChanged: controller.setSearchQuery,
+        style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+        decoration: InputDecoration(
+          hintText: "Search your ads...".tr,
+          hintStyle: TextStyle(fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+          prefixIcon: Icon(Icons.search_rounded, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+          suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+              ? IconButton(
+            icon: Icon(Icons.close_rounded, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+            onPressed: controller.clearSearch,
+          )
+              : const SizedBox.shrink()),
+          filled: true,
+          fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -83,7 +133,7 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: isDark ? AppThemeData.grey10 : AppThemeData.grey2,
+      color: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Row(
         children: [
@@ -95,10 +145,10 @@ class _FilterBar extends StatelessWidget {
             ),
           ),
           spaceW(width: 12),
-          // ── Sort / Filter (right) ──────────────────────────
+          // ── Sort (right) ──────────────────────────
           GestureDetector(
             onTap: () => _showSortSheet(context),
-            child: _FilterPill(label: "Filter", icon: Icons.tune_rounded, isDark: isDark, iconFirst: false),
+            child: _FilterPill(label: "Sort", icon: Icons.sort_rounded, isDark: isDark, iconFirst: false),
           ),
         ],
       ),
@@ -146,25 +196,25 @@ class _FilterPill extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: iconFirst
             ? [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                  ),
-                ),
-                spaceW(width: 4),
-                Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-              ]
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
+            ),
+          ),
+          spaceW(width: 4),
+          Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+        ]
             : [
-                Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-                spaceW(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                ),
-              ],
+          Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+          spaceW(width: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
+          ),
+        ],
       ),
     );
   }
@@ -199,7 +249,7 @@ class _StatusFilterSheet extends StatelessWidget {
           ),
           spaceH(height: 14),
           Obx(
-            () => Wrap(
+                () => Wrap(
               spacing: 10,
               runSpacing: 10,
               children: MyAdsController.statusFilters.map((filter) {
@@ -262,7 +312,7 @@ class _SortSheet extends StatelessWidget {
           ),
           spaceH(height: 12),
           Obx(
-            () => Column(
+                () => Column(
               children: MyAdsController.sortOptions.map((opt) {
                 final isSelected = controller.selectedSort.value == opt['key'];
                 return ListTile(
@@ -304,30 +354,28 @@ class _AdCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => Get.to(() => AdDetailView(ad: ad)),
+        // Fix: Outer Container keeps the custom drop shadow and border...
+        Container(
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, width: 1),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+            border: Border.all(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, width: 1),
+            boxShadow: isDark
+                ? []
+                : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-              // NB: avoid IntrinsicHeight here — it interacts badly with
-              // Material + Stack and triggers a Flutter semantics-tree bug
-              // (`_collectChildMergeUpAndSiblingGroup` assertion). Use a
-              // fixed image height instead.
+            ],
+          ),
+          // Fix: Inner Material handles the solid background color so the InkWell ripple renders correctly on top!
+          child: Material(
+            color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.hardEdge, // Prevents the ripple from bleeding out of the rounded corners
+            child: InkWell(
+              onTap: () => Get.to(() => AdDetailView(ad: ad)),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -347,7 +395,6 @@ class _AdCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  // _Thumbnail(ad: ad, isDark: isDark),
                   // ── Info ───────────────────────────────────────────────
                   Expanded(
                     child: Padding(
@@ -358,62 +405,59 @@ class _AdCard extends StatelessWidget {
                         children: [
                           // Top block — price + title
                           Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Price (room reserved on the right for the floating menu button)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 40),
-                                  child: TextCustom(
-                                    title: controller.formatPrice(ad),
-                                    fontSize: 19,
-                                    fontFamily: FontFamily.bold,
-                                    color: AppThemeData.primary4,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Price (room reserved on the right for the floating menu button)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 40),
+                                child: TextCustom(
+                                  title: controller.formatPrice(ad),
+                                  fontSize: 19,
+                                  fontFamily: FontFamily.bold,
+                                  color: AppThemeData.primary4,
+                                ),
+                              ),
+                              spaceH(height: 6),
+                              TextCustom(
+                                title: ad.title ?? 'Untitled',
+                                fontSize: 14,
+                                fontFamily: FontFamily.semiBold,
+                                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                                maxLine: 2,
+                              ),
+                              spaceH(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.access_time_rounded, size: 12, color: AppThemeData.grey5),
+                                  spaceW(width: 4),
+                                  Expanded(
+                                    child: TextCustom(
+                                      title: controller.formatDate(ad.createdAt),
+                                      fontSize: 11,
+                                      fontFamily: FontFamily.regular,
+                                      color: AppThemeData.grey5,
+                                    ),
                                   ),
-                                ),
-                                spaceH(height: 6),
-                                TextCustom(
-                                  title: ad.title ?? 'Untitled',
-                                  fontSize: 14,
-                                  fontFamily: FontFamily.semiBold,
-                                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                                  maxLine: 2,
-                                ),
-                                spaceH(height: 6),
-                                Row(
-                                  children: [
-                                    Icon(Icons.access_time_rounded, size: 12, color: AppThemeData.grey5),
-                                    spaceW(width: 4),
-                                   Expanded(
-                                      child:  TextCustom(
-                                        title: controller.formatDate(ad.createdAt),
-                                        fontSize: 11,
-                                        fontFamily: FontFamily.regular,
-                                        color: AppThemeData.grey5,
-                                      ),
-                                    ),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: [
-
-                                        _StatusBadge(ad: ad, isDark: isDark),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-
-                          ],
-                        ),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      _StatusBadge(ad: ad, isDark: isDark),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
+        ),
         // Floating actions menu — top-right of the card. Sits above the
         // GestureDetector so taps don't open the detail view.
         Positioned(
@@ -442,13 +486,13 @@ class _Thumbnail extends StatelessWidget {
         borderRadius: const BorderRadius.only(topLeft: Radius.circular(15), bottomLeft: Radius.circular(15)),
         child: (ad.mainImage != null && ad.mainImage!.isNotEmpty)
             ? CachedNetworkImage(
-                imageUrl: ad.mainImage!,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => _placeholder(),
-                errorWidget: (_, _, _) => _placeholder(),
-              )
+          imageUrl: ad.mainImage!,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => _placeholder(),
+          errorWidget: (_, _, _) => _placeholder(),
+        )
             : _placeholder(),
       ),
     );
@@ -593,7 +637,7 @@ class _EmptyState extends StatelessWidget {
             TextCustom(title: hasFilter ? "No Ads Found".tr : "No Ads Yet".tr, fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
             spaceH(height: 10),
             TextCustom(
-              title: hasFilter ? "No ads match the selected filter.\nTry a different status.".tr : "You haven't posted any ads.\nTap Sell to post your first ad!".tr,
+              title: hasFilter ? "No ads match your current filters.\nTry clearing them.".tr : "You haven't posted any ads.\nTap Sell to post your first ad!".tr,
               fontSize: 14,
               color: isDark ? AppThemeData.grey4 : AppThemeData.grey6,
               textAlign: TextAlign.center,
@@ -606,8 +650,8 @@ class _EmptyState extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                   decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(10)),
                   child: Text(
-                    "Clear Filter".tr,
-                    style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: Colors.white),
+                    "Clear Filters".tr,
+                    style: const TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: Colors.white),
                   ),
                 ),
               ),
@@ -728,27 +772,27 @@ class _AdActionsMenu extends StatelessWidget {
             await controller.deleteAd(ad, context);
           }
         },
-      itemBuilder: (_) => [
-        if (_canEdit)
+        itemBuilder: (_) => [
+          if (_canEdit)
+            PopupMenuItem<String>(
+              value: 'edit',
+              height: 40,
+              child: Row(children: [
+                Icon(Icons.edit_outlined, size: 18, color: AppThemeData.primary4),
+                const SizedBox(width: 10),
+                Text('Edit'.tr, style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10)),
+              ]),
+            ),
           PopupMenuItem<String>(
-            value: 'edit',
+            value: 'delete',
             height: 40,
             child: Row(children: [
-              Icon(Icons.edit_outlined, size: 18, color: AppThemeData.primary4),
+              Icon(Icons.delete_outline_rounded, size: 18, color: AppThemeData.danger300),
               const SizedBox(width: 10),
-              Text('Edit'.tr, style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10)),
+              Text('Delete'.tr, style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.danger300)),
             ]),
           ),
-        PopupMenuItem<String>(
-          value: 'delete',
-          height: 40,
-          child: Row(children: [
-            Icon(Icons.delete_outline_rounded, size: 18, color: AppThemeData.danger300),
-            const SizedBox(width: 10),
-            Text('Delete'.tr, style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.danger300)),
-          ]),
-        ),
-      ],
+        ],
       ),
     );
   }

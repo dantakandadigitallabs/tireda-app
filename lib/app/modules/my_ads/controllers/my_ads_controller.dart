@@ -15,9 +15,12 @@ class MyAdsController extends GetxController {
   RxBool isLoading = true.obs;
   RxBool featuredOnly = false.obs;
 
-  // ─── Filter state ────────────────────────────────────────
+  // ─── Filter & Search state ───────────────────────────────
   RxString selectedStatus = 'all'.obs;
   RxString selectedSort = 'newest'.obs;
+
+  final TextEditingController searchController = TextEditingController();
+  RxString searchQuery = ''.obs;
 
   StreamSubscription<List<AdModel>>? _adSubscription;
 
@@ -55,6 +58,12 @@ class MyAdsController extends GetxController {
             return true;
         }
       }).toList();
+    }
+
+    // Filter by search query
+    if (searchQuery.value.trim().isNotEmpty) {
+      final query = searchQuery.value.trim().toLowerCase();
+      result = result.where((ad) => (ad.title ?? '').toLowerCase().contains(query)).toList();
     }
 
     // Sort
@@ -114,7 +123,7 @@ class MyAdsController extends GetxController {
     }
     isLoading.value = true;
     _adSubscription = FireStoreUtils.getMyAdsStream(uid).listen(
-      (list) {
+          (list) {
         adList.value = list;
         isLoading.value = false;
       },
@@ -125,10 +134,17 @@ class MyAdsController extends GetxController {
     );
   }
 
-  // ─── Filter setters ──────────────────────────────────────
+  // ─── Setters ─────────────────────────────────────────────
   void setStatusFilter(String status) => selectedStatus.value = status;
 
   void setSortOption(String sort) => selectedSort.value = sort;
+
+  void setSearchQuery(String val) => searchQuery.value = val;
+
+  void clearSearch() {
+    searchController.clear();
+    searchQuery.value = '';
+  }
 
   String get activeStatusLabel {
     final match = statusFilters.firstWhere((f) => f['key'] == selectedStatus.value, orElse: () => {'label': 'Ads'});
@@ -292,6 +308,7 @@ class MyAdsController extends GetxController {
   // ─── Cleanup ─────────────────────────────────────────────
   @override
   void onClose() {
+    searchController.dispose();
     _adSubscription?.cancel();
     super.onClose();
   }

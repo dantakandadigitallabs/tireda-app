@@ -26,6 +26,7 @@ class AdModel {
   String? sellerId;
   String? sellerName;
   String? sellerProfile;
+  bool? isSellerVerified; // Added Verified Flag
   String? countryCode;
   String? phoneNumber;
   String? address;
@@ -62,6 +63,7 @@ class AdModel {
     this.sellerId,
     this.sellerName,
     this.sellerProfile,
+    this.isSellerVerified, // Added to constructor
     this.countryCode,
     this.phoneNumber,
     this.address,
@@ -105,6 +107,7 @@ class AdModel {
     sellerId = json['sellerId'];
     sellerName = json['sellerName'];
     sellerProfile = json['sellerProfile'];
+    isSellerVerified = json['isSellerVerified'] ?? false; // Maps from JSON
     countryCode = json['countryCode'];
     phoneNumber = json['phoneNumber'];
     address = json['address'];
@@ -120,7 +123,7 @@ class AdModel {
         : [];
     customFields = json['customFields'] != null
         ? List<Map<String, dynamic>>.from(
-            (json['customFields'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
+        (json['customFields'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
         : [];
     views = json['views'] != null ? (json['views'] as num).toInt() : 0;
     likes = json['likes'] != null ? (json['likes'] as num).toInt() : 0;
@@ -154,6 +157,7 @@ class AdModel {
       'sellerId': sellerId,
       'sellerName': sellerName,
       'sellerProfile': sellerProfile,
+      'isSellerVerified': isSellerVerified ?? false, // Maps to JSON
       'countryCode': countryCode,
       'phoneNumber': phoneNumber,
       'address': address,

@@ -423,7 +423,7 @@ class AddProductsController extends GetxController {
       // Apply suggestions to custom fields by matching field name
       result.customFieldValues.forEach((name, value) {
         final field = customFields.firstWhereOrNull(
-          (f) => (f.name ?? '').toLowerCase().trim() == name.toLowerCase().trim(),
+              (f) => (f.name ?? '').toLowerCase().trim() == name.toLowerCase().trim(),
         );
         if (field == null || field.id == null) return;
         switch (field.type) {
@@ -435,7 +435,7 @@ class AddProductsController extends GetxController {
           case 'radio':
           case 'dropdown':
             final match = (field.options ?? []).firstWhereOrNull(
-              (o) => o.toLowerCase() == value.toLowerCase(),
+                  (o) => o.toLowerCase() == value.toLowerCase(),
             );
             if (match != null) {
               if (field.type == 'radio') {
@@ -465,13 +465,6 @@ class AddProductsController extends GetxController {
   }
 
   /// Resolves the AI's category suggestion to a real local CategoryModel.
-  /// Tries (in order):
-  ///  1. Exact ID match (the AI returned a verbatim ID from our list).
-  ///  2. Exact case-insensitive name match against categoryName.
-  ///  3. Substring match where any category name contains the AI's text or
-  ///     vice-versa (handles "iPhone" → "iPhones", "Phone" → "Mobile Phones").
-  /// Restricts matches to leaf categories (no children) since only leaves are
-  /// valid ad targets.
   CategoryModel? _resolveCategory(AiGeneratedAd result, List<CategoryModel> all) {
     final hasChild = <String>{for (final c in all) if ((c.parentCategoryId ?? '').isNotEmpty) c.parentCategoryId!};
     bool isLeaf(CategoryModel c) => c.id != null && !hasChild.contains(c.id);
@@ -489,7 +482,7 @@ class AddProductsController extends GetxController {
 
     // 2. Exact name (prefer leaf)
     final exact = all.firstWhereOrNull(
-      (c) => isLeaf(c) && (c.categoryName ?? '').toLowerCase().trim() == name,
+          (c) => isLeaf(c) && (c.categoryName ?? '').toLowerCase().trim() == name,
     );
     if (exact != null) return exact;
     final exactAny = all.firstWhereOrNull((c) => (c.categoryName ?? '').toLowerCase().trim() == name);
@@ -498,10 +491,10 @@ class AddProductsController extends GetxController {
     // 3. Substring match (prefer leaf, prefer longest name)
     final candidates = all
         .where((c) {
-          final cn = (c.categoryName ?? '').toLowerCase().trim();
-          if (cn.isEmpty) return false;
-          return cn.contains(name) || name.contains(cn);
-        })
+      final cn = (c.categoryName ?? '').toLowerCase().trim();
+      if (cn.isEmpty) return false;
+      return cn.contains(name) || name.contains(cn);
+    })
         .toList()
       ..sort((a, b) {
         final aLeaf = isLeaf(a) ? 1 : 0;
@@ -512,8 +505,6 @@ class AddProductsController extends GetxController {
     return candidates.isEmpty ? null : candidates.first;
   }
 
-  /// Build the list of LEAF categories (those with no children) plus their
-  /// breadcrumb path for the AI prompt.
   List<AiCategoryCandidate> _buildLeafCandidates(List<CategoryModel> all) {
     final byId = {for (final c in all) c.id: c};
     final hasChild = <String>{for (final c in all) if ((c.parentCategoryId ?? '').isNotEmpty) c.parentCategoryId!};
@@ -533,8 +524,6 @@ class AddProductsController extends GetxController {
     }).toList();
   }
 
-  /// Switch the form's category, rebuild [categoryPath] up the parent chain,
-  /// and reload the custom fields for the new category.
   Future<void> _switchCategory(CategoryModel picked, List<CategoryModel> all) async {
     final byId = {for (final c in all) c.id: c};
     final path = <CategoryModel>[picked];
@@ -548,7 +537,6 @@ class AddProductsController extends GetxController {
     categoryModel.value = picked;
     categoryPath.value = path;
 
-    // Clear stale custom-field selections from the previous category
     selectedRadioValues.clear();
     selectedDropdownValues.clear();
     selectedCheckboxValues.clear();
@@ -563,7 +551,6 @@ class AddProductsController extends GetxController {
 
   // ─── Submit ──────────────────────────────────────────────
 
-  /// Calculate ad expiry date based on subscription/free listing rules
   Future<Timestamp?> _calculateExpiryDate() async {
     // Free ad listing
     if (Constant.freeAdListing) {
@@ -602,7 +589,7 @@ class AddProductsController extends GetxController {
       final String adId = editing ? editingAd.value!.id! : Constant.getUuid();
       final user = Constant.userModel;
 
-      // 1. Upload main image (or reuse existing URL in edit mode)
+      // 1. Upload main image
       String mainImageUrl;
       if (mainImage.value != null) {
         mainImageUrl = await Constant.uploadImageToFireStorage(mainImage.value!, 'ads/$adId', 'main');
@@ -610,7 +597,7 @@ class AddProductsController extends GetxController {
         mainImageUrl = existingMainImageUrl.value;
       }
 
-      // 2. Upload other images (skip already-uploaded URLs)
+      // 2. Upload other images
       final List<String> otherImageUrls = [];
       for (int i = 0; i < otherImages.length; i++) {
         if (otherImages[i].startsWith('http')) {
@@ -622,8 +609,6 @@ class AddProductsController extends GetxController {
       }
 
       // 3. Build consolidated custom fields list
-      // Each item: { 'name': fieldName, 'icon': iconUrl, 'value': answer }
-      // Stored at post time so names/icons survive admin edits or field deletion.
       final List<Map<String, dynamic>> customFieldsList = [];
       for (final field in customFields) {
         final id = field.id!;
@@ -689,6 +674,11 @@ class AddProductsController extends GetxController {
         sellerId: user?.id,
         sellerName: user?.fullNameString(),
         sellerProfile: user?.profilePic,
+
+        // --- PRODUCTION VERIFIED SYNC LOGIC HERE ---
+        isSellerVerified: user?.isVerified ?? false,
+        // -------------------------------------------
+
         countryCode: countryCode.value,
         phoneNumber: mobileController.text.trim(),
         address: locationController.text.trim(),
@@ -722,7 +712,6 @@ class AddProductsController extends GetxController {
       ShowToastDialog.closeLoader();
 
       if (success) {
-        // Sync ads posted count on subscription (new ads only)
         if (!editing && !Constant.freeAdListing) {
           final uid = FireStoreUtils.getCurrentUid();
           if (uid != null) {
@@ -753,7 +742,6 @@ class AddProductsController extends GetxController {
     }
   }
 
-  // ─── Cleanup ─────────────────────────────────────────────
   @override
   void onClose() {
     adTitleController.dispose();

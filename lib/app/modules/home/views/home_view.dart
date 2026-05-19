@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,6 +20,7 @@ import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/ad_service.dart';
 import 'package:eSellify/utils/preferences.dart';
+import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
@@ -57,7 +60,7 @@ class HomeView extends StatelessWidget {
                     ? NetworkImage(Constant.userModel!.profilePic!)
                     : null,
                 child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
-                    ? HugeIcon(icon: HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
+                    ? Icon(HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
                     : null,
               ),
             ),
@@ -130,7 +133,7 @@ class HomeView extends StatelessWidget {
                               ),
                             ),
                           ),
-                          HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey7, size: 20),
+                          Icon(HugeIcons.strokeRoundedArrowDown01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey7, size: 20),
                         ],
                       ),
                     ],
@@ -263,7 +266,7 @@ class HomeView extends StatelessWidget {
           Center(
             child: OutlinedButton.icon(
               onPressed: () => Get.to(() => const AdsListingView()),
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedGridView, size: 18, color: AppThemeData.primary4),
+              icon: Icon(HugeIcons.strokeRoundedGridView, size: 18, color: AppThemeData.primary4),
               label: TextCustom(
                 title: 'Browse all ads'.tr,
                 fontSize: 14,
@@ -314,6 +317,18 @@ class HomeView extends StatelessWidget {
     }
   }
 
+  // ─── Jiji-Style "Verified ID" Badge ───
+  Widget _verifiedBadge() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.verified_user, size: 10, color: AppThemeData.primary4),
+        spaceW(width: 4),
+        TextCustom(title: "Verified ID", fontSize: 10, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
+      ],
+    );
+  }
+
   // ─── Style 0: Horizontal List ──────────────────────────────
   Widget _buildHorizontalList(List<AdModel> ads, bool isDark) {
     return SizedBox(
@@ -323,53 +338,61 @@ class HomeView extends StatelessWidget {
         itemCount: ads.length,
         itemBuilder: (_, index) {
           final ad = ads[index];
+          final isFeatured = ad.isFeatured == true;
           return GestureDetector(
             onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
             child: Container(
-              width: 280,
+              width: 300,
               margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
               ),
               child: Row(
                 children: [
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-                        child: _adImage(ad, isDark, width: 100, height: 120),
-                      ),
-                      if (ad.isFeatured == true) Positioned(top: 6, left: 6, child: _featuredBadge()),
-                    ],
+                  Container(
+                    width: 100,
+                    height: double.infinity,
+                    clipBehavior: Clip.hardEdge,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      border: isFeatured
+                          ? Border.all(color: AppThemeData.primary4, width: 1.5)
+                          : Border.all(color: Colors.transparent, width: 0),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _adImage(ad, isDark, height: double.infinity, width: double.infinity),
+                        if (isFeatured) Positioned(top: 4, left: 4, child: _featuredBadge(fontSize: 8, iconSize: 10)),
+                      ],
+                    ),
                   ),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.only(left: 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
-                          if (ad.customFields != null && ad.customFields!.isNotEmpty) ...[
-                            spaceH(height: 2),
-                            TextCustom(
-                              title: ad.customFields!.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).take(2).map((f) => f['value'].toString()).join(' | '),
-                              fontSize: 11,
-                              color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                              maxLine: 1,
-                            ),
+                          TextCustom(title: PriceFormatter.format(ad), fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                          spaceH(height: 4),
+                          TextCustom(title: ad.title ?? '', fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
+                          spaceH(height: 4),
+
+                          if (ad.isSellerVerified == true) ...[
+                            _verifiedBadge(),
+                            spaceH(height: 4),
                           ],
-                          spaceH(height: 4),
-                          TextCustom(title: _formatPrice(ad), fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                          spaceH(height: 4),
+
                           Row(
                             children: [
-                              HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                              Icon(HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                               spaceW(width: 4),
                               Expanded(
-                                child: TextCustom(title: ad.address.toString(), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                                child: TextCustom(title: ad.address.toString(), fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
                               ),
                             ],
                           ),
@@ -390,39 +413,56 @@ class HomeView extends StatelessWidget {
   Widget _buildVerticalList(List<AdModel> ads, bool isDark) {
     return Column(
       children: ads.map((ad) {
+        final isFeatured = ad.isFeatured == true;
         return GestureDetector(
           onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
             ),
             child: Row(
               children: [
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-                      child: _adImage(ad, isDark, width: 120, height: 120),
-                    ),
-                    if (ad.isFeatured == true) Positioned(top: 6, left: 6, child: _featuredBadge()),
-                  ],
+                Container(
+                  width: 120,
+                  height: 120,
+                  clipBehavior: Clip.hardEdge,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: isFeatured
+                        ? Border.all(color: AppThemeData.primary4, width: 1.5)
+                        : Border.all(color: Colors.transparent, width: 0),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _adImage(ad, isDark, height: double.infinity, width: double.infinity),
+                      if (isFeatured) Positioned(top: 4, left: 4, child: _featuredBadge(fontSize: 8, iconSize: 10)),
+                    ],
+                  ),
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.only(left: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextCustom(title: ad.title ?? '', fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
-                        spaceH(height: 4),
-                        TextCustom(title: _formatPrice(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
-                        spaceH(height: 4),
+                        TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                        spaceH(height: 6),
+                        TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
+                        spaceH(height: 6),
+
+                        if (ad.isSellerVerified == true) ...[
+                          _verifiedBadge(),
+                          spaceH(height: 6),
+                        ],
+
                         Row(
                           children: [
-                            HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                            Icon(HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             spaceW(width: 4),
                             Expanded(
                               child: TextCustom(title: ad.address.toString(), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
@@ -451,7 +491,7 @@ class HomeView extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
-        mainAxisExtent: 235,
+        mainAxisExtent: 250, // Locked exactly at 250
       ),
       itemBuilder: (_, index) => GestureDetector(
         onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ads[index]})),
@@ -478,48 +518,60 @@ class HomeView extends StatelessWidget {
 
   // ─── Ad Card (Grid) ────────────────────────────────────────
   Widget _buildAdCard(AdModel ad, bool isDark) {
+    final isFeatured = ad.isFeatured == true;
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10), // Softly bordered outer tile
         border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
       ),
+      padding: const EdgeInsets.all(8), // Uniform padding to perfectly align Image & Text width
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          // ── IMAGE AREA: Fixed 130px height, inset width, colored frame if featured ──
+          Container(
+            height: 130,
+            width: double.infinity,
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: isFeatured
+                  ? Border.all(color: AppThemeData.primary4, width: 1.5)
+                  : Border.all(color: Colors.transparent, width: 0),
+            ),
             child: Stack(
+              fit: StackFit.expand,
               children: [
-                Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppThemeData.primary4, width: 1.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: _adImage(ad, isDark, height: double.infinity, width: double.infinity),
-                  ),
-                ),
-                if (ad.isFeatured == true) Positioned(top: 6, left: 6, child: _featuredBadge(fontSize: 8, iconSize: 10)),
+                _adImage(ad, isDark, height: 130, width: double.infinity),
+                if (isFeatured) Positioned(top: 4, left: 4, child: _featuredBadge(fontSize: 8, iconSize: 10)),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+
+          spaceH(height: 8), // Clean spacing
+
+          // ── TEXT AREA: Dynamically fills the remaining 250px ──
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
               children: [
-                TextCustom(title: _formatPrice(ad), fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.primary4, maxLine: 1),
+                TextCustom(title: PriceFormatter.format(ad), fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.primary4, maxLine: 1),
                 spaceH(height: 2),
-                TextCustom(title: ad.title ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
-                spaceH(height: 2),
+                TextCustom(title: ad.title ?? '', fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
+
+                spaceH(height: 6),
+                if (ad.isSellerVerified == true) ...[
+                  _verifiedBadge(),
+                ],
+
+                const Spacer(), // Pushes location gracefully to the bottom
+
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    Icon(HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     spaceW(width: 4),
                     Expanded(
                       child: TextCustom(title: ad.address.toString(), fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
@@ -542,7 +594,7 @@ class HomeView extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.star_rounded, size: iconSize, color: Colors.white),
+          Icon(HugeIcons.strokeRoundedStar, size: iconSize, color: Colors.white),
           const SizedBox(width: 2),
           Text("Featured", style: TextStyle(fontSize: fontSize, fontFamily: FontFamily.bold, color: Colors.white)),
         ],
@@ -563,14 +615,14 @@ class HomeView extends StatelessWidget {
         height: height,
         width: width,
         color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-        child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+        child: Center(child: Icon(HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
       ),
     )
         : Container(
       height: height,
       width: width,
       color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-      child: Center(child: HugeIcon(icon: HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+      child: Center(child: Icon(HugeIcons.strokeRoundedImage03, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
     );
   }
 
@@ -603,7 +655,11 @@ class HomeView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextCustom(title: _formatPrice(ad), fontSize: 16, fontFamily: FontFamily.bold, color: Colors.white),
+                  if (ad.isSellerVerified == true) ...[
+                    _verifiedBadge(),
+                    spaceH(height: 6),
+                  ],
+                  TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: Colors.white),
                   const SizedBox(height: 2),
                   TextCustom(title: ad.title ?? '', fontSize: 13, fontFamily: FontFamily.regular, color: Colors.white70, maxLine: 1),
                 ],
@@ -654,16 +710,6 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Price Helper ──────────────────────────────────────────
-  String _formatPrice(AdModel ad) {
-    if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
-    final currency = ad.currency;
-    final symbol = currency?.symbol ?? '';
-    final decimals = currency?.decimalDigits ?? 0;
-    final price = ad.price!.toStringAsFixed(decimals);
-    return currency?.symbolAtRight == true ? "$price $symbol".trim() : "$symbol$price".trim();
-  }
-
   // ─── Banner Carousel ───────────────────────────────────────
   Widget _buildBannerCarousel(HomeController controller, bool isDark) {
     return Column(
@@ -688,12 +734,12 @@ class HomeView extends StatelessWidget {
                     placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
                     errorWidget: (_, _, _) => Container(
                       color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                      child: Center(child: Icon(Icons.image_outlined, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+                      child: Center(child: Icon(HugeIcons.strokeRoundedImage03, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
                     ),
                   )
                       : Container(
                     decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(14)),
-                    child: Center(child: Icon(Icons.image_outlined, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+                    child: Center(child: Icon(HugeIcons.strokeRoundedImage03, size: 40, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
                   ),
                 ),
               );
@@ -728,17 +774,17 @@ class HomeView extends StatelessWidget {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.SEARCH),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
           color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+          border: Border.all(color: Colors.transparent, width: 0),
         ),
         child: Row(
           children: [
-            HugeIcon(icon: HugeIcons.strokeRoundedSearch01, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            Icon(HugeIcons.strokeRoundedSearch01, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
             spaceW(width: 12),
-            TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+            TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
           ],
         ),
       ),
@@ -804,7 +850,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
         backgroundColor: cardBg,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textColor),
+          icon: Icon(HugeIcons.strokeRoundedArrowLeft01, color: textColor),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text("Select State", style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: textColor)),
@@ -822,7 +868,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
               decoration: InputDecoration(
                 hintText: "Find state...",
                 hintStyle: TextStyle(color: subColor, fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: subColor, size: 20),
+                prefixIcon: Icon(HugeIcons.strokeRoundedSearch01, color: subColor, size: 20),
                 filled: true,
                 fillColor: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -843,7 +889,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  Icon(Icons.language_rounded, size: 20, color: AppThemeData.primary4),
+                  Icon(HugeIcons.strokeRoundedGlobe02, size: 20, color: AppThemeData.primary4),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -855,7 +901,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
                       ],
                     ),
                   ),
-                  Icon(Icons.check, color: AppThemeData.primary4, size: 20),
+                  Icon(HugeIcons.strokeRoundedTick01, color: AppThemeData.primary4, size: 20),
                 ],
               ),
             ),
@@ -882,7 +928,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     child: Row(
                       children: [
-                        Icon(Icons.location_city_rounded, size: 20, color: subColor),
+                        Icon(HugeIcons.strokeRoundedCity01, size: 20, color: subColor),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -894,7 +940,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right, color: subColor, size: 20),
+                        Icon(HugeIcons.strokeRoundedArrowRight01, color: subColor, size: 20),
                       ],
                     ),
                   ),
@@ -954,7 +1000,7 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
         backgroundColor: cardBg,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textColor),
+          icon: Icon(HugeIcons.strokeRoundedArrowLeft01, color: textColor),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
@@ -977,7 +1023,7 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
               decoration: InputDecoration(
                 hintText: "Find LGA...",
                 hintStyle: TextStyle(color: subColor, fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: subColor, size: 20),
+                prefixIcon: Icon(HugeIcons.strokeRoundedSearch01, color: subColor, size: 20),
                 filled: true,
                 fillColor: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -999,10 +1045,10 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     child: Row(
                       children: [
-                        Icon(Icons.location_on_outlined, size: 20, color: subColor),
+                        Icon(HugeIcons.strokeRoundedLocation01, size: 20, color: subColor),
                         const SizedBox(width: 12),
                         Expanded(child: Text(lga.name, style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: textColor))),
-                        Icon(Icons.chevron_right, color: subColor, size: 20),
+                        Icon(HugeIcons.strokeRoundedArrowRight01, color: subColor, size: 20),
                       ],
                     ),
                   ),

@@ -1,3 +1,5 @@
+import 'dart:async'; // Add this
+
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/user_subscription_model.dart';
 import 'package:eSellify/app/modules/chats/views/chats_view.dart';
@@ -21,16 +23,21 @@ class DashboardScreenController extends GetxController {
   RxBool isLoading = true.obs;
 
   RxInt selectedIndex = 0.obs;
-  RxList pageList = [const HomeView(), ChatsView(), SellScreenView(), MyAdsView(), const ProfileView()].obs;
+  RxList pageList = [const HomeView(), const ChatsView(), const SellScreenView(), const MyAdsView(), const ProfileView()].obs;
 
   RxString userName = "".obs;
   RxString userEmail = "".obs;
   RxString profileImage = "".obs;
 
+  // ── NEW: Chat Notification State ──
+  RxBool hasUnreadMessages = false.obs;
+  StreamSubscription? _chatSubscription;
+
   @override
   void onInit() {
     super.onInit();
     getUserData();
+    _listenForUnreadChats(); // Start listening on launch
   }
 
   void getUserData() {
@@ -46,12 +53,26 @@ class DashboardScreenController extends GetxController {
     isLoading.value = false;
   }
 
+  // ── NEW: Background Chat Stream ──
+  void _listenForUnreadChats() {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+
+    _chatSubscription = FireStoreUtils.getChatRoomsStream(uid).listen((rooms) {
+      int totalUnread = 0;
+      for (var room in rooms) {
+        totalUnread += room.myUnreadCount(uid);
+      }
+      hasUnreadMessages.value = totalUnread > 0;
+    });
+  }
+
   void changeIndex(int index) {
     selectedIndex.value = index;
   }
 
-  /// Check subscription and navigate to sell screen or show dialog
   Future<void> onSellTap() async {
+    // ... [Your existing Sell Tap Logic remains unchanged] ...
     if (Constant.freeAdListing) {
       selectedIndex.value = 2;
       return;
@@ -87,11 +108,9 @@ class DashboardScreenController extends GetxController {
       return;
     }
 
-    // Check real active ad count
     if (activeSub.isItemLimitUnlimited != true) {
       final activeAdCount = await FireStoreUtils.countUserActiveAds(uid);
       if (activeAdCount >= (activeSub.adLimit ?? 0)) {
-        // Update subscription with real count
         activeSub.adsPosted = activeAdCount;
         _showSubscriptionDialog(
           icon: Icons.block_outlined,
@@ -109,6 +128,7 @@ class DashboardScreenController extends GetxController {
   }
 
   void _showSubscriptionDialog({
+    // ... [Your existing dialog logic remains unchanged] ...
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -181,5 +201,11 @@ class DashboardScreenController extends GetxController {
 
   void logout() {
     Get.offAllNamed(Routes.LOGIN_SCREEN);
+  }
+
+  @override
+  void onClose() {
+    _chatSubscription?.cancel(); // Don't forget to close the stream!
+    super.onClose();
   }
 }
