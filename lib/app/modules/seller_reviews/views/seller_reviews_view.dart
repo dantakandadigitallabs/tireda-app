@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/ad_model.dart';
+import 'package:eSellify/app/models/review_model.dart';
 import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
@@ -37,7 +38,7 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
             isBack: true,
             controller.sellerName.value.isNotEmpty
                 ? '${controller.sellerName.value}\'s shelf'
-                : 'Seller Profile',
+                : 'Seller Profile'.tr,
           ),
           body: Column(
             children: [
@@ -207,7 +208,7 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
           children: [
             Icon(Icons.storefront_outlined, size: 56, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
             spaceH(height: 16),
-            TextCustom(title: 'No active listings', fontSize: 16, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            TextCustom(title: 'No active listings'.tr, fontSize: 16, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
           ],
         ),
       );
@@ -324,7 +325,8 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
     );
   }
 
-  Widget _buildReviewCard(dynamic review, bool isDark) {
+  // ── FIX A: dynamic → ReviewModel ──────────────────────────
+  Widget _buildReviewCard(ReviewModel review, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -399,14 +401,22 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
     );
   }
 
+  // ── FIX C: Enhanced _timeAgo with week/month granularity ──
   String _timeAgo(Timestamp? ts) {
     if (ts == null) return '';
-    final diff = DateTime.now().difference(ts.toDate());
+    final now = DateTime.now();
+    final date = ts.toDate();
+    final diff = now.difference(date);
+
+    if (date.isAfter(now)) return 'Just now';
     if (diff.inMinutes < 1) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inHours >= 24 && diff.inHours < 48) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
+
     final dt = ts.toDate();
     return '${dt.day}/${dt.month}/${dt.year}';
   }

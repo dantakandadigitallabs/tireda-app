@@ -71,7 +71,7 @@ class DashboardScreenView extends StatelessWidget {
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                                      width: 1.5,
+                                      width: 2,
                                     ),
                                   ),
                                 ),
