@@ -33,6 +33,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/home_controller.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -340,7 +341,7 @@ class HomeView extends StatelessWidget {
           final ad = ads[index];
           final isFeatured = ad.isFeatured == true;
           return GestureDetector(
-            onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
+            onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
             child: Container(
               width: 300,
               margin: const EdgeInsets.only(right: 12),
@@ -415,7 +416,7 @@ class HomeView extends StatelessWidget {
       children: ads.map((ad) {
         final isFeatured = ad.isFeatured == true;
         return GestureDetector(
-          onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
+          onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(10),
@@ -494,7 +495,7 @@ class HomeView extends StatelessWidget {
         mainAxisExtent: 250, // Locked exactly at 250
       ),
       itemBuilder: (_, index) => GestureDetector(
-        onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ads[index]})),
+        onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ads[index])),
         child: _buildAdCard(ads[index], isDark),
       ),
     );
@@ -509,7 +510,7 @@ class HomeView extends StatelessWidget {
         controller: PageController(viewportFraction: 0.88),
         itemCount: ads.length,
         itemBuilder: (_, index) => GestureDetector(
-          onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ads[index]})),
+          onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ads[index])),
           child: Padding(padding: const EdgeInsets.only(right: 10), child: _buildCarouselCard(ads[index], isDark)),
         ),
       ),
@@ -629,7 +630,7 @@ class HomeView extends StatelessWidget {
   // ─── Carousel Card ─────────────────────────────────────────
   Widget _buildCarouselCard(AdModel ad, bool isDark) {
     return GestureDetector(
-      onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
+      onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: Stack(

@@ -19,6 +19,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/search_controller.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
 class SearchView extends GetView<AdSearchController> {
   const SearchView({super.key});
@@ -248,7 +249,7 @@ class SearchView extends GetView<AdSearchController> {
     return GestureDetector(
       onTap: () {
         controller.submitSearch(controller.query.value);
-        AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad}));
+        AdService.showInterstitial(onDismissed: () => goToAdDetail(ad));
       },
       child: Container(
         padding: const EdgeInsets.all(10),

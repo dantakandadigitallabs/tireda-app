@@ -12,6 +12,7 @@ import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
 class HomeController extends GetxController {
   Rx<TextEditingController> searchController = TextEditingController().obs;
@@ -177,7 +178,7 @@ class HomeController extends GetxController {
       case 'ad_detail':
         final ad = await FireStoreUtils.getAdById(banner.redirectValue!);
         if (ad != null) {
-          Get.to(() => const AdListingDetailView(), arguments: {"ad": ad});
+          goToAdDetail(ad);
         }
         break;
     }

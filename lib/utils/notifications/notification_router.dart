@@ -6,6 +6,7 @@ import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_scre
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:get/get.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
 class NotificationRouter {
   /// Navigate to the dashboard with a specific tab selected.
@@ -49,7 +50,7 @@ class NotificationRouter {
         if (adId != null && adId.isNotEmpty) {
           final ad = await FireStoreUtils.getAdById(adId);
           if (ad != null) {
-            Get.to(() => const AdListingDetailView(), arguments: {"ad": ad});
+            goToAdDetail(ad);
             return;
           }
         }

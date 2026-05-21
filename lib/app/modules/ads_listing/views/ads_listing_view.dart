@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 
 import '../controllers/ads_listing_controller.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
 class AdsListingView extends GetView<AdsListingController> {
   const AdsListingView({super.key});
@@ -188,7 +189,7 @@ class AdsListingView extends GetView<AdsListingController> {
         if (realIndex >= data.length) return const SizedBox.shrink();
         final ad = data[realIndex];
         return GestureDetector(
-          onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
+          onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
           child: _buildListCard(ad, isDark),
         );
       },
@@ -278,7 +279,7 @@ class AdsListingView extends GetView<AdsListingController> {
       itemBuilder: (_, index) {
         final ad = controller.filteredAds[index];
         return GestureDetector(
-          onTap: () => AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad})),
+          onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
           child: _buildGridCard(ad, isDark),
         );
       },

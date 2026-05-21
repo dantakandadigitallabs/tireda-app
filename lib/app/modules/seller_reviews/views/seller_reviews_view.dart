@@ -18,6 +18,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/seller_reviews_controller.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
 class SellerReviewsView extends GetView<SellerReviewsController> {
   const SellerReviewsView({super.key});
@@ -466,7 +467,7 @@ class _AdCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad}),
+      onTap: () => goToAdDetail(ad),
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
