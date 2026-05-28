@@ -117,7 +117,7 @@ class HomeView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      TextCustom(title: "Location", fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                      TextCustom(title: "Location", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -162,7 +162,7 @@ class HomeView extends StatelessWidget {
                 ? ShimmerWidgets.homeShimmer(isDark)
                 : SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -188,8 +188,8 @@ class HomeView extends StatelessWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 4,
+                          mainAxisSpacing: 4,
                           childAspectRatio: 0.85,
                         ),
                         itemCount: controller.categoryList.length,
@@ -345,10 +345,10 @@ class HomeView extends StatelessWidget {
             child: Container(
               width: 300,
               margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
               ),
               child: Row(
@@ -360,7 +360,7 @@ class HomeView extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(6),
                       border: isFeatured
-                          ? Border.all(color: AppThemeData.primary4, width: 1.5)
+                          ? Border.all(color: AppThemeData.primary4, width: 2.4)
                           : Border.all(color: Colors.transparent, width: 0),
                     ),
                     child: Stack(
@@ -434,7 +434,7 @@ class HomeView extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6),
                     border: isFeatured
-                        ? Border.all(color: AppThemeData.primary4, width: 1.5)
+                        ? Border.all(color: AppThemeData.primary4, width: 2.4)
                         : Border.all(color: Colors.transparent, width: 0),
                   ),
                   child: Stack(
@@ -490,9 +490,9 @@ class HomeView extends StatelessWidget {
       itemCount: ads.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        mainAxisExtent: 250, // Locked exactly at 250
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
+        mainAxisExtent: 265, // Increased slightly for compact metadata
       ),
       itemBuilder: (_, index) => GestureDetector(
         onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ads[index])),
@@ -517,65 +517,212 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Ad Card (Grid) ────────────────────────────────────────
+
+
+// ─── Location Formatter ─────────────────────────────────────
+  String _formatShortLocation(String? address) {
+    if (address == null || address.isEmpty) return '';
+
+    final parts = address.split(',');
+
+    if (parts.length < 2) {
+      return address.replaceAll('State', '').trim();
+    }
+
+    final localGovt = parts.first.trim();
+
+    String state = parts[1]
+        .replaceAll('State', '')
+        .replaceAll('(FCT)', '')
+        .trim();
+
+    return '$state, $localGovt';
+  }
+
+// ─── Condition Extractor ────────────────────────────────────
+  String _getCondition(AdModel ad) {
+    try {
+      if (ad.customFields == null || ad.customFields!.isEmpty) {
+        return '';
+      }
+
+      for (final field in ad.customFields!) {
+        final name = field['name']?.toString().toLowerCase() ?? '';
+
+        if (name.contains('condition')) {
+          return field['value']?.toString() ?? '';
+        }
+      }
+
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+// ─── Ad Card (Grid) ────────────────────────────────────────
   Widget _buildAdCard(AdModel ad, bool isDark) {
     final isFeatured = ad.isFeatured == true;
+    final condition = _getCondition(ad);
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        borderRadius: BorderRadius.circular(10), // Softly bordered outer tile
-        border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+          width: 0.3,
+        ),
       ),
-      padding: const EdgeInsets.all(8), // Uniform padding to perfectly align Image & Text width
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── IMAGE AREA: Fixed 130px height, inset width, colored frame if featured ──
+
+          // ─── IMAGE AREA ─────────────────────────────────────
           Container(
-            height: 130,
+            height: 145,
             width: double.infinity,
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(6),
               border: isFeatured
-                  ? Border.all(color: AppThemeData.primary4, width: 1.5)
+                  ? Border.all(color: AppThemeData.primary4, width: 2.4)
                   : Border.all(color: Colors.transparent, width: 0),
             ),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _adImage(ad, isDark, height: 130, width: double.infinity),
-                if (isFeatured) Positioned(top: 4, left: 4, child: _featuredBadge(fontSize: 8, iconSize: 10)),
+                _adImage(
+                  ad,
+                  isDark,
+                  height: 145,
+                  width: double.infinity,
+                ),
+
+                if (isFeatured)
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    child: _featuredBadge(
+                      fontSize: 8,
+                      iconSize: 10,
+                    ),
+                  ),
               ],
             ),
           ),
 
-          spaceH(height: 8), // Clean spacing
+          spaceH(height: 6),
 
-          // ── TEXT AREA: Dynamically fills the remaining 250px ──
+          // ─── TEXT AREA ──────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.max,
               children: [
-                TextCustom(title: PriceFormatter.format(ad), fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.primary4, maxLine: 1),
-                spaceH(height: 2),
-                TextCustom(title: ad.title ?? '', fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
 
-                spaceH(height: 6),
-                if (ad.isSellerVerified == true) ...[
-                  _verifiedBadge(),
-                ],
+                // PRICE
+                TextCustom(
+                  title: PriceFormatter.format(ad),
+                  fontSize: 15,
+                  fontFamily: FontFamily.bold,
+                  color: AppThemeData.primary4,
+                  maxLine: 1,
+                ),
 
-                const Spacer(), // Pushes location gracefully to the bottom
+                spaceH(height: 1),
 
+                // TITLE
+                TextCustom(
+                  title: ad.title ?? '',
+                  fontSize: 13,
+                  fontFamily: FontFamily.regular,
+                  color: isDark
+                      ? AppThemeData.grey1
+                      : AppThemeData.grey10,
+                  maxLine: 2,
+                ),
+
+                spaceH(height: 4),
+
+                // CONDITION + VERIFIED
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(HugeIcons.strokeRoundedLocation01, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                    spaceW(width: 4),
+
+                    if (condition.isNotEmpty) ...[
+                      Flexible(
+                        child: TextCustom(
+                          title: condition,
+                          fontSize: 10,
+                          fontFamily: FontFamily.medium,
+                          color: isDark
+                              ? AppThemeData.grey5
+                              : AppThemeData.grey6,
+                          maxLine: 1,
+                        ),
+                      ),
+                    ],
+
+                    if (condition.isNotEmpty && ad.isSellerVerified == true) ...[
+                      spaceW(width: 5),
+
+                      TextCustom(
+                        title: "•",
+                        fontSize: 10,
+                        fontFamily: FontFamily.medium,
+                        color: isDark
+                            ? AppThemeData.grey5
+                            : AppThemeData.grey6,
+                      ),
+
+                      spaceW(width: 5),
+                    ],
+
+                    if (ad.isSellerVerified == true) ...[
+                      Icon(
+                        Icons.verified_user,
+                        size: 11,
+                        color: AppThemeData.primary4,
+                      ),
+
+                      spaceW(width: 4),
+
+                      TextCustom(
+                        title: "Verified ID",
+                        fontSize: 10,
+                        fontFamily: FontFamily.semiBold,
+                        color: AppThemeData.primary4,
+                      ),
+                    ],
+                  ],
+                ),
+
+                const Spacer(),
+
+                // LOCATION
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+
+                    Icon(
+                      HugeIcons.strokeRoundedLocation01,
+                      size: 11,
+                      color: isDark
+                          ? AppThemeData.grey5
+                          : AppThemeData.grey6,
+                    ),
+
+                    spaceW(width: 3),
+
                     Expanded(
-                      child: TextCustom(title: ad.address.toString(), fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                      child: TextCustom(
+                        title: _formatShortLocation(ad.address),
+                        fontSize: 11,
+                        color: isDark
+                            ? AppThemeData.grey5
+                            : AppThemeData.grey6,
+                        maxLine: 1,
+                      ),
                     ),
                   ],
                 ),
@@ -887,7 +1034,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
             },
             child: Container(
               color: cardBg,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
               child: Row(
                 children: [
                   Icon(HugeIcons.strokeRoundedGlobe02, size: 20, color: AppThemeData.primary4),
@@ -926,7 +1073,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
                   },
                   child: Container(
                     color: cardBg,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                     child: Row(
                       children: [
                         Icon(HugeIcons.strokeRoundedCity01, size: 20, color: subColor),
@@ -1043,7 +1190,7 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
                   onTap: () => Navigator.of(context).pop(_LocationResult(state: widget.state, lga: lga)),
                   child: Container(
                     color: cardBg,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                     child: Row(
                       children: [
                         Icon(HugeIcons.strokeRoundedLocation01, size: 20, color: subColor),
