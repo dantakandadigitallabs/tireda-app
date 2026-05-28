@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/models/ad_model.dart';

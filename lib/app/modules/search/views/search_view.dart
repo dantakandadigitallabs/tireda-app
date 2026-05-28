@@ -19,7 +19,6 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/search_controller.dart';
-import 'package:eSellify/utils/navigation_helper.dart';
 
 class SearchView extends GetView<AdSearchController> {
   const SearchView({super.key});
@@ -249,7 +248,7 @@ class SearchView extends GetView<AdSearchController> {
     return GestureDetector(
       onTap: () {
         controller.submitSearch(controller.query.value);
-        AdService.showInterstitial(onDismissed: () => goToAdDetail(ad));
+        AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad}));
       },
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -291,7 +290,7 @@ class SearchView extends GetView<AdSearchController> {
                     ),
                   spaceH(height: 4),
                   TextCustom(
-                    title: Constant.amountShow(amount: ad.price?.toString()),
+                    title: ad.isJobAd ? ad.formattedSalary() : Constant.amountShow(amount: ad.price?.toString()),
                     fontSize: 14,
                     fontFamily: FontFamily.bold,
                     color: AppThemeData.primary4,

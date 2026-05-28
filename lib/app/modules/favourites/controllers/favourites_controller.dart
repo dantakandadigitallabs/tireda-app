@@ -41,6 +41,7 @@ class FavouritesController extends GetxController {
   }
 
   String formatPrice(AdModel ad) {
+    if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
     final c = ad.currency;
     final s = c?.symbol ?? '';

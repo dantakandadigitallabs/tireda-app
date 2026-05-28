@@ -196,6 +196,10 @@ class NotificationsView extends GetView<NotificationsController> {
         return Icons.timer_off_outlined;
       case 'ad_liked':
         return Icons.favorite_border_rounded;
+      case 'job_application':
+        return Icons.work_outline_rounded;
+      case 'job_application_status':
+        return Icons.assignment_turned_in_outlined;
       case 'verification_approved':
         return Icons.verified_outlined;
       case 'verification_rejected':
@@ -236,6 +240,10 @@ class NotificationsView extends GetView<NotificationsController> {
         return const Color(0xff8E8E93);
       case 'ad_liked':
         return const Color(0xffE91E63);
+      case 'job_application':
+        return AppThemeData.primary4;
+      case 'job_application_status':
+        return const Color(0xff4CAF50);
       case 'welcome':
       case 'broadcast_announcement':
         return const Color(0xffFF9500);

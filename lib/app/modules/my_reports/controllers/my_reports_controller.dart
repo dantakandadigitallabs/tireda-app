@@ -3,7 +3,6 @@ import 'package:eSellify/app/models/ad_report_model.dart';
 import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:get/get.dart';
-import 'package:eSellify/utils/navigation_helper.dart';
 
 class MyReportsController extends GetxController {
   RxList<AdReportModel> reports = <AdReportModel>[].obs;
@@ -49,7 +48,7 @@ class MyReportsController extends GetxController {
     final ad = await FireStoreUtils.getAdById(adId);
     ShowToastDialog.closeLoader();
     if (ad != null) {
-      goToAdDetail(ad);
+      Get.to(() => const AdListingDetailView(), arguments: {"ad": ad});
     } else {
       ShowToastDialog.showError("This ad is no longer available");
     }

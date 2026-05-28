@@ -6,7 +6,6 @@ import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_scre
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:get/get.dart';
-import 'package:eSellify/utils/navigation_helper.dart';
 
 class NotificationRouter {
   /// Navigate to the dashboard with a specific tab selected.
@@ -50,12 +49,31 @@ class NotificationRouter {
         if (adId != null && adId.isNotEmpty) {
           final ad = await FireStoreUtils.getAdById(adId);
           if (ad != null) {
-            goToAdDetail(ad);
+            Get.to(() => const AdListingDetailView(), arguments: {"ad": ad});
             return;
           }
         }
         // Fallback: go to My Ads tab (index 3)
         _goToDashboardTab(3);
+        break;
+
+      // ── Job application ── employer opens the applicants list for their ad
+      case 'job_application':
+        final adId = data['adId'] as String?;
+        if (adId != null && adId.isNotEmpty) {
+          final ad = await FireStoreUtils.getAdById(adId);
+          if (ad != null) {
+            Get.toNamed(Routes.JOB_APPLICANTS, arguments: {'adId': adId, 'adTitle': ad.title});
+            return;
+          }
+        }
+        // Fallback: go to My Ads tab (index 3)
+        _goToDashboardTab(3);
+        break;
+
+      // ── Job application status (shortlisted/rejected) ── applicant opens Job Applications
+      case 'job_application_status':
+        Get.toNamed(Routes.JOB_APPLICATIONS);
         break;
 
       // ── Verification ──

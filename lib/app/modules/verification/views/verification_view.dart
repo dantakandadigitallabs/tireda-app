@@ -9,7 +9,7 @@ import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';

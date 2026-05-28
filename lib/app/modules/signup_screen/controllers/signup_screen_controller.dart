@@ -1,7 +1,7 @@
 // ignore_for_file: invalid_return_type_for_catch_error, depend_on_referenced_packages
 
 import 'dart:developer' as developer;
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/extension/string_extensions.dart';
 import 'package:eSellify/app/models/add_address_model.dart';
@@ -94,6 +94,11 @@ class SignupScreenController extends GetxController {
       if (success == true) {
         Constant.userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()!);
 
+        await EmailTemplateService.sendEmail(
+          type: 'welcome',
+          toEmail: userModel.value.email!,
+          variables: {'name': userModel.value.fullNameString(), 'email': userModel.value.email ?? '', 'app_name': Constant.appName.toString()},
+        );
         // ✅ Use Get.offAll with widget instead of named route
         ShowToastDialog.closeLoader();
         Get.offAll(() => EnterLocationView(isRedirectDashboard: true));
@@ -140,16 +145,12 @@ class SignupScreenController extends GetxController {
       bool? updated = await FireStoreUtils.updateUser(userModel.value);
 
       if (updated == true) {
-        Constant.userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()!);
-
-        // Send welcome email (fire-and-forget)
-        if (userModel.value.email != null && userModel.value.email!.isNotEmpty) {
-          EmailTemplateService.sendEmail(
-            type: 'welcome',
-            toEmail: userModel.value.email!,
-            variables: {'name': userModel.value.fullNameString(), 'email': userModel.value.email ?? ''},
-          );
-        }
+        developer.log("============> 77777777");
+        await EmailTemplateService.sendEmail(
+          type: 'welcome',
+          toEmail: userModel.value.email!,
+          variables: {'name': userModel.value.fullNameString(), 'email': userModel.value.email ?? '', 'app_name': Constant.appName.toString()},
+        );
 
         ShowToastDialog.closeLoader();
         Get.offAll(() => EnterLocationView(isRedirectDashboard: true));

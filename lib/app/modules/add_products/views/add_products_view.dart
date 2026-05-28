@@ -129,8 +129,13 @@ class AddProductsView extends GetView<AddProductsController> {
                       ),
                       spaceH(height: 12),
 
-                      // ── Price ─────────────────────────────────────────
+                      // ── Price / Salary ────────────────────────────────
+                      // Job categories show a Min/Max salary range instead of price.
                       Obx(() {
+                        final isJobCategory = controller.categoryModel.value.isJobCategory ?? false;
+                        if (isJobCategory) {
+                          return _SalarySection(controller: controller, isDark: isDark);
+                        }
                         final isPriceOptional = controller.categoryModel.value.priceOptional ?? false;
                         if (isPriceOptional) return const SizedBox.shrink();
                         return _SectionCard(
@@ -152,8 +157,9 @@ class AddProductsView extends GetView<AddProductsController> {
                         );
                       }),
                       Obx(() {
+                        final isJobCategory = controller.categoryModel.value.isJobCategory ?? false;
                         final isPriceOptional = controller.categoryModel.value.priceOptional ?? false;
-                        return isPriceOptional ? const SizedBox.shrink() : spaceH(height: 12);
+                        return (!isJobCategory && isPriceOptional) ? const SizedBox.shrink() : spaceH(height: 12);
                       }),
 
                       // ── Mobile Number ─────────────────────────────────
@@ -686,6 +692,87 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SALARY SECTION (v1.3 — Job Categories)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SalarySection extends StatelessWidget {
+  final AddProductsController controller;
+  final bool isDark;
+
+  const _SalarySection({required this.controller, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      isDark: isDark,
+      child: Obx(() {
+        if (controller.isCurrencyLoading.value) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SalaryLoadingSkeleton(isDark: isDark, title: "Minimum Salary *"),
+              spaceH(height: 16),
+              _SalaryLoadingSkeleton(isDark: isDark, title: "Maximum Salary *"),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFieldWidget(
+              title: "Minimum Salary *",
+              hintText: "0",
+              controller: controller.minSalaryController,
+              onPress: () {},
+              textInputType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
+            ),
+            spaceH(height: 16),
+            TextFieldWidget(
+              title: "Maximum Salary *",
+              hintText: "0",
+              controller: controller.maxSalaryController,
+              onPress: () {},
+              textInputType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+}
+
+class _SalaryLoadingSkeleton extends StatelessWidget {
+  final bool isDark;
+  final String title;
+
+  const _SalaryLoadingSkeleton({required this.isDark, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextCustom(title: title, fontSize: 14, fontFamily: FontFamily.medium),
+        spaceH(height: 8),
+        Container(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+            color: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+          ),
+          child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+      ],
+    );
+  }
+}
+
 class _PriceLoadingSkeleton extends StatelessWidget {
   final bool isDark;
 
@@ -1057,8 +1144,14 @@ class _DropdownField extends StatelessWidget {
                 () => DropdownButtonFormField<String>(
               initialValue: controller.selectedDropdownValues[field.id],
               hint: Text("Select ${field.name}", style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
+              style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+              dropdownColor: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
+              iconEnabledColor: isDark ? AppThemeData.grey3 : AppThemeData.grey7,
               items: field.options?.map((option) {
-                return DropdownMenuItem<String>(value: option, child: Text(option));
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(option, style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10)),
+                );
               }).toList(),
               onChanged: (value) {
                 if (value != null) controller.selectedDropdownValues[field.id!] = value;

@@ -156,7 +156,7 @@ class OsmLocationPickerController extends GetxController {
   }
 
   Future<void> confirmLocation() async {
-    ShowToastDialog.showLoader("Please Wait..");
+    ShowToastDialog.showLoader("Please Wait..".tr);
     final LatLng? point = selectedLocation.value ?? currentLocation.value;
     if (point == null) {
       debugPrint("No location selected");

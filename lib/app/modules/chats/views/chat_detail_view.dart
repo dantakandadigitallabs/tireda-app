@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/dependency/shimmer.dart';
@@ -150,7 +150,11 @@ class ChatDetailView extends StatelessWidget {
           // Bottom: sold/blocked banner or input
           Obx(() {
             if (controller.isAdSoldOut.value) {
-              return _BlockedBanner(message: "This ad has been sold out", icon: Icons.sell_outlined, isDark: isDark);
+              return _BlockedBanner(
+                message: chatRoom.isJobAd ? "This position is closed" : "This ad has been sold out".tr,
+                icon: Icons.sell_outlined,
+                isDark: isDark,
+              );
             }
             if (controller.isOtherUserBlocked.value) {
               return _BlockedBanner(message: "You have blocked this user", icon: Icons.block, isDark: isDark);
@@ -162,7 +166,8 @@ class ChatDetailView extends StatelessWidget {
               controller: controller.messageController,
               isDark: isDark,
               onSend: controller.sendTextMessage,
-              onOffer: () => _showMakeOfferSheet(context, controller, isDark),
+              // No monetary offers on job-ad chats
+              onOffer: chatRoom.isJobAd ? null : () => _showMakeOfferSheet(context, controller, isDark),
               onAttachment: () => _showAttachmentSheet(context, controller, isDark),
             );
           }),
@@ -174,7 +179,7 @@ class ChatDetailView extends StatelessWidget {
   // ─── Offer Sheet ─────────────────────────────────────────────────────────────
   void _showMakeOfferSheet(BuildContext context, ChatDetailController controller, bool isDark) {
     if (controller.amIBlockedByOther.value) {
-      ShowToastDialog.showError("You can't send offers to this user");
+      ShowToastDialog.showError("You can't send offers to this user".tr);
       return;
     }
 
@@ -219,7 +224,7 @@ class ChatDetailView extends StatelessWidget {
                   ],
                 ),
                 spaceH(height: 24),
-                TextCustom(title: "Make an Offer", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                TextCustom(title: "Make an Offer".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                 spaceH(height: 4),
                 TextCustom(title: "Enter your offer price below", fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 spaceH(height: 16),
@@ -254,7 +259,7 @@ class ChatDetailView extends StatelessWidget {
                       await controller.sendOfferMessage(amount);
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: AppThemeData.primary4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
-                    child: const Text("Send Offer", style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white)),
+                    child: Text("Send Offer".tr, style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white)),
                   ),
                 ),
                 spaceH(height: 8),
@@ -269,7 +274,7 @@ class ChatDetailView extends StatelessWidget {
   // ─── Attachment Sheet ────────────────────────────────────────────────────────
   void _showAttachmentSheet(BuildContext context, ChatDetailController controller, bool isDark) {
     if (controller.amIBlockedByOther.value) {
-      ShowToastDialog.showError("You can't send media to this user");
+      ShowToastDialog.showError("You can't send media to this user".tr);
       return;
     }
 
@@ -485,7 +490,7 @@ class _AdBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextCustom(title: chatRoom.adTitle ?? '', fontSize: 13, fontFamily: FontFamily.medium, maxLine: 1),
-                TextCustom(title: chatRoom.formattedPrice, fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                TextCustom(title: chatRoom.priceOrSalaryLabel, fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
               ],
             ),
           ),
@@ -746,10 +751,10 @@ class _MessageInput extends StatelessWidget {
   final TextEditingController controller;
   final bool isDark;
   final VoidCallback onSend;
-  final VoidCallback onOffer;
+  final VoidCallback? onOffer;
   final VoidCallback onAttachment;
 
-  const _MessageInput({required this.controller, required this.isDark, required this.onSend, required this.onOffer, required this.onAttachment});
+  const _MessageInput({required this.controller, required this.isDark, required this.onSend, this.onOffer, required this.onAttachment});
 
   @override
   Widget build(BuildContext context) {
@@ -775,17 +780,19 @@ class _MessageInput extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          // Make offer button
-          GestureDetector(
-            onTap: onOffer,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-              child: Icon(Icons.local_offer_outlined, size: 18, color: AppThemeData.primary4),
+          // Make offer button — hidden for job ads (no monetary offers)
+          if (onOffer != null) ...[
+            GestureDetector(
+              onTap: onOffer,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.local_offer_outlined, size: 18, color: AppThemeData.primary4),
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
+            const SizedBox(width: 6),
+          ],
           // Text input
           Expanded(
             child: TextField(

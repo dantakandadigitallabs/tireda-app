@@ -106,7 +106,9 @@ class _PurchaseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = ad.currency?.symbol ?? Constant.currencyModel?.symbol ?? '\$';
     final decimals = ad.currency?.decimalDigits ?? Constant.currencyModel?.decimalDigits ?? 2;
-    final price = ad.price != null ? '$currency${ad.price!.toStringAsFixed(decimals)}' : 'Negotiable';
+    final price = ad.isJobAd
+        ? ad.formattedSalary()
+        : (ad.price != null ? '$currency${ad.price!.toStringAsFixed(decimals)}' : 'Negotiable');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

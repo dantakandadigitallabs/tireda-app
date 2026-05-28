@@ -225,6 +225,7 @@ class ProfileView extends GetView<ProfileController> {
             onTap: () => Get.to(MyAdsView(), arguments: {"featured": true}),
           ),
           _MenuItem(svg: "assets/icons/ic_cart.svg", title: "My Purchases".tr, onTap: () => Get.toNamed(Routes.MY_PURCHASES)),
+          _MenuItem(svg: "assets/icons/ic_order.svg", title: "Job Applications".tr, onTap: () => Get.toNamed(Routes.JOB_APPLICATIONS)),
           _MenuItem(
             svg: "assets/icons/ic_info.svg",
             title: "My Reviews".tr,

@@ -18,7 +18,6 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/favourites_controller.dart';
-import 'package:eSellify/utils/navigation_helper.dart';
 
 class FavouritesView extends GetView<FavouritesController> {
   const FavouritesView({super.key});
@@ -89,7 +88,7 @@ class _FavAdCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        await AdService.showInterstitial(onDismissed: () => goToAdDetail(ad));
+        await AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad}));
         controller.loadFavourites(); // refresh on return
       },
       child: Container(

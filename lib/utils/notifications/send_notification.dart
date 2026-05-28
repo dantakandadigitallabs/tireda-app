@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/notification_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';

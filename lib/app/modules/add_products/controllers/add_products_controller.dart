@@ -1,7 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/dependency/geoflutterfire/src/geoflutterfire.dart';
@@ -24,6 +24,10 @@ class AddProductsController extends GetxController {
   final TextEditingController adTitleController = TextEditingController();
   final TextEditingController adDescriptionController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
+
+  // Job Category salary range (used instead of price when isJobCategory == true)
+  final TextEditingController minSalaryController = TextEditingController();
+  final TextEditingController maxSalaryController = TextEditingController();
   final TextEditingController mobileController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
 
@@ -53,8 +57,10 @@ class AddProductsController extends GetxController {
   RxMap<String, String> selectedRadioValues = <String, String>{}.obs;
   RxMap<String, TextEditingController> textControllers = <String, TextEditingController>{}.obs;
   RxMap<String, String> selectedDropdownValues = <String, String>{}.obs;
+
   // Checkboxes: fieldId → list of selected options
   RxMap<String, List<String>> selectedCheckboxValues = <String, List<String>>{}.obs;
+
   // File Input: fieldId → picked File
   RxMap<String, File?> selectedFileValues = <String, File?>{}.obs;
 
@@ -96,6 +102,8 @@ class AddProductsController extends GetxController {
       adTitleController.text = ad.title ?? '';
       adDescriptionController.text = ad.description ?? '';
       priceController.text = ad.price != null ? ad.price.toString() : '';
+      minSalaryController.text = ad.minSalary != null ? ad.minSalary.toString() : '';
+      maxSalaryController.text = ad.maxSalary != null ? ad.maxSalary.toString() : '';
       mobileController.text = ad.phoneNumber ?? '';
       countryCode.value = ad.countryCode ?? Constant.countryCode;
       locationController.text = ad.address ?? '';
@@ -117,10 +125,7 @@ class AddProductsController extends GetxController {
       if (ad.categoryPath != null && ad.categoryNamePath != null) {
         final List<CategoryModel> rebuiltPath = [];
         for (int i = 0; i < ad.categoryPath!.length; i++) {
-          rebuiltPath.add(CategoryModel(
-            id: ad.categoryPath![i],
-            categoryName: i < ad.categoryNamePath!.length ? ad.categoryNamePath![i] : '',
-          ));
+          rebuiltPath.add(CategoryModel(id: ad.categoryPath![i], categoryName: i < ad.categoryNamePath!.length ? ad.categoryNamePath![i] : ''));
         }
         categoryPath.value = rebuiltPath;
         if (rebuiltPath.isNotEmpty) {
@@ -224,31 +229,52 @@ class AddProductsController extends GetxController {
 
   bool validateStep1() {
     if (adTitleController.text.trim().isEmpty) {
-      ShowToastDialog.showError("Ad title is required.");
+      ShowToastDialog.showError("Ad title is required.".tr);
       return false;
     }
     if (adDescriptionController.text.trim().isEmpty) {
-      ShowToastDialog.showError("Ad description is required.");
+      ShowToastDialog.showError("Ad description is required.".tr);
       return false;
     }
-    final isPriceOptional = categoryModel.value.priceOptional ?? false;
-    if (!isPriceOptional) {
-      final priceText = priceController.text.trim();
-      if (priceText.isEmpty || double.tryParse(priceText) == null) {
-        ShowToastDialog.showError("Please enter a valid price.");
+    final isJobCategory = categoryModel.value.isJobCategory ?? false;
+    if (isJobCategory) {
+      // Job Category: salary range replaces price and is required.
+      final minText = minSalaryController.text.trim();
+      final maxText = maxSalaryController.text.trim();
+      final minVal = double.tryParse(minText);
+      final maxVal = double.tryParse(maxText);
+      if (minText.isEmpty || minVal == null) {
+        ShowToastDialog.showError("Please enter a valid minimum salary.".tr);
         return false;
+      }
+      if (maxText.isEmpty || maxVal == null) {
+        ShowToastDialog.showError("Please enter a valid maximum salary.".tr);
+        return false;
+      }
+      if (maxVal < minVal) {
+        ShowToastDialog.showError("Maximum salary cannot be less than minimum salary.".tr);
+        return false;
+      }
+    } else {
+      final isPriceOptional = categoryModel.value.priceOptional ?? false;
+      if (!isPriceOptional) {
+        final priceText = priceController.text.trim();
+        if (priceText.isEmpty || double.tryParse(priceText) == null) {
+          ShowToastDialog.showError("Please enter a valid price.".tr);
+          return false;
+        }
       }
     }
     if (mobileController.text.trim().isEmpty) {
-      ShowToastDialog.showError("Mobile number is required.");
+      ShowToastDialog.showError("Mobile number is required.".tr);
       return false;
     }
     if (locationController.text.trim().isEmpty) {
-      ShowToastDialog.showError("Please select a location.");
+      ShowToastDialog.showError("Please select a location.".tr);
       return false;
     }
     if (mainImage.value == null && existingMainImageUrl.value.isEmpty) {
-      ShowToastDialog.showError("Please add a main picture.");
+      ShowToastDialog.showError("Please add a main picture.".tr);
       return false;
     }
     return true;
@@ -346,7 +372,7 @@ class AddProductsController extends GetxController {
     if (images.isEmpty) return;
     final remaining = 6 - otherImages.length;
     if (remaining <= 0) {
-      ShowToastDialog.showError("Only 6 images are allowed.");
+      ShowToastDialog.showError("Only 6 images are allowed.".tr);
       return;
     }
     for (var img in images.take(remaining)) {
@@ -489,25 +515,28 @@ class AddProductsController extends GetxController {
     if (exactAny != null) return exactAny;
 
     // 3. Substring match (prefer leaf, prefer longest name)
-    final candidates = all
-        .where((c) {
-      final cn = (c.categoryName ?? '').toLowerCase().trim();
-      if (cn.isEmpty) return false;
-      return cn.contains(name) || name.contains(cn);
-    })
-        .toList()
-      ..sort((a, b) {
-        final aLeaf = isLeaf(a) ? 1 : 0;
-        final bLeaf = isLeaf(b) ? 1 : 0;
-        if (aLeaf != bLeaf) return bLeaf - aLeaf; // leaves first
-        return (b.categoryName?.length ?? 0) - (a.categoryName?.length ?? 0); // longer name first
-      });
+    final candidates =
+        all.where((c) {
+          final cn = (c.categoryName ?? '').toLowerCase().trim();
+          if (cn.isEmpty) return false;
+          return cn.contains(name) || name.contains(cn);
+        }).toList()..sort((a, b) {
+          final aLeaf = isLeaf(a) ? 1 : 0;
+          final bLeaf = isLeaf(b) ? 1 : 0;
+          if (aLeaf != bLeaf) return bLeaf - aLeaf; // leaves first
+          return (b.categoryName?.length ?? 0) - (a.categoryName?.length ?? 0); // longer name first
+        });
     return candidates.isEmpty ? null : candidates.first;
   }
 
+  /// Build the list of LEAF categories (those with no children) plus their
+  /// breadcrumb path for the AI prompt.
   List<AiCategoryCandidate> _buildLeafCandidates(List<CategoryModel> all) {
     final byId = {for (final c in all) c.id: c};
-    final hasChild = <String>{for (final c in all) if ((c.parentCategoryId ?? '').isNotEmpty) c.parentCategoryId!};
+    final hasChild = <String>{
+      for (final c in all)
+        if ((c.parentCategoryId ?? '').isNotEmpty) c.parentCategoryId!,
+    };
     final leaves = all.where((c) => c.id != null && !hasChild.contains(c.id)).toList();
     return leaves.map((leaf) {
       final names = <String>[];
@@ -524,6 +553,8 @@ class AddProductsController extends GetxController {
     }).toList();
   }
 
+  /// Switch the form's category, rebuild [categoryPath] up the parent chain,
+  /// and reload the custom fields for the new category.
   Future<void> _switchCategory(CategoryModel picked, List<CategoryModel> all) async {
     final byId = {for (final c in all) c.id: c};
     final path = <CategoryModel>[picked];
@@ -537,6 +568,7 @@ class AddProductsController extends GetxController {
     categoryModel.value = picked;
     categoryPath.value = path;
 
+    // Clear stale custom-field selections from the previous category
     selectedRadioValues.clear();
     selectedDropdownValues.clear();
     selectedCheckboxValues.clear();
@@ -551,6 +583,7 @@ class AddProductsController extends GetxController {
 
   // ─── Submit ──────────────────────────────────────────────
 
+  /// Calculate ad expiry date based on subscription/free listing rules
   Future<Timestamp?> _calculateExpiryDate() async {
     // Free ad listing
     if (Constant.freeAdListing) {
@@ -583,13 +616,13 @@ class AddProductsController extends GetxController {
 
     isSubmitting.value = true;
     final bool editing = isEditing.value;
-    ShowToastDialog.showLoader(editing ? "Updating your ad..." : "Posting your ad...");
+    ShowToastDialog.showLoader(editing ? "Updating your ad...".tr : "Posting your ad...".tr);
 
     try {
       final String adId = editing ? editingAd.value!.id! : Constant.getUuid();
       final user = Constant.userModel;
 
-      // 1. Upload main image
+      // 1. Upload main image (or reuse existing URL in edit mode)
       String mainImageUrl;
       if (mainImage.value != null) {
         mainImageUrl = await Constant.uploadImageToFireStorage(mainImage.value!, 'ads/$adId', 'main');
@@ -597,7 +630,7 @@ class AddProductsController extends GetxController {
         mainImageUrl = existingMainImageUrl.value;
       }
 
-      // 2. Upload other images
+      // 2. Upload other images (skip already-uploaded URLs)
       final List<String> otherImageUrls = [];
       for (int i = 0; i < otherImages.length; i++) {
         if (otherImages[i].startsWith('http')) {
@@ -609,6 +642,8 @@ class AddProductsController extends GetxController {
       }
 
       // 3. Build consolidated custom fields list
+      // Each item: { 'name': fieldName, 'icon': iconUrl, 'value': answer }
+      // Stored at post time so names/icons survive admin edits or field deletion.
       final List<Map<String, dynamic>> customFieldsList = [];
       for (final field in customFields) {
         final id = field.id!;
@@ -638,11 +673,7 @@ class AddProductsController extends GetxController {
             break;
         }
         if (value.isEmpty) continue; // skip fields with no answer
-        customFieldsList.add({
-          'name': field.name ?? id,
-          'icon': field.image ?? '',
-          'value': value,
-        });
+        customFieldsList.add({'name': field.name ?? id, 'icon': field.image ?? '', 'value': value});
       }
 
       // 4. Build slug from title
@@ -654,20 +685,24 @@ class AddProductsController extends GetxController {
 
       // 7. Build AdModel
       final priceText = priceController.text.trim();
-      final isPriceOptional = categoryModel.value.priceOptional ?? false;
+      final isJobCategory = categoryModel.value.isJobCategory ?? false;
+      // For job categories price is replaced by a salary range.
+      final isPriceOptional = isJobCategory ? false : (categoryModel.value.priceOptional ?? false);
+      final double? minSalary = isJobCategory ? double.tryParse(minSalaryController.text.trim()) : null;
+      final double? maxSalary = isJobCategory ? double.tryParse(maxSalaryController.text.trim()) : null;
 
-      GeoFirePoint geoPoint = Geoflutterfire().point(
-        latitude: selectedLatitude.value ?? 0.0,
-        longitude: selectedLongitude.value ?? 0.0,
-      );
+      GeoFirePoint geoPoint = Geoflutterfire().point(latitude: selectedLatitude.value ?? 0.0, longitude: selectedLongitude.value ?? 0.0);
 
       final AdModel ad = AdModel(
         id: adId,
         title: adTitleController.text.trim(),
         description: adDescriptionController.text.trim(),
         slug: slug,
-        price: isPriceOptional ? null : double.tryParse(priceText),
+        price: isJobCategory ? null : (isPriceOptional ? null : double.tryParse(priceText)),
         isPriceOptional: isPriceOptional,
+        isJobCategory: isJobCategory,
+        minSalary: minSalary,
+        maxSalary: maxSalary,
         currency: selectedCurrency.value,
         categoryPath: catIdPath,
         categoryNamePath: catNamePath,
@@ -687,12 +722,8 @@ class AddProductsController extends GetxController {
         mainImage: mainImageUrl,
         otherImages: otherImageUrls,
         customFields: customFieldsList,
-        status: editing
-            ? (Constant.autoApproveEditedAds ? 'active' : 'resubmitted')
-            : (Constant.autoApproveAds ? 'active' : 'pending'),
-        isActive: editing
-            ? Constant.autoApproveEditedAds
-            : Constant.autoApproveAds,
+        status: editing ? (Constant.autoApproveEditedAds ? 'active' : 'resubmitted') : (Constant.autoApproveAds ? 'active' : 'pending'),
+        isActive: editing ? Constant.autoApproveEditedAds : Constant.autoApproveAds,
         views: editing ? editingAd.value!.views : 0,
         likes: editing ? editingAd.value!.likes : 0,
         createdAt: editing ? editingAd.value!.createdAt : Timestamp.now(),
@@ -712,6 +743,7 @@ class AddProductsController extends GetxController {
       ShowToastDialog.closeLoader();
 
       if (success) {
+        // Sync ads posted count on subscription (new ads only)
         if (!editing && !Constant.freeAdListing) {
           final uid = FireStoreUtils.getCurrentUid();
           if (uid != null) {
@@ -723,30 +755,33 @@ class AddProductsController extends GetxController {
         }
 
         if (editing) {
-          ShowToastDialog.showSuccess("Ad updated successfully!");
+          ShowToastDialog.showSuccess("Ad updated successfully!".tr);
           Get.back(result: true); // back to detail
           Get.back(result: true); // back to my ads list
         } else {
-          ShowToastDialog.showSuccess("Ad posted successfully!");
+          ShowToastDialog.showSuccess("Ad posted successfully!".tr);
           Get.offAllNamed(Routes.DASHBOARD_SCREEN);
         }
       } else {
-        ShowToastDialog.showError(editing ? "Failed to update ad." : "Failed to post ad. Please try again.");
+        ShowToastDialog.showError(editing ? "Failed to update ad.".tr : "Failed to post ad. Please try again.".tr);
       }
     } catch (e) {
       ShowToastDialog.closeLoader();
       log('submitAd error: $e');
-      ShowToastDialog.showError("Something went wrong. Please try again.");
+      ShowToastDialog.showError("Something went wrong. Please try again.".tr);
     } finally {
       isSubmitting.value = false;
     }
   }
 
+  // ─── Cleanup ─────────────────────────────────────────────
   @override
   void onClose() {
     adTitleController.dispose();
     adDescriptionController.dispose();
     priceController.dispose();
+    minSalaryController.dispose();
+    maxSalaryController.dispose();
     mobileController.dispose();
     locationController.dispose();
     for (final ctrl in textControllers.values) {

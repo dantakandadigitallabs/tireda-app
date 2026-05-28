@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/models/chat_message_model.dart';
@@ -52,10 +52,7 @@ class ChatDetailController extends GetxController {
   Future<void> _checkBlockedStatus() async {
     if (currentUserId.isEmpty) return;
     final otherUserId = chatRoom.otherUserId(currentUserId);
-    final results = await Future.wait([
-      FireStoreUtils.getBlockedUsers(currentUserId),
-      FireStoreUtils.getBlockedUsers(otherUserId),
-    ]);
+    final results = await Future.wait([FireStoreUtils.getBlockedUsers(currentUserId), FireStoreUtils.getBlockedUsers(otherUserId)]);
     isOtherUserBlocked.value = results[0].contains(otherUserId);
     amIBlockedByOther.value = results[1].contains(currentUserId);
   }
@@ -71,12 +68,12 @@ class ChatDetailController extends GetxController {
 
   void scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scrollController.hasClients) {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+      // Guard against the controller being transiently attached to more than
+      // one scroll view (e.g. during a route transition). Accessing `.position`
+      // when `positions.length != 1` throws, so only scroll when exactly one
+      // list view is attached.
+      if (scrollController.hasClients && scrollController.positions.length == 1) {
+        scrollController.animateTo(scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
       }
     });
   }
@@ -84,7 +81,7 @@ class ChatDetailController extends GetxController {
   // ─── Send Text Message ─────────────────────────────────────────────────────
   Future<void> sendTextMessage() async {
     if (isAdSoldOut.value) {
-      ShowToastDialog.showError("This ad has been sold out. You can no longer send messages.");
+      ShowToastDialog.showError("This ad has been sold out. You can no longer send messages.".tr);
       return;
     }
 
@@ -95,7 +92,7 @@ class ChatDetailController extends GetxController {
     final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
     if (otherBlocked.contains(currentUserId)) {
       amIBlockedByOther.value = true;
-      ShowToastDialog.showError("You can't send messages to this user");
+      ShowToastDialog.showError("You can't send messages to this user".tr);
       return;
     }
 
@@ -114,21 +111,17 @@ class ChatDetailController extends GetxController {
       isRead: false,
     );
 
-    final success = await FireStoreUtils.sendMessage(
-      chatRoomId: chatRoom.id!,
-      message: message,
-      receiverId: otherUserId,
-    );
+    final success = await FireStoreUtils.sendMessage(chatRoomId: chatRoom.id!, message: message, receiverId: otherUserId);
 
     if (!success) {
-      ShowToastDialog.showError("Failed to send message");
+      ShowToastDialog.showError("Failed to send message".tr);
     }
   }
 
   // ─── Send Offer ────────────────────────────────────────────────────────────
   Future<void> sendOfferMessage(double amount) async {
     if (isAdSoldOut.value) {
-      ShowToastDialog.showError("This ad has been sold out. You can no longer send offers.");
+      ShowToastDialog.showError("This ad has been sold out. You can no longer send offers.".tr);
       return;
     }
 
@@ -136,7 +129,7 @@ class ChatDetailController extends GetxController {
     final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
     if (otherBlocked.contains(currentUserId)) {
       amIBlockedByOther.value = true;
-      ShowToastDialog.showError("You can't send offers to this user");
+      ShowToastDialog.showError("You can't send offers to this user".tr);
       return;
     }
 
@@ -155,26 +148,18 @@ class ChatDetailController extends GetxController {
       isRead: false,
     );
 
-    final success = await FireStoreUtils.sendMessage(
-      chatRoomId: chatRoom.id!,
-      message: message,
-      receiverId: otherUserId,
-    );
+    final success = await FireStoreUtils.sendMessage(chatRoomId: chatRoom.id!, message: message, receiverId: otherUserId);
 
     if (success) {
-      ShowToastDialog.showSuccess("Offer sent!");
+      ShowToastDialog.showSuccess("Offer sent!".tr);
     } else {
-      ShowToastDialog.showError("Failed to send offer");
+      ShowToastDialog.showError("Failed to send offer".tr);
     }
   }
 
   Future<void> respondToOffer(ChatMessageModel msg, String status) async {
-    await FireStoreUtils.updateOfferStatus(
-      chatRoomId: chatRoom.id!,
-      messageId: msg.id!,
-      status: status,
-    );
-    ShowToastDialog.showSuccess(status == 'accepted' ? "Offer accepted" : "Offer declined");
+    await FireStoreUtils.updateOfferStatus(chatRoomId: chatRoom.id!, messageId: msg.id!, status: status);
+    ShowToastDialog.showSuccess(status == 'accepted' ? "Offer accepted".tr : "Offer declined".tr);
   }
 
   // ─── Media (Image / Video) ─────────────────────────────────────────────────
@@ -185,7 +170,7 @@ class ChatDetailController extends GetxController {
       if (picked == null) return;
       await _uploadAndSendImages([picked]);
     } catch (e) {
-      ShowToastDialog.showError("Failed to capture photo");
+      ShowToastDialog.showError("Failed to capture photo".tr);
     }
   }
 
@@ -196,7 +181,7 @@ class ChatDetailController extends GetxController {
       if (picked.isEmpty) return;
       await _uploadAndSendImages(picked);
     } catch (e) {
-      ShowToastDialog.showError("Failed to pick images");
+      ShowToastDialog.showError("Failed to pick images".tr);
     }
   }
 
@@ -210,11 +195,11 @@ class ChatDetailController extends GetxController {
       final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
       if (otherBlocked.contains(currentUserId)) {
         amIBlockedByOther.value = true;
-        ShowToastDialog.showError("You can't send media to this user");
+        ShowToastDialog.showError("You can't send media to this user".tr);
         return;
       }
 
-      ShowToastDialog.showLoader("Sending video...");
+      ShowToastDialog.showLoader("Sending video...".tr);
 
       final msgId = Constant.getUuid();
       final url = await Constant.uploadImageToFireStorage(File(picked.path), 'chat_media/${chatRoom.id}', 'video_$msgId');
@@ -236,7 +221,7 @@ class ChatDetailController extends GetxController {
       ShowToastDialog.closeLoader();
     } catch (e) {
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showError("Failed to send video");
+      ShowToastDialog.showError("Failed to send video".tr);
     }
   }
 
@@ -245,22 +230,18 @@ class ChatDetailController extends GetxController {
     final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
     if (otherBlocked.contains(currentUserId)) {
       amIBlockedByOther.value = true;
-      ShowToastDialog.showError("You can't send media to this user");
+      ShowToastDialog.showError("You can't send media to this user".tr);
       return;
     }
 
-    ShowToastDialog.showLoader("Sending ${files.length == 1 ? 'photo' : '${files.length} photos'}...");
+    ShowToastDialog.showLoader("sending_photos".trParams({"count": files.length.toString(), "type": files.length == 1 ? "photo".tr : "photos".tr}));
 
     try {
       final msgId = Constant.getUuid();
       final List<String> uploadedUrls = [];
 
       for (int i = 0; i < files.length; i++) {
-        final url = await Constant.uploadImageToFireStorage(
-          File(files[i].path),
-          'chat_media/${chatRoom.id}',
-          'img_${msgId}_$i',
-        );
+        final url = await Constant.uploadImageToFireStorage(File(files[i].path), 'chat_media/${chatRoom.id}', 'img_${msgId}_$i');
         uploadedUrls.add(url);
       }
 
@@ -281,7 +262,7 @@ class ChatDetailController extends GetxController {
       ShowToastDialog.closeLoader();
     } catch (e) {
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showError("Failed to send images");
+      ShowToastDialog.showError("Failed to send images".tr);
     }
   }
 
@@ -290,14 +271,14 @@ class ChatDetailController extends GetxController {
     final otherUserId = chatRoom.otherUserId(currentUserId);
     await FireStoreUtils.blockUser(currentUserId, otherUserId);
     isOtherUserBlocked.value = true;
-    ShowToastDialog.showSuccess("${chatRoom.otherUserName(currentUserId)} has been blocked");
+    ShowToastDialog.showSuccess("user_blocked".trParams({"name": chatRoom.otherUserName(currentUserId)}));
   }
 
   Future<void> unblockUser() async {
     final otherUserId = chatRoom.otherUserId(currentUserId);
     await FireStoreUtils.unblockUser(currentUserId, otherUserId);
     isOtherUserBlocked.value = false;
-    ShowToastDialog.showSuccess("${chatRoom.otherUserName(currentUserId)} has been unblocked");
+    ShowToastDialog.showSuccess("user_unblocked".trParams({"name": chatRoom.otherUserName(currentUserId)}));
   }
 
   @override

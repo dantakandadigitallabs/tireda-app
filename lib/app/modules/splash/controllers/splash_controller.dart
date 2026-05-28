@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:eSellify/app/models/language_model.dart';
 import 'package:eSellify/app/modules/language/views/language_view.dart';
-import 'package:eSellify/app/modules/onboarding_screen/views/onboarding_screen_view.dart';
 import 'package:eSellify/app/modules/signup_screen/views/enter_location_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/app/services/localization_service.dart';

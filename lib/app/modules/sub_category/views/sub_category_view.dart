@@ -121,7 +121,7 @@ class SubCategoryView extends StatelessWidget {
 
   /// N-level navigation: check if category has children → drill deeper, else → show ads
   Future<void> _onCategoryTap(SubCategoryController controller, CategoryModel category) async {
-    ShowToastDialog.showLoader("Loading...");
+    ShowToastDialog.showLoader("Loading...".tr);
     final hasChildren = await controller.hasChildren(category.id!);
     ShowToastDialog.closeLoader();
 

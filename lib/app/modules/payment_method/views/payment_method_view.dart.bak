@@ -1,5 +1,4 @@
 import 'package:eSellify/app/constant/constants.dart';
-import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';

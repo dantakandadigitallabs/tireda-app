@@ -11,12 +11,12 @@ class ForgotPasswordController extends GetxController {
   RxBool isEmailSent = false.obs;
 
   Future<void> resetPassword() async {
-    ShowToastDialog.showLoader("Please Wait..");
+    ShowToastDialog.showLoader("Please Wait..".tr);
     String email = resetEmailController.value.text.trim();
 
     if (email.isEmpty || !GetUtils.isEmail(email)) {
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showError("Please enter a valid email");
+      ShowToastDialog.showError("Please enter a valid email".tr);
       return;
     }
 
@@ -25,21 +25,21 @@ class ForgotPasswordController extends GetxController {
 
       isEmailSent.value = true;
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showSuccess("Password reset email sent successfully");
+      ShowToastDialog.showSuccess("Password reset email sent successfully".tr);
     } on FirebaseAuthException catch (e) {
       String message = "Something went wrong";
 
       if (e.code == 'user-not-found') {
-        message = "No user found with this email";
+        message = "No user found with this email".tr;
       } else if (e.code == 'invalid-email') {
-        message = "Invalid email address";
+        message = "Invalid email address".tr;
       }
       ShowToastDialog.closeLoader();
       ShowToastDialog.showError(message);
       developer.log("Firebase error: ${e.code}");
     } catch (e) {
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showError("Error occurred");
+      ShowToastDialog.showError("Error occurred".tr);
       developer.log("Error in resetPassword: $e");
     } finally {
       ShowToastDialog.closeLoader();

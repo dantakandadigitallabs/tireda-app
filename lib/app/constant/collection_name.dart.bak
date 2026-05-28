@@ -25,5 +25,4 @@ class CollectionName {
   static const String verificationRequests = "verification_requests";
   static const String reviews = "reviews";
   static const String safetyTips = "safety_tips";
-  static const String jobApplications = "job_applications";
 }

@@ -62,6 +62,10 @@ import '../modules/search/bindings/search_binding.dart';
 import '../modules/search/views/search_view.dart';
 import '../modules/my_purchases/bindings/my_purchases_binding.dart';
 import '../modules/my_purchases/views/my_purchases_view.dart';
+import '../modules/job_applications/bindings/job_applications_binding.dart';
+import '../modules/job_applications/views/job_applications_view.dart';
+import '../modules/job_applicants/bindings/job_applicants_binding.dart';
+import '../modules/job_applicants/views/job_applicants_view.dart';
 import '../modules/seller_reviews/bindings/seller_reviews_binding.dart';
 import '../modules/seller_reviews/views/seller_reviews_view.dart';
 
@@ -73,165 +77,39 @@ class AppPages {
   static const INITIAL = Routes.SPLASH;
 
   static final routes = [
-    GetPage(
-      name: _Paths.SPLASH,
-      page: () => const SplashView(),
-      binding: SplashBinding(),
-    ),
-    GetPage(
-      name: _Paths.ONBOARDING_SCREEN,
-      page: () => const OnboardingScreenView(),
-      binding: OnboardingScreenBinding(),
-    ),
-    GetPage(
-      name: _Paths.LOGIN_SCREEN,
-      page: () => LoginScreenView(),
-      binding: LoginScreenBinding(),
-    ),
-    GetPage(
-      name: _Paths.SIGNUP_SCREEN,
-      page: () => SignupScreenView(),
-      binding: SignupScreenBinding(),
-    ),
-    GetPage(
-      name: _Paths.FORGOT_PASSWORD,
-      page: () => const ForgotPasswordView(),
-      binding: ForgotPasswordBinding(),
-    ),
-    GetPage(
-      name: _Paths.DASHBOARD_SCREEN,
-      page: () => const DashboardScreenView(),
-      binding: DashboardScreenBinding(),
-    ),
-    GetPage(
-      name: _Paths.HOME,
-      page: () => const HomeView(),
-      binding: HomeBinding(),
-    ),
-    GetPage(
-      name: _Paths.PROFILE,
-      page: () => const ProfileView(),
-      binding: ProfileBinding(),
-    ),
-    GetPage(
-      name: _Paths.CHATS,
-      page: () => const ChatsView(),
-      binding: ChatsBinding(),
-    ),
-    GetPage(
-      name: _Paths.SELL_SCREEN,
-      page: () => const SellScreenView(),
-      binding: SellScreenBinding(),
-    ),
-    GetPage(
-      name: _Paths.MY_ADS,
-      page: () => const MyAdsView(),
-      binding: MyAdsBinding(),
-    ),
-    GetPage(
-      name: _Paths.EDIT_PROFILE,
-      page: () => const EditProfileView(),
-      binding: EditProfileBinding(),
-    ),
-    GetPage(
-      name: _Paths.PAYMENT_HISTORY,
-      page: () => const PaymentHistoryView(),
-      binding: PaymentHistoryBinding(),
-    ),
-    GetPage(
-      name: _Paths.NOTIFICATIONS,
-      page: () => const NotificationsView(),
-      binding: NotificationsBinding(),
-    ),
-    GetPage(
-      name: _Paths.FAVOURITES,
-      page: () => const FavouritesView(),
-      binding: FavouritesBinding(),
-    ),
-    GetPage(
-      name: _Paths.CONTACT_US,
-      page: () => const ContactUsView(),
-      binding: ContactUsBinding(),
-    ),
-    GetPage(
-      name: _Paths.HTML_SCREEN,
-      page: () => const HtmlScreenView(),
-      binding: HtmlScreenBinding(),
-    ),
-    GetPage(
-      name: _Paths.MY_ADDRESS,
-      page: () => const MyAddressView(),
-      binding: MyAddressBinding(),
-    ),
-    GetPage(
-      name: _Paths.SUBSCRIPTIONS,
-      page: () => const SubscriptionsView(),
-      binding: SubscriptionsBinding(),
-    ),
-    GetPage(
-      name: _Paths.LANGUAGE,
-      page: () => const LanguageView(),
-      binding: LanguageBinding(),
-    ),
-    GetPage(
-      name: _Paths.CATEGORIES,
-      page: () => const CategoriesView(),
-      binding: CategoriesBinding(),
-    ),
-    GetPage(
-      name: _Paths.SUB_CATEGORY,
-      page: () => const SubCategoryView(),
-      binding: SubCategoryBinding(),
-    ),
-    GetPage(
-      name: _Paths.ADD_PRODUCTS,
-      page: () => const AddProductsView(),
-      binding: AddProductsBinding(),
-    ),
-    GetPage(
-      name: _Paths.ADS_LISTING,
-      page: () => const AdsListingView(),
-      binding: AdsListingBinding(),
-    ),
-    GetPage(
-      name: _Paths.AD_LISTING_DETAIL,
-      page: () => const AdListingDetailView(),
-      binding: AdListingDetailBinding(),
-    ),
-    GetPage(
-      name: _Paths.BLOCKED_USERS,
-      page: () => const BlockedUsersView(),
-      binding: BlockedUsersBinding(),
-    ),
-    GetPage(
-      name: _Paths.MY_REPORTS,
-      page: () => const MyReportsView(),
-      binding: MyReportsBinding(),
-    ),
-    GetPage(
-      name: _Paths.PAYMENT_METHOD,
-      page: () => const PaymentMethodView(),
-      binding: PaymentMethodBinding(),
-    ),
-    GetPage(
-      name: _Paths.VERIFICATION,
-      page: () => const VerificationView(),
-      binding: VerificationBinding(),
-    ),
-    GetPage(
-      name: _Paths.SEARCH,
-      page: () => const SearchView(),
-      binding: SearchBinding(),
-    ),
-    GetPage(
-      name: _Paths.MY_PURCHASES,
-      page: () => const MyPurchasesView(),
-      binding: MyPurchasesBinding(),
-    ),
-    GetPage(
-      name: _Paths.SELLER_REVIEWS,
-      page: () => const SellerReviewsView(),
-      binding: SellerReviewsBinding(),
-    ),
+    GetPage(name: _Paths.SPLASH, page: () => const SplashView(), binding: SplashBinding()),
+    GetPage(name: _Paths.ONBOARDING_SCREEN, page: () => const OnboardingScreenView(), binding: OnboardingScreenBinding()),
+    GetPage(name: _Paths.LOGIN_SCREEN, page: () => LoginScreenView(), binding: LoginScreenBinding()),
+    GetPage(name: _Paths.SIGNUP_SCREEN, page: () => SignupScreenView(), binding: SignupScreenBinding()),
+    GetPage(name: _Paths.FORGOT_PASSWORD, page: () => const ForgotPasswordView(), binding: ForgotPasswordBinding()),
+    GetPage(name: _Paths.DASHBOARD_SCREEN, page: () => const DashboardScreenView(), binding: DashboardScreenBinding()),
+    GetPage(name: _Paths.HOME, page: () => const HomeView(), binding: HomeBinding()),
+    GetPage(name: _Paths.PROFILE, page: () => const ProfileView(), binding: ProfileBinding()),
+    GetPage(name: _Paths.CHATS, page: () => const ChatsView(), binding: ChatsBinding()),
+    GetPage(name: _Paths.SELL_SCREEN, page: () => const SellScreenView(), binding: SellScreenBinding()),
+    GetPage(name: _Paths.MY_ADS, page: () => const MyAdsView(), binding: MyAdsBinding()),
+    GetPage(name: _Paths.EDIT_PROFILE, page: () => const EditProfileView(), binding: EditProfileBinding()),
+    GetPage(name: _Paths.PAYMENT_HISTORY, page: () => const PaymentHistoryView(), binding: PaymentHistoryBinding()),
+    GetPage(name: _Paths.NOTIFICATIONS, page: () => const NotificationsView(), binding: NotificationsBinding()),
+    GetPage(name: _Paths.FAVOURITES, page: () => const FavouritesView(), binding: FavouritesBinding()),
+    GetPage(name: _Paths.CONTACT_US, page: () => const ContactUsView(), binding: ContactUsBinding()),
+    GetPage(name: _Paths.HTML_SCREEN, page: () => const HtmlScreenView(), binding: HtmlScreenBinding()),
+    GetPage(name: _Paths.MY_ADDRESS, page: () => const MyAddressView(), binding: MyAddressBinding()),
+    GetPage(name: _Paths.SUBSCRIPTIONS, page: () => const SubscriptionsView(), binding: SubscriptionsBinding()),
+    GetPage(name: _Paths.LANGUAGE, page: () => const LanguageView(), binding: LanguageBinding()),
+    GetPage(name: _Paths.CATEGORIES, page: () => const CategoriesView(), binding: CategoriesBinding()),
+    GetPage(name: _Paths.SUB_CATEGORY, page: () => const SubCategoryView(), binding: SubCategoryBinding()),
+    GetPage(name: _Paths.ADD_PRODUCTS, page: () => const AddProductsView(), binding: AddProductsBinding()),
+    GetPage(name: _Paths.ADS_LISTING, page: () => const AdsListingView(), binding: AdsListingBinding()),
+    GetPage(name: _Paths.AD_LISTING_DETAIL, page: () => const AdListingDetailView(), binding: AdListingDetailBinding()),
+    GetPage(name: _Paths.BLOCKED_USERS, page: () => const BlockedUsersView(), binding: BlockedUsersBinding()),
+    GetPage(name: _Paths.MY_REPORTS, page: () => const MyReportsView(), binding: MyReportsBinding()),
+    GetPage(name: _Paths.PAYMENT_METHOD, page: () => const PaymentMethodView(), binding: PaymentMethodBinding()),
+    GetPage(name: _Paths.VERIFICATION, page: () => const VerificationView(), binding: VerificationBinding()),
+    GetPage(name: _Paths.SEARCH, page: () => const SearchView(), binding: SearchBinding()),
+    GetPage(name: _Paths.MY_PURCHASES, page: () => const MyPurchasesView(), binding: MyPurchasesBinding()),
+    GetPage(name: _Paths.SELLER_REVIEWS, page: () => const SellerReviewsView(), binding: SellerReviewsBinding()),
+    GetPage(name: _Paths.JOB_APPLICATIONS, page: () => const JobApplicationsView(), binding: JobApplicationsBinding()),
+    GetPage(name: _Paths.JOB_APPLICANTS, page: () => const JobApplicantsView(), binding: JobApplicantsBinding()),
   ];
 }

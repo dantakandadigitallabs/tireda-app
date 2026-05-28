@@ -38,6 +38,8 @@ abstract class Routes {
   static const SEARCH = _Paths.SEARCH;
   static const MY_PURCHASES = _Paths.MY_PURCHASES;
   static const SELLER_REVIEWS = _Paths.SELLER_REVIEWS;
+  static const JOB_APPLICATIONS = _Paths.JOB_APPLICATIONS;
+  static const JOB_APPLICANTS = _Paths.JOB_APPLICANTS;
 }
 
 abstract class _Paths {
@@ -75,4 +77,6 @@ abstract class _Paths {
   static const SEARCH = '/search';
   static const MY_PURCHASES = '/my-purchases';
   static const SELLER_REVIEWS = '/seller-reviews';
+  static const JOB_APPLICATIONS = '/job-applications';
+  static const JOB_APPLICANTS = '/job-applicants';
 }

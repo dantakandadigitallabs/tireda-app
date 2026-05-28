@@ -12,6 +12,11 @@ class AdModel {
   String? slug;
   double? price;
   bool? isPriceOptional;
+  // ─── Job category fields ─────────────────────────────────
+  // For ads posted under a Job Category, price is replaced by a salary range.
+  bool? isJobCategory;
+  double? minSalary;
+  double? maxSalary;
   CurrencyModel? currency;
   List<String>? categoryPath;
   List<String>? categoryNamePath;
@@ -23,6 +28,31 @@ class AdModel {
       (categoryPath != null && categoryPath!.length >= 2)
           ? categoryPath![categoryPath!.length - 2]
           : null;
+
+  /// True when this ad belongs to a Job Category, in which case it carries a
+  /// salary range (minSalary / maxSalary) instead of a price.
+  bool get isJobAd =>
+      isJobCategory == true || minSalary != null || maxSalary != null;
+
+  /// Formats the salary range using the ad's currency, e.g. "$1000 – $2000".
+  /// Falls back gracefully when only one bound is present.
+  String formattedSalary() {
+    final c = currency;
+    final s = c?.symbol ?? '';
+    final d = c?.decimalDigits ?? 0;
+    final atRight = c?.symbolAtRight == true;
+    String fmt(double v) {
+      final p = v.toStringAsFixed(d);
+      return atRight ? "$p $s".trim() : "$s$p".trim();
+    }
+
+    if (minSalary != null && maxSalary != null) {
+      return "${fmt(minSalary!)} – ${fmt(maxSalary!)}";
+    }
+    if (minSalary != null) return "From ${fmt(minSalary!)}";
+    if (maxSalary != null) return "Up to ${fmt(maxSalary!)}";
+    return "Negotiable";
+  }
   String? sellerId;
   String? sellerName;
   String? sellerProfile;
@@ -57,6 +87,9 @@ class AdModel {
     this.slug,
     this.price,
     this.isPriceOptional,
+    this.isJobCategory,
+    this.minSalary,
+    this.maxSalary,
     this.currency,
     this.categoryPath,
     this.categoryNamePath,
@@ -95,6 +128,11 @@ class AdModel {
     slug = json['slug'];
     price = json['price'] != null ? (json['price'] as num).toDouble() : null;
     isPriceOptional = json['isPriceOptional'];
+    isJobCategory = json['isJobCategory'] ?? false;
+    minSalary =
+        json['minSalary'] != null ? (json['minSalary'] as num).toDouble() : null;
+    maxSalary =
+        json['maxSalary'] != null ? (json['maxSalary'] as num).toDouble() : null;
     currency = json['currency'] != null
         ? CurrencyModel.fromJson(json['currency'])
         : null;
@@ -123,7 +161,7 @@ class AdModel {
         : [];
     customFields = json['customFields'] != null
         ? List<Map<String, dynamic>>.from(
-        (json['customFields'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
+            (json['customFields'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
         : [];
     views = json['views'] != null ? (json['views'] as num).toInt() : 0;
     likes = json['likes'] != null ? (json['likes'] as num).toInt() : 0;
@@ -151,6 +189,9 @@ class AdModel {
       'slug': slug,
       'price': price,
       'isPriceOptional': isPriceOptional,
+      'isJobCategory': isJobCategory ?? false,
+      'minSalary': minSalary,
+      'maxSalary': maxSalary,
       'currency': currency?.toJson(),
       'categoryPath': categoryPath ?? [],
       'categoryNamePath': categoryNamePath ?? [],

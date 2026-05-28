@@ -1,6 +1,9 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/models/ad_model.dart';
@@ -9,7 +12,7 @@ import 'package:eSellify/app/modules/seller_reviews/views/seller_reviews_view.da
 import 'package:eSellify/app/models/report_reason_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/price_formatter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:uuid/uuid.dart';
 import 'package:eSellify/utils/app_colors.dart';
@@ -19,6 +22,7 @@ import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/safety_tips_bottom_sheet.dart';
+import 'package:eSellify/widgets/text_field_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -63,7 +67,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
             ),
             actions: [
               Obx(
-                    () => GestureDetector(
+                () => GestureDetector(
                   onTap: controller.toggleLike,
                   child: Icon(
                     controller.isLiked.value ? Icons.favorite : Icons.favorite_border,
@@ -122,7 +126,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                             ),
                             spaceH(height: 6),
 
-                            // Location (Clickable, but no visual hint)
+                            // Location (Clickable)
                             if (ad.address != null && ad.address!.isNotEmpty)
                               GestureDetector(
                                 behavior: HitTestBehavior.opaque,
@@ -268,29 +272,55 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                     ),
                     spaceW(width: 8),
 
-                    // 3. Offer Button (Primary Solid)
+                    // 3. Offer Button (Standard ads) / Apply Now Button (Job ads)
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () => SafetyTipsBottomSheet.show(
-                          context,
-                          continueLabel: "Continue to offer",
-                          onContinue: () => _showMakeOfferSheet(context, controller, isDark),
-                        ),
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.local_offer_outlined, size: 16, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text("Offer", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
+                      child: ad.isJobAd
+                          ? GestureDetector(
+                              onTap: () => SafetyTipsBottomSheet.show(
+                                context,
+                                continueLabel: "Continue to apply",
+                                onContinue: () async {
+                                  if (await controller.canApplyForJob()) {
+                                    _showApplyJobSheet(context, controller, isDark);
+                                  }
+                                },
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
+                              child: Container(
+                                height: 48,
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.work_outline_rounded, size: 16, color: Colors.white),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text("Apply Now", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : GestureDetector(
+                              onTap: () => SafetyTipsBottomSheet.show(
+                                context,
+                                continueLabel: "Continue to offer",
+                                onContinue: () => _showMakeOfferSheet(context, controller, isDark),
+                              ),
+                              child: Container(
+                                height: 48,
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.local_offer_outlined, size: 16, color: Colors.white),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text("Offer", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -342,11 +372,11 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                       child: ad.mainImage != null && ad.mainImage!.isNotEmpty
                           ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
                           : Container(
-                        width: 50,
-                        height: 50,
-                        color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                        child: const Icon(Icons.image, color: AppThemeData.grey5),
-                      ),
+                              width: 50,
+                              height: 50,
+                              color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                              child: const Icon(Icons.image, color: AppThemeData.grey5),
+                            ),
                     ),
                     spaceW(width: 12),
                     Expanded(
@@ -416,6 +446,242 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
     );
   }
 
+  // ─── Apply for Job Bottom Sheet (v1.3 — Job Category) ─────
+
+  void _showApplyJobSheet(BuildContext context, AdListingDetailController controller, bool isDark) {
+    final initialName = Constant.userModel?.fullNameString() ?? '';
+    final nameController = TextEditingController(text: initialName == 'N/A' ? '' : initialName);
+    final emailController = TextEditingController(text: Constant.userModel?.email ?? '');
+    final coverNoteController = TextEditingController();
+    final phoneController = TextEditingController(text: Constant.userModel?.phoneNumber ?? '');
+    String countryCode = Constant.userModel?.countryCode ?? Constant.countryCode ?? '+91';
+    final ad = controller.ad;
+
+    File? cvFile;
+    String? cvFileName;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(color: isDark ? AppThemeData.grey7 : AppThemeData.grey4, borderRadius: BorderRadius.circular(2)),
+                        ),
+                      ),
+                      spaceH(height: 20),
+                      // Job info header
+                      Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: ad.mainImage != null && ad.mainImage!.isNotEmpty
+                                ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
+                                : Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                                    child: const Icon(Icons.work_outline_rounded, color: AppThemeData.grey5),
+                                  ),
+                          ),
+                          spaceW(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.medium, maxLine: 1),
+                                spaceH(height: 2),
+                                TextCustom(title: PriceFormatter.format(ad), fontSize: 13, color: AppThemeData.grey5),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      spaceH(height: 20),
+                      TextCustom(title: "Apply for this job", fontSize: 18, fontFamily: FontFamily.bold),
+                      spaceH(height: 4),
+                      TextCustom(title: "Upload your CV and add a short note", fontSize: 13, color: AppThemeData.grey5),
+                      spaceH(height: 18),
+
+                      // Full Name
+                      TextFieldWidget(
+                        title: "Full Name *",
+                        hintText: "Enter your full name",
+                        controller: nameController,
+                        onPress: () {},
+                        fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                      ),
+                      spaceH(height: 16),
+
+                      // Email
+                      TextFieldWidget(
+                        title: "Email *",
+                        hintText: "Enter your email",
+                        controller: emailController,
+                        onPress: () {},
+                        textInputType: TextInputType.emailAddress,
+                        fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                      ),
+                      spaceH(height: 16),
+
+                      // Phone with country code
+                      MobileNumberTextField(
+                        title: "Phone Number *",
+                        controller: phoneController,
+                        countryCode: countryCode,
+                        onCountryCodeChanged: (code) => setState(() => countryCode = code),
+                        onPress: () {},
+                      ),
+                      spaceH(height: 16),
+
+                      // CV Upload
+                      TextCustom(title: "CV / Resume *", fontSize: 14, fontFamily: FontFamily.medium),
+                      spaceH(height: 8),
+                      GestureDetector(
+                        onTap: () async {
+                          final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx']);
+                          if (result != null && result.files.single.path != null) {
+                            setState(() {
+                              cvFile = File(result.files.single.path!);
+                              cvFileName = result.files.single.name;
+                            });
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: cvFile != null ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+                              width: cvFile != null ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                cvFile != null ? Icons.check_circle_rounded : Icons.upload_file_outlined,
+                                size: 22,
+                                color: cvFile != null ? AppThemeData.primary4 : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                              ),
+                              spaceW(width: 12),
+                              Expanded(
+                                child: TextCustom(
+                                  title: cvFileName ?? "Tap to upload (PDF, DOC, DOCX)",
+                                  fontSize: 14,
+                                  maxLine: 1,
+                                  color: cvFile != null ? (isDark ? AppThemeData.grey1 : AppThemeData.grey10) : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                ),
+                              ),
+                              if (cvFile != null)
+                                GestureDetector(
+                                  onTap: () => setState(() {
+                                    cvFile = null;
+                                    cvFileName = null;
+                                  }),
+                                  child: Icon(Icons.close, size: 18, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      spaceH(height: 16),
+
+                      // Cover Note
+                      TextCustom(title: "Cover Note (optional)", fontSize: 14, fontFamily: FontFamily.medium),
+                      spaceH(height: 8),
+                      TextField(
+                        controller: coverNoteController,
+                        maxLines: 4,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                        decoration: InputDecoration(
+                          hintText: "Tell the employer why you're a good fit...",
+                          hintStyle: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                          filled: true,
+                          fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                      ),
+                      spaceH(height: 22),
+
+                      // Submit
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (nameController.text.trim().isEmpty) {
+                              ShowToastDialog.showError("Please enter your full name".tr);
+                              return;
+                            }
+                            final email = emailController.text.trim();
+                            if (email.isEmpty || !GetUtils.isEmail(email)) {
+                              ShowToastDialog.showError("Please enter a valid email".tr);
+                              return;
+                            }
+                            if (phoneController.text.trim().isEmpty) {
+                              ShowToastDialog.showError("Please enter your phone number".tr);
+                              return;
+                            }
+                            if (cvFile == null || cvFileName == null) {
+                              ShowToastDialog.showError("Please upload your CV".tr);
+                              return;
+                            }
+                            controller.submitJobApplication(
+                              cvFile: cvFile!,
+                              cvFileName: cvFileName!,
+                              fullName: nameController.text,
+                              email: email,
+                              coverNote: coverNoteController.text,
+                              phone: phoneController.text,
+                              countryCode: countryCode,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppThemeData.primary4,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            "Submit Application".tr,
+                            style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      spaceH(height: 8),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ─── Helpers ───────────────────────────────────────────────
 
   List<String> _getImages(AdModel ad) => [if (ad.mainImage != null && ad.mainImage!.isNotEmpty) ad.mainImage!, ...?ad.otherImages?.where((u) => u.isNotEmpty)];
@@ -458,12 +724,12 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
           child: iconUrl.isNotEmpty
               ? CachedNetworkImage(
-            imageUrl: iconUrl,
-            width: 24,
-            height: 24,
-            fit: BoxFit.contain,
-            errorWidget: (_, _, _) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
-          )
+                  imageUrl: iconUrl,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.contain,
+                  errorWidget: (_, _, _) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
+                )
               : Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
         ),
         spaceW(width: 10),
@@ -533,20 +799,20 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                       ),
                       if (ad.sellerId != null)
                         Obx(
-                              () => Get.find<AdListingDetailController>().isSellerVerified.value == true
+                          () => Get.find<AdListingDetailController>().isSellerVerified.value == true
                               ? Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset("assets/icons/ic_crown.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
-                                spaceW(width: 4),
-                                TextCustom(title: "Verified", fontSize: 10, color: AppThemeData.primaryWhite),
-                              ],
-                            ),
-                          )
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SvgPicture.asset("assets/icons/ic_crown.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
+                                      spaceW(width: 4),
+                                      TextCustom(title: "Verified", fontSize: 10, color: AppThemeData.primaryWhite),
+                                    ],
+                                  ),
+                                )
                               : const SizedBox(),
                         ),
                     ],
@@ -672,84 +938,84 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
     }
 
     Get.dialog(
-        Dialog(
-          backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.info_outline_rounded, size: 48, color: Color(0xFF2196F3)),
-                spaceH(height: 16),
-                Text(
-                    "Mark as Unavailable?",
-                    style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack)
-                ),
-                spaceH(height: 8),
-                Text(
-                    "Did the seller mention this item is already sold? Let us know so we can update the community.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6)
-                ),
-                spaceH(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Get.back(),
-                        child: Text("Cancel", style: TextStyle(color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, fontFamily: FontFamily.semiBold)),
-                      ),
+      Dialog(
+        backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.info_outline_rounded, size: 48, color: Color(0xFF2196F3)),
+              spaceH(height: 16),
+              Text(
+                "Mark as Unavailable?",
+                style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack),
+              ),
+              spaceH(height: 8),
+              Text(
+                "Did the seller mention this item is already sold? Let us know so we can update the community.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+              ),
+              spaceH(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      child: Text("Cancel", style: TextStyle(color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, fontFamily: FontFamily.semiBold)),
                     ),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          Get.back();
-                          ShowToastDialog.showLoader("Submitting...");
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Get.back();
+                        ShowToastDialog.showLoader("Submitting...");
 
-                          final user = Constant.userModel;
-                          final controller = Get.find<AdListingDetailController>();
+                        final user = Constant.userModel;
+                        final controller = Get.find<AdListingDetailController>();
 
-                          final report = AdReportModel(
-                            id: const Uuid().v4(),
-                            adId: ad.id,
-                            adTitle: ad.title,
-                            adImage: ad.mainImage,
-                            reporterId: uid,
-                            reporterName: user?.fullNameString(),
-                            reporterEmail: user?.email,
-                            sellerId: ad.sellerId,
-                            sellerName: ad.sellerName,
-                            reasonId: "system_unavailable_flag",
-                            reasonTitle: "Item Marked as Unavailable",
-                            description: "A buyer flagged this item as sold/unavailable.",
-                            status: 'pending',
-                            createdAt: Timestamp.now(),
-                          );
+                        final report = AdReportModel(
+                          id: const Uuid().v4(),
+                          adId: ad.id,
+                          adTitle: ad.title,
+                          adImage: ad.mainImage,
+                          reporterId: uid,
+                          reporterName: user?.fullNameString(),
+                          reporterEmail: user?.email,
+                          sellerId: ad.sellerId,
+                          sellerName: ad.sellerName,
+                          reasonId: "system_unavailable_flag",
+                          reasonTitle: "Item Marked as Unavailable",
+                          description: "A buyer flagged this item as sold/unavailable.",
+                          status: 'pending',
+                          createdAt: Timestamp.now(),
+                        );
 
-                          final success = await FireStoreUtils.submitAdReport(report);
-                          ShowToastDialog.closeLoader();
+                        final success = await FireStoreUtils.submitAdReport(report);
+                        ShowToastDialog.closeLoader();
 
-                          if (success) {
-                            controller.onReportSubmitted(report);
-                            ShowToastDialog.showSuccess("Thank you for letting us know!");
-                          } else {
-                            ShowToastDialog.showError("Failed to submit. Please try again.");
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2196F3),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text("Yes, Mark it", style: TextStyle(color: Colors.white, fontFamily: FontFamily.semiBold)),
+                        if (success) {
+                          controller.onReportSubmitted(report);
+                          ShowToastDialog.showSuccess("Thank you for letting us know!");
+                        } else {
+                          ShowToastDialog.showError("Failed to submit. Please try again.");
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2196F3),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
+                      child: const Text("Yes, Mark it", style: TextStyle(color: Colors.white, fontFamily: FontFamily.semiBold)),
                     ),
-                  ],
-                )
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        )
+        ),
+      ),
     );
   }
 
@@ -850,7 +1116,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                       ),
                       spaceH(height: 12),
                       Obx(
-                            () => Wrap(
+                        () => Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: reasons.map((reason) {
@@ -913,49 +1179,49 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Obx(
-                      () => SizedBox(
+                  () => SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       onPressed: isSubmitting.value
                           ? null
                           : () async {
-                        if (selectedReason.value == null) {
-                          ShowToastDialog.showWarning("Please select a report reason");
-                          return;
-                        }
+                              if (selectedReason.value == null) {
+                                ShowToastDialog.showWarning("Please select a report reason");
+                                return;
+                              }
 
-                        isSubmitting.value = true;
-                        final user = Constant.userModel;
-                        final controller = Get.find<AdListingDetailController>();
-                        final report = AdReportModel(
-                          id: const Uuid().v4(),
-                          adId: ad.id,
-                          adTitle: ad.title,
-                          adImage: ad.mainImage,
-                          reporterId: uid,
-                          reporterName: user?.fullNameString(),
-                          reporterEmail: user?.email,
-                          sellerId: ad.sellerId,
-                          sellerName: ad.sellerName,
-                          reasonId: selectedReason.value!.id,
-                          reasonTitle: selectedReason.value!.title,
-                          description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
-                          status: 'pending',
-                          createdAt: Timestamp.now(),
-                        );
+                              isSubmitting.value = true;
+                              final user = Constant.userModel;
+                              final controller = Get.find<AdListingDetailController>();
+                              final report = AdReportModel(
+                                id: const Uuid().v4(),
+                                adId: ad.id,
+                                adTitle: ad.title,
+                                adImage: ad.mainImage,
+                                reporterId: uid,
+                                reporterName: user?.fullNameString(),
+                                reporterEmail: user?.email,
+                                sellerId: ad.sellerId,
+                                sellerName: ad.sellerName,
+                                reasonId: selectedReason.value!.id,
+                                reasonTitle: selectedReason.value!.title,
+                                description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
+                                status: 'pending',
+                                createdAt: Timestamp.now(),
+                              );
 
-                        final success = await FireStoreUtils.submitAdReport(report);
-                        isSubmitting.value = false;
+                              final success = await FireStoreUtils.submitAdReport(report);
+                              isSubmitting.value = false;
 
-                        if (success) {
-                          Get.back();
-                          controller.onReportSubmitted(report);
-                          ShowToastDialog.showSuccess("Report submitted. Thank you!");
-                        } else {
-                          ShowToastDialog.showError("Failed to submit report. Please try again.");
-                        }
-                      },
+                              if (success) {
+                                Get.back();
+                                controller.onReportSubmitted(report);
+                                ShowToastDialog.showSuccess("Report submitted. Thank you!");
+                              } else {
+                                ShowToastDialog.showError("Failed to submit report. Please try again.");
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isSubmitting.value ? AppThemeData.grey5 : AppThemeData.danger300,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1012,8 +1278,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
           images: widget.images,
           initialIndex: initialIndex,
         ),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
       ),
     );
   }
@@ -1027,22 +1292,22 @@ class _ImageGalleryState extends State<_ImageGallery> {
           width: double.infinity,
           child: widget.images.isEmpty
               ? Container(
-            color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3,
-            child: Center(child: Icon(Icons.image_outlined, size: 64, color: widget.isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-          )
+                  color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3,
+                  child: Center(child: Icon(Icons.image_outlined, size: 64, color: widget.isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+                )
               : PageView.builder(
-            controller: _pageController,
-            itemCount: widget.images.length,
-            onPageChanged: (i) => setState(() => _current = i),
-            itemBuilder: (_, i) => GestureDetector(
-              onTap: () => _openFullScreen(context, i),
-              child: CachedNetworkImage(
-                imageUrl: widget.images[i],
-                fit: BoxFit.cover,
-                placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
-              ),
-            ),
-          ),
+                  controller: _pageController,
+                  itemCount: widget.images.length,
+                  onPageChanged: (i) => setState(() => _current = i),
+                  itemBuilder: (_, i) => GestureDetector(
+                    onTap: () => _openFullScreen(context, i),
+                    child: CachedNetworkImage(
+                      imageUrl: widget.images[i],
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
+                    ),
+                  ),
+                ),
         ),
         if (widget.images.length > 1)
           Positioned(
@@ -1053,7 +1318,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 widget.images.length,
-                    (i) => AnimatedContainer(
+                (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: i == _current ? 16 : 6,

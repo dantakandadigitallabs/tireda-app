@@ -8,7 +8,7 @@ import 'package:eSellify/app/dependency/geoflutterfire/src/utils/math.dart';
 import 'package:eSellify/app/models/ad_report_model.dart';
 import 'package:eSellify/app/models/banner_model.dart';
 import 'package:eSellify/app/models/report_reason_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/models/category_model.dart';
 import 'package:eSellify/app/models/chat_message_model.dart';
 import 'package:eSellify/app/models/chat_room_model.dart';
@@ -16,6 +16,7 @@ import 'package:eSellify/app/models/feature_section_model.dart';
 import 'package:eSellify/app/models/contact_us_model.dart';
 import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/custom_field_model.dart';
+import 'package:eSellify/app/models/job_application_model.dart';
 import 'package:eSellify/app/models/notification_model.dart';
 import 'package:eSellify/app/models/review_model.dart';
 import 'package:eSellify/app/models/payment_method_model.dart';
@@ -470,6 +471,146 @@ class FireStoreUtils {
     } catch (error) {
       log('Error fetching Featured Ads subscriptions Plans: $error');
       return [];
+    }
+  }
+
+  // ── JOB APPLICATIONS ────────────────────────────────────────────────
+  /// Saves a job application document. Returns true on success.
+  static Future<bool> saveJobApplication(JobApplicationModel application) async {
+    try {
+      await fireStore.collection(CollectionName.jobApplications).doc(application.id).set(application.toJson());
+
+      // Notify the employer (ad owner) about the new application.
+      await _notifyEmployerOfApplication(application);
+      return true;
+    } catch (e) {
+      developer.log('saveJobApplication Error: $e');
+      return false;
+    }
+  }
+
+  /// Sends the employer an FCM push + saved in-app notification for a new
+  /// job application. Failures here never block the application save.
+  static Future<void> _notifyEmployerOfApplication(JobApplicationModel application) async {
+    try {
+      final employerId = application.employerId;
+      if (employerId == null || employerId.isEmpty) return;
+
+      final employerDoc = await fireStore.collection(CollectionName.customers).doc(employerId).get();
+      final token = employerDoc.data()?['fcmToken'] as String?;
+      if (token == null || token.isEmpty) return;
+
+      final applicantName = (application.applicantName ?? '').trim().isEmpty ? 'Someone' : application.applicantName!.trim();
+      final jobTitle = application.adTitle ?? 'your job';
+
+      await SendNotification.sendOneNotification(
+        token: token,
+        title: 'New job application',
+        body: '$applicantName applied for "$jobTitle"',
+        isPayment: false,
+        isSaveNotification: true,
+        payload: {'type': 'job_application', 'adId': application.adId ?? '', 'receiverId': employerId, 'senderId': application.applicantId ?? '', 'userType': 'customer'},
+      );
+    } catch (e) {
+      developer.log('_notifyEmployerOfApplication Error: $e');
+    }
+  }
+
+  /// Applications submitted BY the given applicant (for the "Job Applications" screen).
+  /// Sorted newest-first client-side to avoid needing a composite index.
+  static Future<List<JobApplicationModel>> getMyJobApplications(String applicantId) async {
+    try {
+      final snapshot = await fireStore.collection(CollectionName.jobApplications).where('applicantId', isEqualTo: applicantId).get();
+      final list = snapshot.docs.map((doc) => JobApplicationModel.fromJson(doc.data())).toList();
+      list.sort((a, b) => (b.createdAt ?? Timestamp(0, 0)).compareTo(a.createdAt ?? Timestamp(0, 0)));
+      return list;
+    } catch (e) {
+      developer.log('getMyJobApplications Error: $e');
+      return [];
+    }
+  }
+
+  /// Applications received FOR a given job ad (for the employer's "Applicants" screen).
+  static Future<List<JobApplicationModel>> getApplicationsForAd(String adId) async {
+    try {
+      final snapshot = await fireStore.collection(CollectionName.jobApplications).where('adId', isEqualTo: adId).get();
+      final list = snapshot.docs.map((doc) => JobApplicationModel.fromJson(doc.data())).toList();
+      list.sort((a, b) => (b.createdAt ?? Timestamp(0, 0)).compareTo(a.createdAt ?? Timestamp(0, 0)));
+      return list;
+    } catch (e) {
+      developer.log('getApplicationsForAd Error: $e');
+      return [];
+    }
+  }
+
+  /// Updates an application's status (pending | reviewed | shortlisted | rejected).
+  static Future<bool> updateJobApplicationStatus(String applicationId, String status) async {
+    try {
+      await fireStore.collection(CollectionName.jobApplications).doc(applicationId).update({'status': status, 'updatedAt': Timestamp.now()});
+
+      // Notify the applicant about meaningful decisions.
+      if (status == 'shortlisted' || status == 'rejected' || status == 'hired') {
+        final doc = await fireStore.collection(CollectionName.jobApplications).doc(applicationId).get();
+        if (doc.exists) {
+          await _notifyApplicantOfStatus(JobApplicationModel.fromJson(doc.data()!), status);
+        }
+      }
+      return true;
+    } catch (e) {
+      developer.log('updateJobApplicationStatus Error: $e');
+      return false;
+    }
+  }
+
+  /// Sends the applicant an FCM push + saved in-app notification when their
+  /// application is shortlisted or rejected. Never blocks the status update.
+  static Future<void> _notifyApplicantOfStatus(JobApplicationModel application, String status) async {
+    try {
+      final applicantId = application.applicantId;
+      if (applicantId == null || applicantId.isEmpty) return;
+
+      final applicantDoc = await fireStore.collection(CollectionName.customers).doc(applicantId).get();
+      final token = applicantDoc.data()?['fcmToken'] as String?;
+      if (token == null || token.isEmpty) return;
+
+      final jobTitle = application.adTitle ?? 'a job';
+      late final String title;
+      late final String body;
+      switch (status) {
+        case 'hired':
+          title = "Congratulations! You're hired";
+          body = 'You have been hired for "$jobTitle". The employer may reach out with next steps.';
+          break;
+        case 'shortlisted':
+          title = "You've been shortlisted!";
+          body = 'Your application for "$jobTitle" has been shortlisted.';
+          break;
+        default: // rejected
+          title = "Application update";
+          body = 'Your application for "$jobTitle" was not selected this time.';
+      }
+
+      await SendNotification.sendOneNotification(
+        token: token,
+        title: title,
+        body: body,
+        isPayment: false,
+        isSaveNotification: true,
+        payload: {'type': 'job_application_status', 'adId': application.adId ?? '', 'receiverId': applicantId, 'senderId': application.employerId ?? '', 'userType': 'customer'},
+      );
+    } catch (e) {
+      developer.log('_notifyApplicantOfStatus Error: $e');
+    }
+  }
+
+  /// Returns true if [applicantId] already submitted an application for [adId].
+  static Future<bool> hasAppliedToJob({required String adId, required String applicantId}) async {
+    try {
+      final snapshot = await fireStore.collection(CollectionName.jobApplications).where('adId', isEqualTo: adId).where('applicantId', isEqualTo: applicantId).limit(1).get();
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      developer.log('hasAppliedToJob Error: $e');
+      return false;
     }
   }
 
@@ -985,6 +1126,9 @@ class FireStoreUtils {
       adTitle: ad.title,
       adImage: ad.mainImage,
       adPrice: ad.price,
+      isJobCategory: ad.isJobCategory,
+      minSalary: ad.minSalary,
+      maxSalary: ad.maxSalary,
       adCategory: ad.leafCategoryName,
       adCurrencySymbol: ad.currency?.symbol,
       adCurrencySymbolAtRight: ad.currency?.symbolAtRight,
@@ -995,6 +1139,44 @@ class FireStoreUtils {
       receiverId: ad.sellerId,
       receiverName: ad.sellerName,
       receiverProfile: ad.sellerProfile,
+      lastMessage: '',
+      lastMessageType: 'text',
+      lastMessageTime: Timestamp.now(),
+      senderUnreadCount: 0,
+      receiverUnreadCount: 0,
+      createdAt: Timestamp.now(),
+    );
+    await docRef.set(chatRoom.toJson());
+    return chatRoom;
+  }
+
+  /// Like [getOrCreateChatRoom] but lets the caller specify the OTHER participant
+  /// explicitly (used when the employer starts a chat with a specific applicant,
+  /// where the other user is the applicant, not the ad's seller).
+  static Future<ChatRoomModel> getOrCreateChatRoomWith({required AdModel ad, required UserModel currentUser, required UserModel otherUser}) async {
+    final existing = await findChatRoom(adId: ad.id!, senderId: currentUser.id!, receiverId: otherUser.id!);
+    if (existing != null) return existing;
+
+    final docRef = fireStore.collection(CollectionName.chatRooms).doc();
+    final chatRoom = ChatRoomModel(
+      id: docRef.id,
+      adId: ad.id,
+      adTitle: ad.title,
+      adImage: ad.mainImage,
+      adPrice: ad.price,
+      isJobCategory: ad.isJobCategory,
+      minSalary: ad.minSalary,
+      maxSalary: ad.maxSalary,
+      adCategory: ad.leafCategoryName,
+      adCurrencySymbol: ad.currency?.symbol,
+      adCurrencySymbolAtRight: ad.currency?.symbolAtRight,
+      adCurrencyDecimalDigits: ad.currency?.decimalDigits,
+      senderId: currentUser.id,
+      senderName: currentUser.fullNameString(),
+      senderProfile: currentUser.profilePic,
+      receiverId: otherUser.id,
+      receiverName: otherUser.fullNameString(),
+      receiverProfile: otherUser.profilePic,
       lastMessage: '',
       lastMessageType: 'text',
       lastMessageTime: Timestamp.now(),

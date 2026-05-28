@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/global_controller.dart';
