@@ -512,8 +512,8 @@ class HomeView extends StatelessWidget {
       itemCount: ads.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
         mainAxisExtent: 265, // Increased slightly for compact metadata
       ),
       itemBuilder: (_, index) => GestureDetector(
@@ -584,48 +584,41 @@ class HomeView extends StatelessWidget {
 
 // ─── Ad Card (Grid) ────────────────────────────────────────
   Widget _buildAdCard(AdModel ad, bool isDark) {
-    final isFeatured = ad.isFeatured == true;
     final condition = _getCondition(ad);
 
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-          width: 0.3,
+          color: ad.isFeatured == true
+              ? AppThemeData.primary4
+              : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+          width: 1.5,
         ),
       ),
-      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
           // ─── IMAGE AREA ─────────────────────────────────────
-          Container(
-            height: 145,
-            width: double.infinity,
-            clipBehavior: Clip.hardEdge,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              border: isFeatured
-                  ? Border.all(color: AppThemeData.primary4, width: 2.4)
-                  : Border.all(color: Colors.transparent, width: 0),
-            ),
+          Expanded(
             child: Stack(
-              fit: StackFit.expand,
               children: [
-                _adImage(
-                  ad,
-                  isDark,
-                  height: 145,
-                  width: double.infinity,
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: _adImage(
+                    ad,
+                    isDark,
+                    height: double.infinity,
+                    width: double.infinity,
+                  ),
                 ),
 
-                if (isFeatured)
+                if (ad.isFeatured == true)
                   Positioned(
-                    top: 4,
-                    left: 4,
+                    top: 6,
+                    left: 6,
                     child: _featuredBadge(
                       fontSize: 8,
                       iconSize: 10,
@@ -635,34 +628,34 @@ class HomeView extends StatelessWidget {
             ),
           ),
 
-          spaceH(height: 6),
-
           // ─── TEXT AREA ──────────────────────────────────────
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
 
                 // PRICE
                 TextCustom(
                   title: PriceFormatter.format(ad),
-                  fontSize: 15,
+                  fontSize: 14,
                   fontFamily: FontFamily.bold,
                   color: AppThemeData.primary4,
                   maxLine: 1,
                 ),
 
-                spaceH(height: 1),
+                spaceH(height: 2),
 
                 // TITLE
                 TextCustom(
                   title: ad.title ?? '',
-                  fontSize: 13,
-                  fontFamily: FontFamily.regular,
+                  fontSize: 12,
+                  fontFamily: FontFamily.medium,
                   color: isDark
                       ? AppThemeData.grey1
                       : AppThemeData.grey10,
-                  maxLine: 2,
+                  maxLine: 1,
                 ),
 
                 spaceH(height: 4),
@@ -719,7 +712,7 @@ class HomeView extends StatelessWidget {
                   ],
                 ),
 
-                const Spacer(),
+                spaceH(height: 4),
 
                 // LOCATION
                 Row(
@@ -739,7 +732,7 @@ class HomeView extends StatelessWidget {
                     Expanded(
                       child: TextCustom(
                         title: _formatShortLocation(ad.address),
-                        fontSize: 11,
+                        fontSize: 10,
                         color: isDark
                             ? AppThemeData.grey5
                             : AppThemeData.grey6,
