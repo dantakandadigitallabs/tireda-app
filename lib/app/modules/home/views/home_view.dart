@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -58,15 +56,21 @@ class HomeView extends StatelessWidget {
               padding: const EdgeInsets.only(left: 16),
               child: GestureDetector(
                 onTap: () => Get.toNamed(Routes.PROFILE),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                  backgroundImage: (Constant.userModel?.profilePic != null && Constant.userModel!.profilePic!.startsWith('http'))
-                      ? NetworkImage(Constant.userModel!.profilePic!)
-                      : null,
-                  child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
-                      ? Icon(HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
-                      : null,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppThemeData.primary4, width: 1.8),
+                  ),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                    backgroundImage: (Constant.userModel?.profilePic != null && Constant.userModel!.profilePic!.startsWith('http'))
+                        ? NetworkImage(Constant.userModel!.profilePic!)
+                        : null,
+                    child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
+                        ? Icon(HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
+                        : null,
+                  ),
                 ),
               ),
             ),
@@ -153,36 +157,39 @@ class HomeView extends StatelessWidget {
                 ),
               ),
               spaceW(width: 16),
-              // ── Notification Bell with dot badge ──
+              // ── Notification Bell with dynamic dot badge ──
               GestureDetector(
                 onTap: () {
                   Get.toNamed(Routes.NOTIFICATIONS);
                 },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    SvgPicture.asset(
-                      "assets/icons/ic_bell.svg",
-                      height: 24,
-                      colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey1 : AppThemeData.grey10, BlendMode.srcIn),
-                    ),
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        height: 9,
-                        width: 9,
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                            width: 1.5,
+                child: Obx(
+                      () => Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      SvgPicture.asset(
+                        "assets/icons/ic_bell.svg",
+                        height: 24,
+                        colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey1 : AppThemeData.grey10, BlendMode.srcIn),
+                      ),
+                      if (controller.hasUnreadNotifications.value)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            height: 9,
+                            width: 9,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                                width: 1.5,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ).paddingOnly(right: 16),
             ],
@@ -296,24 +303,6 @@ class HomeView extends StatelessWidget {
           ),
           spaceH(height: 8),
           _buildGridStyle(ads, isDark, context),
-          spaceH(height: 16),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () => Get.to(() => const AdsListingView()),
-              icon: Icon(HugeIcons.strokeRoundedGridView, size: 18, color: AppThemeData.primary4),
-              label: TextCustom(
-                title: 'Browse all ads'.tr,
-                fontSize: 14,
-                fontFamily: FontFamily.semiBold,
-                color: AppThemeData.primary4,
-              ),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                side: BorderSide(color: AppThemeData.primary4, width: 1.2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
           spaceH(height: 20),
         ],
       );
@@ -952,23 +941,74 @@ class HomeView extends StatelessWidget {
   // ─── Search Bar ────────────────────────────────────────────
   Widget _buildSearchBar(DarkThemeProvider themeChange, HomeController controller) {
     final isDark = themeChange.isDarkTheme();
-    return GestureDetector(
-      onTap: () => Get.toNamed(Routes.SEARCH),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.transparent, width: 0),
+    return Row(
+      children: [
+        // ── Search input (~70% width) ──
+        Expanded(
+          flex: 7,
+          child: GestureDetector(
+            onTap: () => Get.toNamed(Routes.SEARCH),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.transparent, width: 0),
+              ),
+              child: Row(
+                children: [
+                  Icon(HugeIcons.strokeRoundedSearch01, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  spaceW(width: 12),
+                  TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                ],
+              ),
+            ),
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(HugeIcons.strokeRoundedSearch01, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-            spaceW(width: 12),
-            TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-          ],
+
+        // ── "or" separator ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: TextCustom(
+            title: "or",
+            fontSize: 12,
+            fontFamily: FontFamily.regular,
+            color: isDark ? AppThemeData.grey6 : AppThemeData.grey5,
+          ),
         ),
-      ),
+
+        // ── All Ads button (~25% width) ──
+        Expanded(
+          flex: 3,
+          child: GestureDetector(
+            onTap: () => Get.to(() => const AdsListingView()),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppThemeData.primary4, width: 1),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(HugeIcons.strokeRoundedCatalogue, size: 16, color: AppThemeData.primary4),
+                  spaceW(width: 5),
+                  Flexible(
+                    child: TextCustom(
+                      title: "All Ads",
+                      fontSize: 13,
+                      fontFamily: FontFamily.semiBold,
+                      color: AppThemeData.primary4,
+                      maxLine: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

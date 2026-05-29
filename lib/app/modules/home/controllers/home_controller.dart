@@ -37,6 +37,10 @@ class HomeController extends GetxController {
   RxList<AdModel> allAdsPreview = <AdModel>[].obs;
   RxBool isAllAdsLoading = true.obs;
 
+  // Notification dot — true when user has at least one unread notification
+  RxBool hasUnreadNotifications = false.obs;
+  StreamSubscription? _notificationsSubscription;
+
   @override
   void onInit() {
     getData();
@@ -46,6 +50,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _autoScrollTimer?.cancel();
+    _notificationsSubscription?.cancel();
     bannerPageController.dispose();
     super.onClose();
   }
@@ -55,6 +60,25 @@ class HomeController extends GetxController {
     loadFeatureSections();
     loadBanners();
     loadAllAdsPreview();
+    _listenToUnreadNotifications();
+  }
+
+  /// Listens to the notifications stream and updates [hasUnreadNotifications]
+  /// reactively. Uses the same stream as NotificationsController so no
+  /// extra Firestore reads are introduced beyond what already exists.
+  void _listenToUnreadNotifications() {
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return;
+
+    _notificationsSubscription?.cancel();
+    _notificationsSubscription = FireStoreUtils.getNotificationsStream(uid).listen(
+          (list) {
+        hasUnreadNotifications.value = list.any((n) => n.isRead != true);
+      },
+      onError: (e) {
+        log('Error listening to notifications stream: $e');
+      },
+    );
   }
 
   /// Loads a small preview of all active ads for the "All Ads" home section.
