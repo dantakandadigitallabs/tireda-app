@@ -8,6 +8,7 @@ import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
+import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
@@ -219,9 +220,9 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        mainAxisExtent: 235,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
+        mainAxisExtent: 265,
       ),
       itemCount: controller.sellerAds.length,
       itemBuilder: (_, i) => _AdCard(ad: controller.sellerAds[i], controller: controller, isDark: isDark),
@@ -464,6 +465,39 @@ class _AdCard extends StatelessWidget {
 
   const _AdCard({required this.ad, required this.controller, required this.isDark});
 
+  // ─── Condition Extractor ────────────────────────────────────
+  String _getCondition(AdModel ad) {
+    try {
+      if (ad.customFields == null || ad.customFields!.isEmpty) {
+        return '';
+      }
+      for (final field in ad.customFields!) {
+        final name = field['name']?.toString().toLowerCase() ?? '';
+        if (name.contains('condition')) {
+          return field['value']?.toString() ?? '';
+        }
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // ─── Location Formatter ─────────────────────────────────────
+  String _formatShortLocation(String? address) {
+    if (address == null || address.isEmpty) return '';
+    final parts = address.split(',');
+    if (parts.length < 2) {
+      return address.replaceAll('State', '').trim();
+    }
+    final localGovt = parts.first.trim();
+    String state = parts[1]
+        .replaceAll('State', '')
+        .replaceAll('(FCT)', '')
+        .trim();
+    return '$state, $localGovt';
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -528,7 +562,7 @@ class _AdCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextCustom(
-                    title: controller.formatPrice(ad),
+                    title: PriceFormatter.format(ad),
                     fontSize: 14,
                     fontFamily: FontFamily.bold,
                     color: AppThemeData.primary4,
@@ -542,14 +576,54 @@ class _AdCard extends StatelessWidget {
                     color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                     maxLine: 1,
                   ),
-                  spaceH(height: 2),
+                  spaceH(height: 4),
+                  // CONDITION + VERIFIED ID ROW
+                  Builder(builder: (_) {
+                    final condition = _getCondition(ad);
+                    return Row(
+                      children: [
+                        if (condition.isNotEmpty) ...[
+                          Flexible(
+                            child: TextCustom(
+                              title: condition,
+                              fontSize: 10,
+                              fontFamily: FontFamily.medium,
+                              color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                              maxLine: 1,
+                            ),
+                          ),
+                        ],
+                        if (condition.isNotEmpty && ad.isSellerVerified == true) ...[
+                          spaceW(width: 5),
+                          TextCustom(
+                            title: "•",
+                            fontSize: 10,
+                            fontFamily: FontFamily.medium,
+                            color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                          ),
+                          spaceW(width: 5),
+                        ],
+                        if (ad.isSellerVerified == true) ...[
+                          Icon(Icons.verified_user, size: 11, color: AppThemeData.primary4),
+                          spaceW(width: 4),
+                          TextCustom(
+                            title: "Verified ID",
+                            fontSize: 10,
+                            fontFamily: FontFamily.semiBold,
+                            color: AppThemeData.primary4,
+                          ),
+                        ],
+                      ],
+                    );
+                  }),
+                  spaceH(height: 4),
                   Row(
                     children: [
                       Icon(Icons.location_on_outlined, size: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                       spaceW(width: 2),
                       Expanded(
                         child: TextCustom(
-                          title: ad.address ?? '',
+                          title: _formatShortLocation(ad.address),
                           fontSize: 10,
                           color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
                           maxLine: 1,
