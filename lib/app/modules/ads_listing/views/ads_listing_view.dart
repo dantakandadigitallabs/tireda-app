@@ -244,7 +244,7 @@ class AdsListingView extends GetView<AdsListingController> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
       ),
       child: Row(
@@ -252,7 +252,7 @@ class AdsListingView extends GetView<AdsListingController> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
                 child: _adImage(ad, isDark, width: 130, height: 130),
               ),
               if (ad.isFeatured == true)
@@ -342,12 +342,12 @@ class AdsListingView extends GetView<AdsListingController> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: ad.isFeatured == true
               ? AppThemeData.primary4
               : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-          width: 1.5,
+          width: 1.8,
         ),
       ),
       child: Column(
@@ -359,7 +359,7 @@ class AdsListingView extends GetView<AdsListingController> {
             child: Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                   child: _adImage(
                     ad,
                     isDark,

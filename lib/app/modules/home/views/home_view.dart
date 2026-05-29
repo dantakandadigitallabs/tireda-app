@@ -52,106 +52,139 @@ class HomeView extends StatelessWidget {
             backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
             automaticallyImplyLeading: false,
             centerTitle: true,
+            elevation: 1,
+            shadowColor: isDark ? Colors.black26 : Colors.black12,
             leading: Padding(
               padding: const EdgeInsets.only(left: 16),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                backgroundImage: (Constant.userModel?.profilePic != null && Constant.userModel!.profilePic!.startsWith('http'))
-                    ? NetworkImage(Constant.userModel!.profilePic!)
-                    : null,
-                child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
-                    ? Icon(HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
-                    : null,
+              child: GestureDetector(
+                onTap: () => Get.toNamed(Routes.PROFILE),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                  backgroundImage: (Constant.userModel?.profilePic != null && Constant.userModel!.profilePic!.startsWith('http'))
+                      ? NetworkImage(Constant.userModel!.profilePic!)
+                      : null,
+                  child: (Constant.userModel?.profilePic == null || !Constant.userModel!.profilePic!.startsWith('http'))
+                      ? Icon(HugeIcons.strokeRoundedUser03, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)
+                      : null,
+                ),
               ),
             ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    // ── Nigerian State / LGA picker ──
-                    final result = await _showNigeriaLocationPicker(context, isDark);
-                    if (result == null) return;
+            title: GestureDetector(
+              onTap: () async {
+                // ── Nigerian State / LGA picker ──
+                final result = await _showNigeriaLocationPicker(context, isDark);
+                if (result == null) return;
 
-                    final address = result.lga.name == "All Nigeria"
-                        ? "All Nigeria"
-                        : "${result.lga.name}, ${result.state.state}";
+                final address = result.lga.name == "All Nigeria"
+                    ? "All Nigeria"
+                    : "${result.lga.name}, ${result.state.state}";
 
-                    final model = AddAddressModel(
-                      id: Constant.getUuid(),
-                      address: address,
-                      locality: result.lga.name == "All Nigeria" ? "" : result.lga.name,
-                      landmark: result.lga.name == "All Nigeria" ? "" : result.state.state,  addressAs: "Home",
-                      isDefault: true,
-                      name: FireStoreUtils.getCurrentUid() != null
-                          ? Constant.userModel?.fullNameString() ?? ""
-                          : "",
-                      location: LocationLatLng(
-                        latitude: result.lga.lat,
-                        longitude: result.lga.lng,
-                      ),
-                    );
-
-                    Constant.currentLocation.value = model;
-
-                    if (FireStoreUtils.getCurrentUid() != null) {
-                      Constant.userModel?.addAddresses ??= [];
-                      final existing = Constant.userModel!.addAddresses!
-                          .indexWhere((a) => a.isDefault == true);
-                      if (existing >= 0) {
-                        Constant.userModel!.addAddresses![existing] = model;
-                      } else {
-                        Constant.userModel!.addAddresses!.add(model);
-                      }
-                      await FireStoreUtils.updateUser(Constant.userModel!);
-                    } else {
-                      Preferences.setString(
-                        Preferences.selectedAddressKey,
-                        jsonEncode(model.toJson()),
-                      );
-                    }
-
-                    controller.getData();
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      TextCustom(title: "Location", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset("assets/icons/ic_map_pin.svg"),
-                          spaceW(width: 4),
-                          Obx(
-                                () => Expanded(
-                              child: TextCustom(
-                                title: Constant.currentLocation.value?.getFullAddress() ?? "Select Location".tr,
-                                fontSize: 14,
-                                fontFamily: FontFamily.regular,
-                                maxLine: 1,
-                                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                              ),
-                            ),
-                          ),
-                          Icon(HugeIcons.strokeRoundedArrowDown01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey7, size: 20),
-                        ],
-                      ),
-                    ],
+                final model = AddAddressModel(
+                  id: Constant.getUuid(),
+                  address: address,
+                  locality: result.lga.name == "All Nigeria" ? "" : result.lga.name,
+                  landmark: result.lga.name == "All Nigeria" ? "" : result.state.state,  addressAs: "Home",
+                  isDefault: true,
+                  name: FireStoreUtils.getCurrentUid() != null
+                      ? Constant.userModel?.fullNameString() ?? ""
+                      : "",
+                  location: LocationLatLng(
+                    latitude: result.lga.lat,
+                    longitude: result.lga.lng,
                   ),
-                ),
-              ],
-            ).paddingOnly(right: 12, left: 12),
+                );
+
+                Constant.currentLocation.value = model;
+
+                if (FireStoreUtils.getCurrentUid() != null) {
+                  Constant.userModel?.addAddresses ??= [];
+                  final existing = Constant.userModel!.addAddresses!
+                      .indexWhere((a) => a.isDefault == true);
+                  if (existing >= 0) {
+                    Constant.userModel!.addAddresses![existing] = model;
+                  } else {
+                    Constant.userModel!.addAddresses!.add(model);
+                  }
+                  await FireStoreUtils.updateUser(Constant.userModel!);
+                } else {
+                  Preferences.setString(
+                    Preferences.selectedAddressKey,
+                    jsonEncode(model.toJson()),
+                  );
+                }
+
+                controller.getData();
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SvgPicture.asset(
+                    "assets/icons/ic_map_pin.svg",
+                    colorFilter: ColorFilter.mode(AppThemeData.primary4, BlendMode.srcIn),
+                    height: 16,
+                  ),
+                  spaceW(width: 6),
+                  Flexible(
+                    child: Obx(
+                          () => TextCustom(
+                        title: Constant.currentLocation.value?.getFullAddress() ?? "Select Location".tr,
+                        fontSize: 14,
+                        fontFamily: FontFamily.semiBold,
+                        maxLine: 1,
+                        color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                      ),
+                    ),
+                  ),
+                  spaceW(width: 4),
+                  Icon(HugeIcons.strokeRoundedArrowDown01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey7, size: 16),
+                ],
+              ).paddingOnly(right: 12, left: 12),
+            ),
             actions: [
+              // ── Dark Mode Toggle ──
+              GestureDetector(
+                onTap: () => themeChange.darkTheme = themeChange.isDarkTheme() ? 1 : 0,
+                child: SvgPicture.asset(
+                  "assets/icons/ic_sun.svg",
+                  height: 22,
+                  colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey1 : AppThemeData.grey10, BlendMode.srcIn),
+                ),
+              ),
+              spaceW(width: 16),
+              // ── Notification Bell with dot badge ──
               GestureDetector(
                 onTap: () {
                   Get.toNamed(Routes.NOTIFICATIONS);
                 },
-                child: SvgPicture.asset(
-                  "assets/icons/ic_bell.svg",
-                  colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey1 : AppThemeData.grey10, BlendMode.srcIn),
-                ).paddingOnly(right: 16),
-              ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    SvgPicture.asset(
+                      "assets/icons/ic_bell.svg",
+                      height: 24,
+                      colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey1 : AppThemeData.grey10, BlendMode.srcIn),
+                    ),
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        height: 9,
+                        width: 9,
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ).paddingOnly(right: 16),
             ],
           ),
           body: RefreshIndicator(
