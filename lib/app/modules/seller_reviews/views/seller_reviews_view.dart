@@ -220,8 +220,8 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
         mainAxisExtent: 265,
       ),
       itemCount: controller.sellerAds.length,
@@ -506,7 +506,12 @@ class _AdCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+          border: Border.all(
+            color: ad.isFeatured == true
+                ? AppThemeData.primary4
+                : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+            width: 1.5,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

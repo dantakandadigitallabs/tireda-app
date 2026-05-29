@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/ad_service.dart';
+import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/native_ad_widget.dart';
 import 'package:eSellify/widgets/shimmer_widgets.dart';
@@ -52,7 +53,7 @@ class AdsListingView extends GetView<AdsListingController> {
                         height: 44,
                         child: TextField(
                           controller: controller.searchController,
-                          style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                          style: TextStyle(fontSize: 15, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                           decoration: InputDecoration(
                             hintText: "Search any advertisement...",
                             hintStyle: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
@@ -90,29 +91,29 @@ class AdsListingView extends GetView<AdsListingController> {
                     ? ShimmerWidgets.adListShimmer(isDark)
                     : controller.filteredAds.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.campaign_outlined, size: 64, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                            spaceH(height: 12),
-                            TextCustom(title: "No Ads Found", fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
-                          ],
-                        ),
-                      )
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.campaign_outlined, size: 64, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                      spaceH(height: 12),
+                      TextCustom(title: "No Ads Found", fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
+                    ],
+                  ),
+                )
                     : Column(
-                        children: [
-                          Expanded(
-                            child: controller.viewMode.value == 0
-                                ? _buildListView(controller, isDark)
-                                : _buildGridView(controller, isDark),
-                          ),
-                          if (controller.isLoadingMore.value)
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppThemeData.primary4)),
-                            ),
-                        ],
+                  children: [
+                    Expanded(
+                      child: controller.viewMode.value == 1
+                          ? _buildListView(controller, isDark)
+                          : _buildGridView(controller, isDark),
+                    ),
+                    if (controller.isLoadingMore.value)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppThemeData.primary4)),
                       ),
+                  ],
+                ),
               ),
 
               // Bottom Bar: Filter + Sort
@@ -175,12 +176,55 @@ class AdsListingView extends GetView<AdsListingController> {
     );
   }
 
+
+
+  // ─── Tireda Location Formatter ────────────────────────────
+  String _formatShortLocation(String? address) {
+    if (address == null || address.isEmpty) return '';
+
+    final parts = address.split(',');
+
+    if (parts.length < 2) {
+      return address.replaceAll('State', '').trim();
+    }
+
+    final localGovt = parts.first.trim();
+
+    String state = parts[1]
+        .replaceAll('State', '')
+        .replaceAll('(FCT)', '')
+        .trim();
+
+    return '$state, $localGovt';
+  }
+
+  // ─── Tireda Condition Extractor ───────────────────────────
+  String _getCondition(AdModel ad) {
+    try {
+      if (ad.customFields == null || ad.customFields!.isEmpty) {
+        return '';
+      }
+
+      for (final field in ad.customFields!) {
+        final name = field['name']?.toString().toLowerCase() ?? '';
+
+        if (name.contains('condition')) {
+          return field['value']?.toString() ?? '';
+        }
+      }
+
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // ─── List View ─────────────────────────────────────────────
   Widget _buildListView(AdsListingController controller, bool isDark) {
     final data = controller.filteredAds;
     return ListView.separated(
       controller: controller.scrollController,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       itemCount: data.length + (data.length ~/ 5),
       separatorBuilder: (_, _) => spaceH(height: 10),
       itemBuilder: (_, index) {
@@ -248,7 +292,7 @@ class AdsListingView extends GetView<AdsListingController> {
                       Icon(Icons.location_on_outlined, size: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                       spaceW(width: 4),
                       Expanded(
-                        child: TextCustom(title: ad.address.toString(), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                        child: TextCustom(title: ad.address.toString(), fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
                       ),
                     ],
                   ),
@@ -257,7 +301,7 @@ class AdsListingView extends GetView<AdsListingController> {
                     children: [
                       Icon(Icons.access_time, size: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                       spaceW(width: 4),
-                      TextCustom(title: _timeAgo(ad), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      TextCustom(title: _timeAgo(ad), fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     ],
                   ),
                 ],
@@ -275,7 +319,12 @@ class AdsListingView extends GetView<AdsListingController> {
       controller: controller.scrollController,
       padding: const EdgeInsets.all(16),
       itemCount: controller.filteredAds.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.72),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+        mainAxisExtent: 265,
+      ),
       itemBuilder: (_, index) {
         final ad = controller.filteredAds[index];
         return GestureDetector(
@@ -286,94 +335,155 @@ class AdsListingView extends GetView<AdsListingController> {
     );
   }
 
+
   Widget _buildGridCard(AdModel ad, bool isDark) {
+    final condition = _getCondition(ad);
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+        border: Border.all(
+          color: ad.isFeatured == true
+              ? AppThemeData.primary4
+              : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image + like button
+
+          // Image
           Expanded(
-            flex: 3,
             child: Stack(
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: _adImage(ad, isDark, height: double.infinity, width: double.infinity),
+                  child: _adImage(
+                    ad,
+                    isDark,
+                    height: double.infinity,
+                    width: double.infinity,
+                  ),
                 ),
+
                 if (ad.isFeatured == true)
                   Positioned(
                     top: 6,
                     left: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(color: const Color(0xffFF9500), borderRadius: BorderRadius.circular(4)),
-                      child: const Row(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xffFF9500),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [Icon(Icons.star_rounded, size: 10, color: Colors.white), SizedBox(width: 2), Text("Featured", style: TextStyle(fontSize: 8, fontFamily: FontFamily.bold, color: Colors.white))],
+                        children: [
+                          const Icon(Icons.star_rounded, size: 10, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text("Featured", style: TextStyle(fontSize: 8, fontFamily: FontFamily.bold, color: Colors.white)),
+                        ],
                       ),
                     ),
                   ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    height: 30,
-                    width: 30,
-                    decoration: BoxDecoration(color: (isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite).withValues(alpha: 0.85), shape: BoxShape.circle),
-                    child: Center(child: _LikeButton(ad: ad, size: 16)),
-                  ),
-                ),
               ],
             ),
           ),
-          // Info section
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Price + Title
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextCustom(title: _formatPrice(ad), fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
-                      spaceH(height: 2),
-                      TextCustom(title: ad.title ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
-                    ],
-                  ),
-                  // Location + Time
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.location_on_outlined, size: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                          spaceW(width: 3),
-                          Expanded(
-                            child: TextCustom(title: ad.address.toString(), fontSize: 10, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
-                          ),
-                        ],
+
+          // Details
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                // Price
+                TextCustom(
+                  title: _formatPrice(ad),
+                  fontSize: 14,
+                  fontFamily: FontFamily.bold,
+                  color: AppThemeData.primary4,
+                  maxLine: 1,
+                ),
+
+                spaceH(height: 2),
+
+                // Title
+                TextCustom(
+                  title: ad.title ?? '',
+                  fontSize: 12,
+                  fontFamily: FontFamily.medium,
+                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                  maxLine: 1,
+                ),
+
+                spaceH(height: 4),
+
+                // Condition + Verified ID
+                Row(
+                  children: [
+
+                    if (condition.isNotEmpty) ...[
+                      Flexible(
+                        child: TextCustom(
+                          title: condition,
+                          fontSize: 10,
+                          fontFamily: FontFamily.medium,
+                          color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                          maxLine: 1,
+                        ),
                       ),
-                      spaceH(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.access_time, size: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                          spaceW(width: 3),
-                          TextCustom(title: _timeAgo(ad), fontSize: 10, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                        ],
+                    ],
+
+                    if (condition.isNotEmpty && ad.isSellerVerified == true) ...[
+                      spaceW(width: 5),
+                      TextCustom(
+                        title: "•",
+                        fontSize: 10,
+                        fontFamily: FontFamily.medium,
+                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                      ),
+                      spaceW(width: 5),
+                    ],
+
+                    if (ad.isSellerVerified == true) ...[
+                      Icon(Icons.verified_user, size: 11, color: AppThemeData.primary4),
+                      spaceW(width: 4),
+                      TextCustom(
+                        title: "Verified ID",
+                        fontSize: 10,
+                        fontFamily: FontFamily.semiBold,
+                        color: AppThemeData.primary4,
                       ),
                     ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+
+                spaceH(height: 4),
+
+                // Location
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 11,
+                      color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                    ),
+                    spaceW(width: 2),
+                    Expanded(
+                      child: TextCustom(
+                        title: _formatShortLocation(ad.address),
+                        fontSize: 10,
+                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                        maxLine: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -384,18 +494,18 @@ class AdsListingView extends GetView<AdsListingController> {
   Widget _adImage(AdModel ad, bool isDark, {required double height, double? width}) {
     return (ad.mainImage != null && ad.mainImage!.isNotEmpty)
         ? CachedNetworkImage(
-            imageUrl: ad.mainImage!,
-            height: height,
-            width: width,
-            fit: BoxFit.cover,
-            placeholder: (_, _) => Container(height: height, width: width, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-          )
+      imageUrl: ad.mainImage!,
+      height: height,
+      width: width,
+      fit: BoxFit.cover,
+      placeholder: (_, _) => Container(height: height, width: width, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+    )
         : Container(
-            height: height,
-            width: width,
-            color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-            child: Center(child: Icon(Icons.image_outlined, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-          );
+      height: height,
+      width: width,
+      color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+      child: Center(child: Icon(Icons.image_outlined, size: 32, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+    );
   }
 
   // ─── Sort Bottom Sheet ─────────────────────────────────────
@@ -445,12 +555,7 @@ class AdsListingView extends GetView<AdsListingController> {
 
   // ─── Helpers ───────────────────────────────────────────────
   String _formatPrice(AdModel ad) {
-    if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
-    final c = ad.currency;
-    final s = c?.symbol ?? '';
-    final d = c?.decimalDigits ?? 0;
-    final p = ad.price!.toStringAsFixed(d);
-    return c?.symbolAtRight == true ? "$p $s".trim() : "$s$p".trim();
+    return PriceFormatter.format(ad);
   }
 
   String _timeAgo(AdModel ad) {
@@ -478,7 +583,7 @@ class _LikeButton extends StatelessWidget {
     final isLiked = (uid != null && (ad.likedUser?.contains(uid) ?? false)).obs;
 
     return Obx(
-      () => GestureDetector(
+          () => GestureDetector(
         onTap: () async {
           if (uid == null || ad.id == null) return;
           final result = await FireStoreUtils.toggleLike(ad.id!, uid);
@@ -524,7 +629,7 @@ class _FilterView extends StatelessWidget {
         ],
       ),
       body: Obx(
-        () => Column(
+            () => Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
@@ -562,7 +667,7 @@ class _FilterView extends StatelessWidget {
                               child: TextCustom(title: "All", fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                             ),
                             ...controller.allCategories.map(
-                              (cat) => DropdownMenuItem(
+                                  (cat) => DropdownMenuItem(
                                 value: cat.id,
                                 child: TextCustom(title: cat.categoryName ?? '-', fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                               ),
@@ -610,16 +715,16 @@ class _FilterView extends StatelessWidget {
                           items: AdsListingController.postedSinceOptions
                               .map(
                                 (opt) => DropdownMenuItem(
-                                  value: opt['key'],
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.calendar_today_outlined, size: 18, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                                      spaceW(width: 10),
-                                      TextCustom(title: opt['label']!, fontSize: 15, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                                    ],
-                                  ),
-                                ),
-                              )
+                              value: opt['key'],
+                              child: Row(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined, size: 18, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                  spaceW(width: 10),
+                                  TextCustom(title: opt['label']!, fontSize: 15, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                ],
+                              ),
+                            ),
+                          )
                               .toList(),
                           onChanged: (v) => controller.filterPostedSince.value = v ?? 'all',
                         ),
