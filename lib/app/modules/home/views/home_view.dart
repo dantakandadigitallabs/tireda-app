@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -946,11 +948,14 @@ class HomeView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.transparent, width: 0),
+                border: Border.all(
+                  color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                  width: 1.5,
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(HugeIcons.strokeRoundedSearch01, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  Icon(HugeIcons.strokeRoundedSearch01, size: 22, color: AppThemeData.primary4),
                   spaceW(width: 12),
                   TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 ],
@@ -970,7 +975,7 @@ class HomeView extends StatelessWidget {
           ),
         ),
 
-        // ── All Ads button (~25% width) ──
+        // ── Explore button (~25% width) ──
         Expanded(
           flex: 3,
           child: GestureDetector(
@@ -978,21 +983,20 @@ class HomeView extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               decoration: BoxDecoration(
-                color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                color: AppThemeData.primary4,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppThemeData.primary4, width: 1),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(HugeIcons.strokeRoundedCatalogue, size: 16, color: AppThemeData.primary4),
+                  Icon(HugeIcons.strokeRoundedCatalogue, size: 16, color: Colors.white),
                   spaceW(width: 5),
                   Flexible(
                     child: TextCustom(
-                      title: "All Ads",
+                      title: "Explore",
                       fontSize: 13,
                       fontFamily: FontFamily.semiBold,
-                      color: AppThemeData.primary4,
+                      color: Colors.white,
                       maxLine: 1,
                     ),
                   ),

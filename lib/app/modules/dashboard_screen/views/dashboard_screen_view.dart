@@ -96,7 +96,7 @@ class DashboardScreenView extends StatelessWidget {
                     ],
                   ),
                   Positioned(
-                    top: -27,
+                    top: -26,
                     child: GestureDetector(
                       onTap: () => controller.onSellTap(),
                       child: Container(
