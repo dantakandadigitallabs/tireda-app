@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/models/category_model.dart';
+import 'package:eSellify/app/models/custom_field_model.dart';
 import 'package:eSellify/app/models/feature_section_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
@@ -48,11 +49,26 @@ class AdsListingController extends GetxController {
   // Filter
   RxString filterCategoryId = ''.obs;
   RxString filterCategoryName = ''.obs;
+  RxString filterSubCategoryId = ''.obs;
+  RxString filterSubCategoryName = ''.obs;
   Rx<double?> filterMinPrice = Rx<double?>(null);
   Rx<double?> filterMaxPrice = Rx<double?>(null);
   RxString filterPostedSince = 'all'.obs;
+  RxBool filterVerifiedOnly = false.obs;
+  RxBool filterFeaturedOnly = false.obs;
   final TextEditingController minPriceController = TextEditingController();
   final TextEditingController maxPriceController = TextEditingController();
+
+  // Dynamic custom field filters — { fieldName: selectedValue }
+  RxMap<String, String> activeCustomFilters = <String, String>{}.obs;
+
+  // Dynamic custom fields for the selected filter subcategory
+  RxList<CustomFieldModel> categoryCustomFields = <CustomFieldModel>[].obs;
+  RxBool isLoadingCustomFields = false.obs;
+
+  // Subcategories for the selected parent category in filter
+  RxList<CategoryModel> filterSubCategories = <CategoryModel>[].obs;
+  RxBool isLoadingSubCategories = false.obs;
 
   // Categories for filter
   RxList<CategoryModel> allCategories = <CategoryModel>[].obs;
@@ -80,6 +96,21 @@ class AdsListingController extends GetxController {
   /// numbers are accurate regardless of pagination state.
   int countAdsForCategory(String categoryId) {
     return categoryCounts[categoryId] ?? 0;
+  }
+
+  /// Returns only filterable custom fields — dropdown or radio with options.
+  List<CustomFieldModel> get filterableCustomFields => categoryCustomFields
+      .where((f) =>
+  (f.type?.toLowerCase() == 'dropdown' || f.type?.toLowerCase() == 'radio') &&
+      (f.options?.isNotEmpty ?? false))
+      .toList();
+
+  /// The effective category ID used for ad fetching.
+  /// Subcategory wins over parent when selected.
+  String? get _effectiveCategoryId {
+    if (filterSubCategoryId.value.isNotEmpty) return filterSubCategoryId.value;
+    if (filterCategoryId.value.isNotEmpty) return filterCategoryId.value;
+    return _argCategoryId;
   }
 
   @override
@@ -157,19 +188,62 @@ class AdsListingController extends GetxController {
     }
   }
 
-  /// Effective category id for server-side querying. Filter UI wins over
-  /// the nav-arg if user changes it.
-  String? get _effectiveCategoryId {
-    if (filterCategoryId.value.isNotEmpty) return filterCategoryId.value;
-    return _argCategoryId;
-  }
-
   DateTime? get _postedSinceCutoff {
     switch (filterPostedSince.value) {
       case '24h': return DateTime.now().subtract(const Duration(hours: 24));
       case '7d':  return DateTime.now().subtract(const Duration(days: 7));
       case '30d': return DateTime.now().subtract(const Duration(days: 30));
       default:    return null;
+    }
+  }
+
+  /// Loads subcategories for a selected parent category in the filter.
+  /// Clears subcategory selection and custom fields when parent changes.
+  Future<void> loadSubCategories(String parentCategoryId) async {
+    if (parentCategoryId.isEmpty) {
+      filterSubCategories.clear();
+      filterSubCategoryId.value = '';
+      filterSubCategoryName.value = '';
+      categoryCustomFields.clear();
+      activeCustomFilters.clear();
+      return;
+    }
+    isLoadingSubCategories.value = true;
+    try {
+      final subs = await FireStoreUtils.getSubCategories(parentCategoryId);
+      filterSubCategories.assignAll(subs);
+    } catch (e) {
+      log('Error loading subcategories: $e');
+    } finally {
+      isLoadingSubCategories.value = false;
+    }
+  }
+
+  /// Loads dynamic custom fields for the selected subcategory.
+  /// Passes both subcategory ID and its parent ID to getCustomFields()
+  /// so fields assigned at either level are returned correctly.
+  Future<void> loadCategoryCustomFields({
+    required String subCategoryId,
+    required String parentCategoryId,
+  }) async {
+    if (subCategoryId.isEmpty) {
+      categoryCustomFields.clear();
+      activeCustomFilters.clear();
+      return;
+    }
+    isLoadingCustomFields.value = true;
+    try {
+      final fields = await FireStoreUtils.getCustomFields(
+        categoryId: subCategoryId,
+        parentCategoryId: parentCategoryId,
+      );
+      categoryCustomFields.assignAll(fields);
+      // Clear stale custom filters from previous subcategory selection
+      activeCustomFilters.clear();
+    } catch (e) {
+      log('Error loading category custom fields: $e');
+    } finally {
+      isLoadingCustomFields.value = false;
     }
   }
 
@@ -187,6 +261,11 @@ class AdsListingController extends GetxController {
         minPrice: filterMinPrice.value,
         maxPrice: filterMaxPrice.value,
         postedSinceCutoff: _postedSinceCutoff,
+        verifiedOnly: filterVerifiedOnly.value ? true : null,
+        featuredOnly: filterFeaturedOnly.value ? true : null,
+        customFilters: activeCustomFilters.isNotEmpty
+            ? Map<String, String>.from(activeCustomFilters)
+            : null,
       );
       allAds.value = result.items;
       _lastDocument = result.lastDocument;
@@ -215,6 +294,11 @@ class AdsListingController extends GetxController {
         minPrice: filterMinPrice.value,
         maxPrice: filterMaxPrice.value,
         postedSinceCutoff: _postedSinceCutoff,
+        verifiedOnly: filterVerifiedOnly.value ? true : null,
+        featuredOnly: filterFeaturedOnly.value ? true : null,
+        customFilters: activeCustomFilters.isNotEmpty
+            ? Map<String, String>.from(activeCustomFilters)
+            : null,
       );
 
       allAds.addAll(result.items);
@@ -272,6 +356,8 @@ class AdsListingController extends GetxController {
     if (filterCategoryId.value.isEmpty && _argCategoryId != null) {
       _argCategoryId = null;
       title.value = 'All Ads';
+    } else if (filterSubCategoryId.value.isNotEmpty) {
+      title.value = filterSubCategoryName.value.isNotEmpty ? filterSubCategoryName.value : 'All Ads';
     } else if (filterCategoryId.value.isNotEmpty) {
       title.value = filterCategoryName.value.isNotEmpty ? filterCategoryName.value : 'All Ads';
     }
@@ -281,9 +367,16 @@ class AdsListingController extends GetxController {
   void resetFilter() {
     filterCategoryId.value = '';
     filterCategoryName.value = '';
+    filterSubCategoryId.value = '';
+    filterSubCategoryName.value = '';
     filterMinPrice.value = null;
     filterMaxPrice.value = null;
     filterPostedSince.value = 'all';
+    filterVerifiedOnly.value = false;
+    filterFeaturedOnly.value = false;
+    activeCustomFilters.clear();
+    categoryCustomFields.clear();
+    filterSubCategories.clear();
     minPriceController.clear();
     maxPriceController.clear();
     _argCategoryId = null;
@@ -293,9 +386,13 @@ class AdsListingController extends GetxController {
 
   bool get hasActiveFilter =>
       filterCategoryId.value.isNotEmpty ||
-      filterMinPrice.value != null ||
-      filterMaxPrice.value != null ||
-      filterPostedSince.value != 'all';
+          filterSubCategoryId.value.isNotEmpty ||
+          filterMinPrice.value != null ||
+          filterMaxPrice.value != null ||
+          filterPostedSince.value != 'all' ||
+          filterVerifiedOnly.value ||
+          filterFeaturedOnly.value ||
+          activeCustomFilters.isNotEmpty;
 
   @override
   void onClose() {

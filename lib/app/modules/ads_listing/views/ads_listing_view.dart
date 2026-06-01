@@ -41,23 +41,24 @@ class AdsListingView extends GetView<AdsListingController> {
           body: Column(
             children: [
               const Center(child: AdBannerWidget()),
-              // Search + View Toggle
+
+              // ── Sticky Header ──────────────────────────────────────
               Container(
                 color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Row(
+                child: Column(
                   children: [
-                    // Search
-                    Expanded(
+                    // Row 1: Search bar
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                       child: SizedBox(
-                        height: 44,
+                        height: 42,
                         child: TextField(
                           controller: controller.searchController,
-                          style: TextStyle(fontSize: 15, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                          style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                           decoration: InputDecoration(
                             hintText: "Search any advertisement...",
-                            hintStyle: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                            prefixIcon: Icon(Icons.search, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                            hintStyle: TextStyle(fontSize: 13, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                            prefixIcon: Icon(Icons.search, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -75,17 +76,208 @@ class AdsListingView extends GetView<AdsListingController> {
                         ),
                       ),
                     ),
-                    spaceW(width: 10),
-                    // List toggle
-                    _viewToggle(controller, 0, Icons.view_list_rounded, isDark),
-                    spaceW(width: 6),
-                    // Grid toggle
-                    _viewToggle(controller, 1, Icons.grid_view_rounded, isDark),
+
+                    // Row 2: Quick filter chips
+                    SizedBox(
+                      height: 36,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          // Filters chip — opens full filter screen with active indicator
+                          _QuickChip(
+                            label: "Filters",
+                            icon: Icons.tune_rounded,
+                            isActive: controller.hasActiveFilter,
+                            isDark: isDark,
+                            onTap: () => Get.to(() => _FilterView(controller: controller)),
+                          ),
+                          spaceW(width: 6),
+
+                          // Price preset chips
+                          _QuickChip(
+                            label: "< ₦500K",
+                            isActive: controller.filterMaxPrice.value == 500000 && controller.filterMinPrice.value == null,
+                            isDark: isDark,
+                            onTap: () {
+                              if (controller.filterMaxPrice.value == 500000 && controller.filterMinPrice.value == null) {
+                                controller.filterMinPrice.value = null;
+                                controller.filterMaxPrice.value = null;
+                              } else {
+                                controller.filterMinPrice.value = null;
+                                controller.filterMaxPrice.value = 500000;
+                                controller.minPriceController.clear();
+                                controller.maxPriceController.text = '500000';
+                              }
+                              controller.applyFilter();
+                            },
+                          ),
+                          spaceW(width: 6),
+                          _QuickChip(
+                            label: "₦500K–1M",
+                            isActive: controller.filterMinPrice.value == 500000 && controller.filterMaxPrice.value == 1000000,
+                            isDark: isDark,
+                            onTap: () {
+                              if (controller.filterMinPrice.value == 500000 && controller.filterMaxPrice.value == 1000000) {
+                                controller.filterMinPrice.value = null;
+                                controller.filterMaxPrice.value = null;
+                              } else {
+                                controller.filterMinPrice.value = 500000;
+                                controller.filterMaxPrice.value = 1000000;
+                                controller.minPriceController.text = '500000';
+                                controller.maxPriceController.text = '1000000';
+                              }
+                              controller.applyFilter();
+                            },
+                          ),
+                          spaceW(width: 6),
+                          _QuickChip(
+                            label: "₦1M–3M",
+                            isActive: controller.filterMinPrice.value == 1000000 && controller.filterMaxPrice.value == 3000000,
+                            isDark: isDark,
+                            onTap: () {
+                              if (controller.filterMinPrice.value == 1000000 && controller.filterMaxPrice.value == 3000000) {
+                                controller.filterMinPrice.value = null;
+                                controller.filterMaxPrice.value = null;
+                              } else {
+                                controller.filterMinPrice.value = 1000000;
+                                controller.filterMaxPrice.value = 3000000;
+                                controller.minPriceController.text = '1000000';
+                                controller.maxPriceController.text = '3000000';
+                              }
+                              controller.applyFilter();
+                            },
+                          ),
+                          spaceW(width: 6),
+                          _QuickChip(
+                            label: "₦3M–5M",
+                            isActive: controller.filterMinPrice.value == 3000000 && controller.filterMaxPrice.value == 5000000,
+                            isDark: isDark,
+                            onTap: () {
+                              if (controller.filterMinPrice.value == 3000000 && controller.filterMaxPrice.value == 5000000) {
+                                controller.filterMinPrice.value = null;
+                                controller.filterMaxPrice.value = null;
+                              } else {
+                                controller.filterMinPrice.value = 3000000;
+                                controller.filterMaxPrice.value = 5000000;
+                                controller.minPriceController.text = '3000000';
+                                controller.maxPriceController.text = '5000000';
+                              }
+                              controller.applyFilter();
+                            },
+                          ),
+                          spaceW(width: 6),
+                          _QuickChip(
+                            label: "> ₦5M",
+                            isActive: controller.filterMinPrice.value == 5000000 && controller.filterMaxPrice.value == null,
+                            isDark: isDark,
+                            onTap: () {
+                              if (controller.filterMinPrice.value == 5000000 && controller.filterMaxPrice.value == null) {
+                                controller.filterMinPrice.value = null;
+                                controller.filterMaxPrice.value = null;
+                              } else {
+                                controller.filterMinPrice.value = 5000000;
+                                controller.filterMaxPrice.value = null;
+                                controller.minPriceController.text = '5000000';
+                                controller.maxPriceController.clear();
+                              }
+                              controller.applyFilter();
+                            },
+                          ),
+                          spaceW(width: 6),
+
+                          // Verified seller chip
+                          _QuickChip(
+                            label: "Verified",
+                            icon: Icons.verified_user_outlined,
+                            isActive: controller.filterVerifiedOnly.value,
+                            isDark: isDark,
+                            onTap: () {
+                              controller.filterVerifiedOnly.value = !controller.filterVerifiedOnly.value;
+                              controller.applyFilter();
+                            },
+                          ),
+                          spaceW(width: 6),
+
+                          // Promoted ads chip
+                          _QuickChip(
+                            label: "Promoted",
+                            icon: Icons.star_outline_rounded,
+                            isActive: controller.filterFeaturedOnly.value,
+                            isDark: isDark,
+                            onTap: () {
+                              controller.filterFeaturedOnly.value = !controller.filterFeaturedOnly.value;
+                              controller.applyFilter();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Row 3: Results count + Sort + View toggle
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                      child: Row(
+                        children: [
+                          // Results count
+                          Expanded(
+                            child: TextCustom(
+                              title: controller.isLoading.value
+                                  ? "Loading..."
+                                  : "Found ${controller.filteredAds.length} ad${controller.filteredAds.length == 1 ? '' : 's'}",
+                              fontSize: 13,
+                              fontFamily: FontFamily.medium,
+                              color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
+                            ),
+                          ),
+
+                          // Sort button
+                          GestureDetector(
+                            onTap: () => _showSortSheet(context, controller, isDark),
+                            child: Container(
+                              height: 32,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                                color: Colors.transparent,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.swap_vert, size: 16, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+                                  spaceW(width: 4),
+                                  TextCustom(
+                                    title: AdsListingController.sortOptions.firstWhere(
+                                          (o) => o['key'] == controller.sortBy.value,
+                                      orElse: () => {'label': 'Sort'},
+                                    )['label']!,
+                                    fontSize: 12,
+                                    fontFamily: FontFamily.medium,
+                                    color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          spaceW(width: 8),
+
+                          // List toggle
+                          _viewToggle(controller, 0, Icons.view_list_rounded, isDark),
+                          spaceW(width: 6),
+                          // Grid toggle
+                          _viewToggle(controller, 1, Icons.grid_view_rounded, isDark),
+                        ],
+                      ),
+                    ),
+
+                    Divider(height: 1, thickness: 0.5, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
                   ],
                 ),
               ),
 
-              // Ads List
+              // ── Ads List ───────────────────────────────────────────
               Expanded(
                 child: controller.isLoading.value
                     ? ShimmerWidgets.adListShimmer(isDark)
@@ -115,43 +307,6 @@ class AdsListingView extends GetView<AdsListingController> {
                   ],
                 ),
               ),
-
-              // Bottom Bar: Filter + Sort
-              Container(
-                color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom + 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showFilterSheet(context, controller, isDark),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.tune_rounded, size: 20, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
-                            spaceW(width: 8),
-                            TextCustom(title: "Filter", fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Container(width: 1, height: 24, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showSortSheet(context, controller, isDark),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.swap_vert, size: 22, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
-                            spaceW(width: 8),
-                            TextCustom(title: "Sort by", fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         );
@@ -164,19 +319,17 @@ class AdsListingView extends GetView<AdsListingController> {
     return GestureDetector(
       onTap: () => controller.viewMode.value = mode,
       child: Container(
-        height: 44,
-        width: 44,
+        height: 32,
+        width: 32,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: isActive ? AppThemeData.primary4 : (isDark ? AppThemeData.grey8 : AppThemeData.grey3)),
           color: isActive ? AppThemeData.primary4.withOpacity(0.1) : Colors.transparent,
         ),
-        child: Icon(icon, size: 22, color: isActive ? AppThemeData.primary4 : (isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
+        child: Icon(icon, size: 18, color: isActive ? AppThemeData.primary4 : (isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
       ),
     );
   }
-
-
 
   // ─── Tireda Location Formatter ────────────────────────────
   String _formatShortLocation(String? address) {
@@ -334,7 +487,6 @@ class AdsListingView extends GetView<AdsListingController> {
       },
     );
   }
-
 
   Widget _buildGridCard(AdModel ad, bool isDark) {
     final condition = _getCondition(ad);
@@ -570,7 +722,65 @@ class AdsListingView extends GetView<AdsListingController> {
   }
 }
 
-// ─── FILTER VIEW (full screen) ───────────────────────────────────────────────
+// ─── Quick Chip Widget ────────────────────────────────────────────────────────
+class _QuickChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool isActive;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _QuickChip({
+    required this.label,
+    required this.isActive,
+    required this.isDark,
+    required this.onTap,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isActive ? AppThemeData.primary4 : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 13,
+                color: isActive ? Colors.white : (isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: isActive ? FontFamily.semiBold : FontFamily.medium,
+                color: isActive ? Colors.white : (isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Like Button ──────────────────────────────────────────────────────────────
 class _LikeButton extends StatelessWidget {
   final AdModel ad;
   final double size;
@@ -601,6 +811,7 @@ class _LikeButton extends StatelessWidget {
   }
 }
 
+// ─── FILTER VIEW (full screen) ────────────────────────────────────────────────
 class _FilterView extends StatelessWidget {
   final AdsListingController controller;
 
@@ -637,53 +848,59 @@ class _FilterView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Category
+
+                    // ── Category ──────────────────────────────────────
                     _label("Category", isDark),
                     spaceH(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: controller.filterCategoryId.value.isEmpty ? null : controller.filterCategoryId.value,
-                          hint: Row(
-                            children: [
-                              Icon(Icons.dashboard_outlined, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                              spaceW(width: 10),
-                              TextCustom(title: "All", fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                            ],
-                          ),
-                          isExpanded: true,
-                          dropdownColor: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
-                          icon: Icon(Icons.keyboard_arrow_down, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                          items: [
-                            DropdownMenuItem(
-                              value: '',
-                              child: TextCustom(title: "All", fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                            ),
-                            ...controller.allCategories.map(
-                                  (cat) => DropdownMenuItem(
-                                value: cat.id,
-                                child: TextCustom(title: cat.categoryName ?? '-', fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    // Tappable category row — opens category picker
+                    GestureDetector(
+                      onTap: () => Get.to(() => _CategoryPickerView(controller: controller)),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.dashboard_outlined, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                            spaceW(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextCustom(
+                                    title: controller.filterCategoryId.value.isEmpty
+                                        ? "All Categories"
+                                        : controller.filterCategoryName.value,
+                                    fontSize: 14,
+                                    fontFamily: FontFamily.medium,
+                                    color: controller.filterCategoryId.value.isEmpty
+                                        ? (isDark ? AppThemeData.grey5 : AppThemeData.grey6)
+                                        : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                  ),
+                                  if (controller.filterSubCategoryId.value.isNotEmpty) ...[
+                                    spaceH(height: 2),
+                                    TextCustom(
+                                      title: controller.filterSubCategoryName.value,
+                                      fontSize: 12,
+                                      fontFamily: FontFamily.medium,
+                                      color: AppThemeData.primary4,
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
+                            Icon(Icons.chevron_right, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                           ],
-                          onChanged: (v) {
-                            controller.filterCategoryId.value = v ?? '';
-                            final cat = controller.allCategories.firstWhereOrNull((c) => c.id == v);
-                            controller.filterCategoryName.value = cat?.categoryName ?? '';
-                          },
                         ),
                       ),
                     ),
                     spaceH(height: 20),
 
-                    // Budget (Price)
+                    // ── Budget (Price) ────────────────────────────────
                     _label("Budget (Price)", isDark),
                     spaceH(height: 8),
                     Row(
@@ -695,7 +912,7 @@ class _FilterView extends StatelessWidget {
                     ),
                     spaceH(height: 20),
 
-                    // Posted Since
+                    // ── Posted Since ──────────────────────────────────
                     _label("Posted Since", isDark),
                     spaceH(height: 8),
                     Container(
@@ -730,12 +947,214 @@ class _FilterView extends StatelessWidget {
                         ),
                       ),
                     ),
+                    spaceH(height: 20),
+
+                    // ── Seller & Listing ──────────────────────────────
+                    _label("Seller & Listing", isDark),
+                    spaceH(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                      ),
+                      child: Column(
+                        children: [
+                          // Verified seller toggle
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.verified_user_outlined, size: 20, color: AppThemeData.primary4),
+                                spaceW(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      TextCustom(title: "Verified Seller", fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                      TextCustom(title: "Show only ID-verified sellers", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: controller.filterVerifiedOnly.value,
+                                  onChanged: (v) => controller.filterVerifiedOnly.value = v,
+                                  activeColor: AppThemeData.primary4,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                          // Promoted ads toggle
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star_outline_rounded, size: 20, color: const Color(0xffFF9500)),
+                                spaceW(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      TextCustom(title: "Promoted Ads Only", fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                      TextCustom(title: "Show only featured listings", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: controller.filterFeaturedOnly.value,
+                                  onChanged: (v) => controller.filterFeaturedOnly.value = v,
+                                  activeColor: AppThemeData.primary4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Dynamic Custom Fields ─────────────────────────
+                    // Only shown when a subcategory is selected and has
+                    // filterable fields (dropdown or radio with options)
+                    if (controller.filterSubCategoryId.value.isNotEmpty) ...[
+                      spaceH(height: 20),
+                      if (controller.isLoadingCustomFields.value)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppThemeData.primary4),
+                            ),
+                          ),
+                        )
+                      else if (controller.filterableCustomFields.isNotEmpty) ...[
+                        _label("More Filters", isDark),
+                        ...controller.filterableCustomFields.map((field) {
+                          final fieldName = field.name ?? '';
+                          final options = field.options ?? [];
+                          final selectedValue = controller.activeCustomFilters[fieldName] ?? '';
+                          final useDropdown = options.length > 3;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              spaceH(height: 16),
+                              TextCustom(
+                                title: fieldName,
+                                fontSize: 13,
+                                fontFamily: FontFamily.semiBold,
+                                color: isDark ? AppThemeData.grey3 : AppThemeData.grey8,
+                              ),
+                              spaceH(height: 8),
+                              if (useDropdown)
+                              // Dropdown for fields with more than 3 options
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: selectedValue.isNotEmpty
+                                          ? AppThemeData.primary4
+                                          : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                                    ),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedValue.isNotEmpty ? selectedValue : null,
+                                      isExpanded: true,
+                                      dropdownColor: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
+                                      icon: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: selectedValue.isNotEmpty
+                                            ? AppThemeData.primary4
+                                            : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                      ),
+                                      hint: TextCustom(
+                                        title: "Select $fieldName",
+                                        fontSize: 14,
+                                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                                      ),
+                                      items: [
+                                        // Clear option at top
+                                        DropdownMenuItem<String>(
+                                          value: '',
+                                          child: TextCustom(
+                                            title: "Any $fieldName",
+                                            fontSize: 14,
+                                            color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
+                                          ),
+                                        ),
+                                        ...options.map(
+                                              (option) => DropdownMenuItem<String>(
+                                            value: option,
+                                            child: TextCustom(
+                                              title: option,
+                                              fontSize: 14,
+                                              color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      onChanged: (v) {
+                                        if (v == null || v.isEmpty) {
+                                          controller.activeCustomFilters.remove(fieldName);
+                                        } else {
+                                          controller.activeCustomFilters[fieldName] = v;
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                )
+                              else
+                              // Chips for fields with 3 or fewer options
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: options.map((option) {
+                                    final isSelected = selectedValue == option;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        if (isSelected) {
+                                          controller.activeCustomFilters.remove(fieldName);
+                                        } else {
+                                          controller.activeCustomFilters[fieldName] = option;
+                                        }
+                                      },
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 180),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                                          ),
+                                        ),
+                                        child: TextCustom(
+                                          title: option,
+                                          fontSize: 13,
+                                          fontFamily: isSelected ? FontFamily.semiBold : FontFamily.medium,
+                                          color: isSelected ? Colors.white : (isDark ? AppThemeData.grey3 : AppThemeData.grey8),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ],
                   ],
                 ),
               ),
             ),
 
-            // Apply Button
+            // ── Apply Button ──────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
@@ -783,6 +1202,215 @@ class _FilterView extends StatelessWidget {
           hintStyle: TextStyle(fontSize: 15, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── CATEGORY PICKER VIEW ─────────────────────────────────────────────────────
+class _CategoryPickerView extends StatelessWidget {
+  final AdsListingController controller;
+
+  const _CategoryPickerView({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeChange = Provider.of<DarkThemeProvider>(context);
+    final isDark = themeChange.isDarkTheme();
+
+    return Scaffold(
+      backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+      appBar: UiInterface.customAppBar(context, themeChange, "Select Category", isBack: true),
+      body: Obx(
+            () => ListView(
+          children: [
+            // All Categories option
+            _CategoryTile(
+              title: "All Categories",
+              subtitle: null,
+              isSelected: controller.filterCategoryId.value.isEmpty,
+              hasChildren: false,
+              isDark: isDark,
+              onTap: () {
+                controller.filterCategoryId.value = '';
+                controller.filterCategoryName.value = '';
+                controller.filterSubCategoryId.value = '';
+                controller.filterSubCategoryName.value = '';
+                controller.filterSubCategories.clear();
+                controller.categoryCustomFields.clear();
+                controller.activeCustomFilters.clear();
+                Get.back();
+              },
+            ),
+            Divider(height: 1, thickness: 0.5, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+
+            // Parent categories
+            ...controller.allCategories.map((cat) {
+              final isSelected = controller.filterCategoryId.value == cat.id;
+              return Column(
+                children: [
+                  _CategoryTile(
+                    title: cat.categoryName ?? '',
+                    subtitle: '${controller.countAdsForCategory(cat.id ?? '')} ads',
+                    isSelected: isSelected,
+                    hasChildren: true,
+                    isDark: isDark,
+                    onTap: () async {
+                      controller.filterCategoryId.value = cat.id ?? '';
+                      controller.filterCategoryName.value = cat.categoryName ?? '';
+                      // Clear subcategory and custom fields when parent changes
+                      controller.filterSubCategoryId.value = '';
+                      controller.filterSubCategoryName.value = '';
+                      controller.categoryCustomFields.clear();
+                      controller.activeCustomFilters.clear();
+                      // Load subcategories then navigate to sub picker
+                      await controller.loadSubCategories(cat.id ?? '');
+                      Get.to(() => _SubCategoryPickerView(controller: controller));
+                    },
+                  ),
+                  Divider(height: 1, thickness: 0.5, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── SUBCATEGORY PICKER VIEW ──────────────────────────────────────────────────
+class _SubCategoryPickerView extends StatelessWidget {
+  final AdsListingController controller;
+
+  const _SubCategoryPickerView({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeChange = Provider.of<DarkThemeProvider>(context);
+    final isDark = themeChange.isDarkTheme();
+
+    return Scaffold(
+      backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+      appBar: UiInterface.customAppBar(
+        context,
+        themeChange,
+        controller.filterCategoryName.value,
+        isBack: true,
+      ),
+      body: Obx(
+            () => controller.isLoadingSubCategories.value
+            ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppThemeData.primary4))
+            : ListView(
+          children: [
+            // All option — selects parent category only, no subcategory
+            _CategoryTile(
+              title: "All in ${controller.filterCategoryName.value}",
+              subtitle: null,
+              isSelected: controller.filterSubCategoryId.value.isEmpty,
+              hasChildren: false,
+              isDark: isDark,
+              onTap: () {
+                controller.filterSubCategoryId.value = '';
+                controller.filterSubCategoryName.value = '';
+                controller.categoryCustomFields.clear();
+                controller.activeCustomFilters.clear();
+                // Pop back to filter view
+                Get.back();
+                Get.back();
+              },
+            ),
+            Divider(height: 1, thickness: 0.5, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+
+            // Subcategories
+            ...controller.filterSubCategories.map((sub) {
+              final isSelected = controller.filterSubCategoryId.value == sub.id;
+              return Column(
+                children: [
+                  _CategoryTile(
+                    title: sub.categoryName ?? '',
+                    subtitle: '${controller.countAdsForCategory(sub.id ?? '')} ads',
+                    isSelected: isSelected,
+                    hasChildren: false,
+                    isDark: isDark,
+                    onTap: () async {
+                      controller.filterSubCategoryId.value = sub.id ?? '';
+                      controller.filterSubCategoryName.value = sub.categoryName ?? '';
+                      // Load custom fields for this subcategory
+                      await controller.loadCategoryCustomFields(
+                        subCategoryId: sub.id ?? '',
+                        parentCategoryId: controller.filterCategoryId.value,
+                      );
+                      // Pop back to filter view — close both picker screens
+                      Get.back();
+                      Get.back();
+                    },
+                  ),
+                  Divider(height: 1, thickness: 0.5, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── CATEGORY TILE ────────────────────────────────────────────────────────────
+class _CategoryTile extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final bool isSelected;
+  final bool hasChildren;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _CategoryTile({
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.hasChildren,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextCustom(
+                    title: title,
+                    fontSize: 15,
+                    fontFamily: isSelected ? FontFamily.semiBold : FontFamily.medium,
+                    color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                  ),
+                  if (subtitle != null) ...[
+                    spaceH(height: 2),
+                    TextCustom(
+                      title: subtitle!,
+                      fontSize: 12,
+                      color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (isSelected && !hasChildren)
+              Icon(Icons.check, size: 20, color: AppThemeData.primary4)
+            else if (hasChildren)
+              Icon(Icons.chevron_right, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+          ],
         ),
       ),
     );

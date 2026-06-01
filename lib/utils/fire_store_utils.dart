@@ -425,7 +425,21 @@ class FireStoreUtils {
     }
     return list;
   }
-
+  static Future<List<CategoryModel>> getSubCategories(String parentId) async {
+    try {
+      final snapshot = await fireStore
+          .collection(CollectionName.category)
+          .where('parentCategoryId', isEqualTo: parentId)
+          .where('active', isEqualTo: true)
+          .get();
+      final list = snapshot.docs.map((doc) => CategoryModel.fromJson(doc.data())).toList();
+      list.sort((a, b) => (a.categoryName ?? '').compareTo(b.categoryName ?? ''));
+      return list;
+    } catch (e) {
+      developer.log('getSubCategories Error: $e');
+      return [];
+    }
+  }
   static Future<ContactUsModel?> getContactUsInformation() async {
     ContactUsModel? contactUsModel;
     await fireStore
@@ -825,6 +839,9 @@ class FireStoreUtils {
     double? minPrice,
     double? maxPrice,
     DateTime? postedSinceCutoff,
+    bool? verifiedOnly,
+    bool? featuredOnly,
+    Map<String, String>? customFilters,
   }) async {
     try {
       final isSectioned = section != null;
@@ -898,6 +915,38 @@ class FireStoreUtils {
           if (postedSinceCutoff != null) {
             final created = ad.createdAt?.toDate();
             if (created == null || created.isBefore(postedSinceCutoff)) continue;
+          }
+
+          // Verified seller filter
+          if (verifiedOnly == true && ad.isSellerVerified != true) continue;
+
+          // Promoted ads filter
+          if (featuredOnly == true && ad.isFeatured != true) continue;
+
+          // Dynamic custom field filters
+          // Each entry in customFilters is { fieldName: selectedValue }
+          // The ad must have a matching customField entry for every active filter
+          if (customFilters != null && customFilters.isNotEmpty) {
+            bool passesAll = true;
+            for (final entry in customFilters.entries) {
+              if (entry.value.isEmpty) continue;
+              bool fieldMatched = false;
+              if (ad.customFields != null) {
+                for (final field in ad.customFields!) {
+                  final name = field['name']?.toString().toLowerCase() ?? '';
+                  final value = field['value']?.toString() ?? '';
+                  if (name == entry.key.toLowerCase() && value.toLowerCase() == entry.value.toLowerCase()) {
+                    fieldMatched = true;
+                    break;
+                  }
+                }
+              }
+              if (!fieldMatched) {
+                passesAll = false;
+                break;
+              }
+            }
+            if (!passesAll) continue;
           }
 
           collected.add(ad);
