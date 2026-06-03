@@ -155,6 +155,14 @@ class AdsListingController extends GetxController {
     } else if (args != null && args['categoryId'] != null) {
       _argCategoryId = args['categoryId'] as String;
       title.value = args['categoryName'] ?? 'Ads';
+      // The categoryId passed from SubCategoryView is always a leaf
+      // subcategory. We treat it as the subcategory selection so custom
+      // fields load automatically without the user re-selecting in filter.
+      filterSubCategoryId.value = _argCategoryId!;
+      filterSubCategoryName.value = args['categoryName'] ?? '';
+      // We don't know the parent ID from args — use empty string.
+      // getCustomFields() uses arrayContainsAny so the subcategory ID
+      // alone is sufficient to return the correct fields.
       filterCategoryId.value = _argCategoryId!;
       filterCategoryName.value = args['categoryName'] ?? '';
     } else if (args != null && args['searchQuery'] != null) {
@@ -164,6 +172,13 @@ class AdsListingController extends GetxController {
       title.value = 'Search Results';
     } else {
       title.value = 'All Ads';
+    }
+    // Pre-load custom fields if arriving via subcategory navigation
+    if (filterSubCategoryId.value.isNotEmpty) {
+      loadCategoryCustomFields(
+        subCategoryId: filterSubCategoryId.value,
+        parentCategoryId: '',
+      );
     }
     _loadData();
   }
