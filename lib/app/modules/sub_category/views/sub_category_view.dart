@@ -96,7 +96,7 @@ class SubCategoryView extends StatelessWidget {
                       children: [
                         TextCustom(
                           title: subCategory.categoryName.toString(),
-                          fontSize: 15,
+                          fontSize: 14,
                           fontFamily: FontFamily.medium,
                           color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                         ),
