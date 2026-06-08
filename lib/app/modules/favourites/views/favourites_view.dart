@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
+import 'package:eSellify/utils/navigation_helper.dart';
 import '../controllers/favourites_controller.dart';
 
 class FavouritesView extends GetView<FavouritesController> {
@@ -88,7 +89,7 @@ class _FavAdCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        await AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad}));
+        await AdService.showInterstitial(onDismissed: () => goToAdDetail(ad));
         controller.loadFavourites(); // refresh on return
       },
       child: Container(

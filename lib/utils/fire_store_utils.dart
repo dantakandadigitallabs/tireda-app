@@ -1700,7 +1700,42 @@ class FireStoreUtils {
     }
     return null;
   }
+  /// Fetches active ads sharing a category ID anywhere in [categoryPath],
+  /// excluding [excludeAdId]. Featured ads are pinned first client-side
+  /// (avoids a composite index). Used for the Similar Ads section.
+  static Future<List<AdModel>> getSimilarAds({
+    required String categoryId,
+    required String excludeAdId,
+    int limit = 16,
+  }) async {
+    try {
+      // Fetch limit+1 extra to account for the excluded current ad
+      final snap = await fireStore
+          .collection(CollectionName.ads)
+          .where('status', isEqualTo: 'active')
+          .where('categoryPath', arrayContains: categoryId)
+          .orderBy('createdAt', descending: true)
+          .limit(limit + 1)
+          .get();
 
+      final now = DateTime.now();
+
+      final results = snap.docs
+          .map((d) => AdModel.fromJson(d.data()))
+          .where((a) => a.id != excludeAdId)
+          .where((a) => a.expiryDate == null || a.expiryDate!.toDate().isAfter(now))
+          .take(limit)
+          .toList();
+
+      // Pin featured ads first — client-side to avoid composite index
+      final featured = results.where((a) => a.isFeatured == true).toList();
+      final others = results.where((a) => a.isFeatured != true).toList();
+      return [...featured, ...others];
+    } catch (e) {
+      developer.log('getSimilarAds Error: $e');
+      return [];
+    }
+  }
   static Future<CategoryModel?> getCategoryById(String categoryId) async {
     try {
       final doc = await fireStore.collection(CollectionName.category).doc(categoryId).get();

@@ -31,19 +31,48 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/ad_listing_detail_controller.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 
-class AdListingDetailView extends GetView<AdListingDetailController> {
-  const AdListingDetailView({super.key});
+// ─── AdListingDetailView ──────────────────────────────────────────────────────
+// Converted from GetView to StatefulWidget so each page in the similar-ads
+// navigation chain owns its own controller instance as a plain Dart object.
+// This eliminates the GetX singleton-registry conflict that caused stale data
+// and broken back-navigation when stacking multiple detail pages.
+class AdListingDetailView extends StatefulWidget {
+  final AdModel ad;
+
+  const AdListingDetailView({super.key, required this.ad});
+
+  @override
+  State<AdListingDetailView> createState() => _AdListingDetailViewState();
+}
+
+class _AdListingDetailViewState extends State<AdListingDetailView> {
+  late final AdListingDetailController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Each page instance creates its own controller — no GetX registry.
+    _controller = AdListingDetailController();
+    _controller.initWithAd(widget.ad);
+  }
+
+  @override
+  void dispose() {
+    _controller.disposeController();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     final isDark = themeChange.isDarkTheme();
 
-    return GetBuilder<AdListingDetailController>(
-      init: AdListingDetailController(),
-      builder: (controller) {
-        final ad = controller.ad;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final ad = _controller.ad;
         final images = _getImages(ad);
         final hasLocation = ad.location?.latitude != null && ad.location?.longitude != null;
         final hasCustomFields = (ad.customFields?.isNotEmpty ?? false) && ad.customFields!.any((f) => (f['value']?.toString().trim() ?? '').isNotEmpty);
@@ -61,24 +90,25 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                   const SizedBox(width: 16),
                   Icon(Icons.arrow_back, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
                   const SizedBox(width: 6),
-                  TextCustom(title: "Homepage", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                  TextCustom(title: "back", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                 ],
               ),
             ),
             actions: [
-              Obx(
-                () => GestureDetector(
-                  onTap: controller.toggleLike,
+              ObxValue<RxBool>(
+                    (isLiked) => GestureDetector(
+                  onTap: _controller.toggleLike,
                   child: Icon(
-                    controller.isLiked.value ? Icons.favorite : Icons.favorite_border,
-                    color: controller.isLiked.value ? Colors.red : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    isLiked.value ? Icons.favorite : Icons.favorite_border,
+                    color: isLiked.value ? Colors.red : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                     size: 22,
                   ),
                 ),
+                _controller.isLiked,
               ),
               const SizedBox(width: 16),
               GestureDetector(
-                onTap: controller.shareAd,
+                onTap: _controller.shareAd,
                 child: Icon(Icons.share_outlined, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
               ),
               const SizedBox(width: 16),
@@ -201,6 +231,9 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                           ],
                         ),
                       ),
+
+                      // ── Similar Ads ────────────────────────────────────────
+                      _SimilarAdsSection(controller: _controller, isDark: isDark),
                     ],
                   ),
                 ),
@@ -249,7 +282,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                         onTap: () => SafetyTipsBottomSheet.show(
                           context,
                           continueLabel: "Continue to chat",
-                          onContinue: controller.openChat,
+                          onContinue: _controller.openChat,
                         ),
                         child: Container(
                           height: 48,
@@ -276,51 +309,51 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                     Expanded(
                       child: ad.isJobAd
                           ? GestureDetector(
-                              onTap: () => SafetyTipsBottomSheet.show(
-                                context,
-                                continueLabel: "Continue to apply",
-                                onContinue: () async {
-                                  if (await controller.canApplyForJob()) {
-                                    _showApplyJobSheet(context, controller, isDark);
-                                  }
-                                },
+                        onTap: () => SafetyTipsBottomSheet.show(
+                          context,
+                          continueLabel: "Continue to apply",
+                          onContinue: () async {
+                            if (await _controller.canApplyForJob()) {
+                              _showApplyJobSheet(context, _controller, isDark);
+                            }
+                          },
+                        ),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.work_outline_rounded, size: 16, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text("Apply Now", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
                               ),
-                              child: Container(
-                                height: 48,
-                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.work_outline_rounded, size: 16, color: Colors.white),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text("Apply Now", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
+                            ],
+                          ),
+                        ),
+                      )
                           : GestureDetector(
-                              onTap: () => SafetyTipsBottomSheet.show(
-                                context,
-                                continueLabel: "Continue to offer",
-                                onContinue: () => _showMakeOfferSheet(context, controller, isDark),
+                        onTap: () => SafetyTipsBottomSheet.show(
+                          context,
+                          continueLabel: "Continue to offer",
+                          onContinue: () => _showMakeOfferSheet(context, _controller, isDark),
+                        ),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.local_offer_outlined, size: 16, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text("Offer", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
                               ),
-                              child: Container(
-                                height: 48,
-                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.local_offer_outlined, size: 16, color: Colors.white),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text("Offer", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white), overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -372,11 +405,11 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                       child: ad.mainImage != null && ad.mainImage!.isNotEmpty
                           ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
                           : Container(
-                              width: 50,
-                              height: 50,
-                              color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                              child: const Icon(Icons.image, color: AppThemeData.grey5),
-                            ),
+                        width: 50,
+                        height: 50,
+                        color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                        child: const Icon(Icons.image, color: AppThemeData.grey5),
+                      ),
                     ),
                     spaceW(width: 12),
                     Expanded(
@@ -497,11 +530,11 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                             child: ad.mainImage != null && ad.mainImage!.isNotEmpty
                                 ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
                                 : Container(
-                                    width: 50,
-                                    height: 50,
-                                    color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                                    child: const Icon(Icons.work_outline_rounded, color: AppThemeData.grey5),
-                                  ),
+                              width: 50,
+                              height: 50,
+                              color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                              child: const Icon(Icons.work_outline_rounded, color: AppThemeData.grey5),
+                            ),
                           ),
                           spaceW(width: 12),
                           Expanded(
@@ -724,12 +757,12 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
           child: iconUrl.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: iconUrl,
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
-                  errorWidget: (_, _, _) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
-                )
+            imageUrl: iconUrl,
+            width: 24,
+            height: 24,
+            fit: BoxFit.contain,
+            errorWidget: (_, _, _) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
+          )
               : Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
         ),
         spaceW(width: 10),
@@ -798,47 +831,53 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                         ),
                       ),
                       if (ad.sellerId != null)
-                        Obx(
-                          () => Get.find<AdListingDetailController>().isSellerVerified.value == true
+                        ObxValue<RxBool>(
+                              (isVerified) => isVerified.value
                               ? Container(
-                                  margin: const EdgeInsets.only(left: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SvgPicture.asset("assets/icons/ic_crown.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
-                                      spaceW(width: 4),
-                                      TextCustom(title: "Verified", fontSize: 10, color: AppThemeData.primaryWhite),
-                                    ],
-                                  ),
-                                )
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SvgPicture.asset("assets/icons/ic_crown.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
+                                spaceW(width: 4),
+                                TextCustom(title: "Verified", fontSize: 10, color: AppThemeData.primaryWhite),
+                              ],
+                            ),
+                          )
                               : const SizedBox(),
+                          _controller.isSellerVerified,
                         ),
                     ],
                   ),
                   spaceH(height: 4),
-                  Obx(() {
-                    final controller = Get.find<AdListingDetailController>();
-                    final rating = controller.sellerRating.value;
-                    final count = controller.sellerReviewCount.value;
-                    return Row(
-                      children: [
-                        if (count > 0) ...[
-                          Icon(Icons.star_rounded, size: 14, color: const Color(0xffFF9500)),
-                          spaceW(width: 4),
-                          TextCustom(title: rating.toStringAsFixed(1), fontSize: 12, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
-                          spaceW(width: 4),
-                          TextCustom(title: '($count)', fontSize: 11, color: AppThemeData.primary4),
-                        ] else
-                          TextCustom(title: 'No reviews', fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                        spaceW(width: 6),
-                        TextCustom(title: '·', fontSize: 12, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                        spaceW(width: 6),
-                        TextCustom(title: "${controller.viewCount.value} views", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                      ],
-                    );
-                  }),
+                  ObxValue<RxInt>(
+                        (count) {
+                      final rating = _controller.sellerRating.value;
+                      final c = count.value;
+                      return Row(
+                        children: [
+                          if (c > 0) ...[
+                            Icon(Icons.star_rounded, size: 14, color: const Color(0xffFF9500)),
+                            spaceW(width: 4),
+                            TextCustom(title: rating.toStringAsFixed(1), fontSize: 12, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
+                            spaceW(width: 4),
+                            TextCustom(title: '($c)', fontSize: 11, color: AppThemeData.primary4),
+                          ] else
+                            TextCustom(title: 'No reviews', fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                          spaceW(width: 6),
+                          TextCustom(title: '·', fontSize: 12, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                          spaceW(width: 6),
+                          ObxValue<RxInt>(
+                                (views) => TextCustom(title: "${views.value} views", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                            _controller.viewCount,
+                          ),
+                        ],
+                      );
+                    },
+                    _controller.sellerReviewCount,
+                  ),
                 ],
               ),
             ),
@@ -850,78 +889,80 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
   }
 
   Widget _buildActionRow(AdModel ad, bool isDark) {
-    return Obx(() {
-      final controller = Get.find<AdListingDetailController>();
-      final report = controller.existingReport.value;
+    return ObxValue<RxBool>(
+          (hasReported) {
+        final report = _controller.existingReport.value;
 
-      if (controller.hasReported.value && report != null) {
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppThemeData.danger300.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.flag_rounded, size: 18, color: AppThemeData.danger300),
-                  spaceW(width: 8),
-                  Expanded(
-                    child: TextCustom(title: "You flagged this ad", fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
-                  ),
-                  _reportStatusBadge(report.status),
+        if (hasReported.value && report != null) {
+          return Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppThemeData.danger300.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.flag_rounded, size: 18, color: AppThemeData.danger300),
+                    spaceW(width: 8),
+                    Expanded(
+                      child: TextCustom(title: "You flagged this ad", fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
+                    ),
+                    _reportStatusBadge(report.status),
+                  ],
+                ),
+                spaceH(height: 8),
+                Row(
+                  children: [
+                    TextCustom(title: "Reason: ", fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                    Expanded(
+                      child: TextCustom(title: report.reasonTitle ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
+                    ),
+                  ],
+                ),
+                if (report.description != null && report.description!.isNotEmpty) ...[
+                  spaceH(height: 4),
+                  TextCustom(title: report.description!, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
                 ],
-              ),
-              spaceH(height: 8),
-              Row(
-                children: [
-                  TextCustom(title: "Reason: ", fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-                  Expanded(
-                    child: TextCustom(title: report.reasonTitle ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                  ),
-                ],
-              ),
-              if (report.description != null && report.description!.isNotEmpty) ...[
-                spaceH(height: 4),
-                TextCustom(title: report.description!, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
               ],
-            ],
-          ),
-        );
-      }
+            ),
+          );
+        }
 
-      return Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => _markAsUnavailable(Get.context!, ad, isDark),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                side: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text("Mark unavailable", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: Color(0xFF2196F3))),
-            ),
-          ),
-          spaceW(width: 12),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => _showReportDialog(Get.context!, ad, isDark),
-              icon: Icon(Icons.flag_outlined, size: 18, color: AppThemeData.danger300),
-              label: Text("Report abuse", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300)),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                side: BorderSide(color: AppThemeData.danger300, width: 1.2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        return Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => _markAsUnavailable(context, ad, isDark),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text("Mark unavailable", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: Color(0xFF2196F3))),
               ),
             ),
-          ),
-        ],
-      );
-    });
+            spaceW(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _showReportDialog(context, ad, isDark),
+                icon: Icon(Icons.flag_outlined, size: 18, color: AppThemeData.danger300),
+                label: Text("Report abuse", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: AppThemeData.danger300, width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      _controller.hasReported,
+    );
   }
 
   void _markAsUnavailable(BuildContext context, AdModel ad, bool isDark) async {
@@ -974,7 +1015,6 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                         ShowToastDialog.showLoader("Submitting...");
 
                         final user = Constant.userModel;
-                        final controller = Get.find<AdListingDetailController>();
 
                         final report = AdReportModel(
                           id: const Uuid().v4(),
@@ -997,7 +1037,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                         ShowToastDialog.closeLoader();
 
                         if (success) {
-                          controller.onReportSubmitted(report);
+                          _controller.onReportSubmitted(report);
                           ShowToastDialog.showSuccess("Thank you for letting us know!");
                         } else {
                           ShowToastDialog.showError("Failed to submit. Please try again.");
@@ -1116,7 +1156,7 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
                       ),
                       spaceH(height: 12),
                       Obx(
-                        () => Wrap(
+                            () => Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: reasons.map((reason) {
@@ -1179,49 +1219,48 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Obx(
-                  () => SizedBox(
+                      () => SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       onPressed: isSubmitting.value
                           ? null
                           : () async {
-                              if (selectedReason.value == null) {
-                                ShowToastDialog.showWarning("Please select a report reason");
-                                return;
-                              }
+                        if (selectedReason.value == null) {
+                          ShowToastDialog.showWarning("Please select a report reason");
+                          return;
+                        }
 
-                              isSubmitting.value = true;
-                              final user = Constant.userModel;
-                              final controller = Get.find<AdListingDetailController>();
-                              final report = AdReportModel(
-                                id: const Uuid().v4(),
-                                adId: ad.id,
-                                adTitle: ad.title,
-                                adImage: ad.mainImage,
-                                reporterId: uid,
-                                reporterName: user?.fullNameString(),
-                                reporterEmail: user?.email,
-                                sellerId: ad.sellerId,
-                                sellerName: ad.sellerName,
-                                reasonId: selectedReason.value!.id,
-                                reasonTitle: selectedReason.value!.title,
-                                description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
-                                status: 'pending',
-                                createdAt: Timestamp.now(),
-                              );
+                        isSubmitting.value = true;
+                        final user = Constant.userModel;
+                        final report = AdReportModel(
+                          id: const Uuid().v4(),
+                          adId: ad.id,
+                          adTitle: ad.title,
+                          adImage: ad.mainImage,
+                          reporterId: uid,
+                          reporterName: user?.fullNameString(),
+                          reporterEmail: user?.email,
+                          sellerId: ad.sellerId,
+                          sellerName: ad.sellerName,
+                          reasonId: selectedReason.value!.id,
+                          reasonTitle: selectedReason.value!.title,
+                          description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
+                          status: 'pending',
+                          createdAt: Timestamp.now(),
+                        );
 
-                              final success = await FireStoreUtils.submitAdReport(report);
-                              isSubmitting.value = false;
+                        final success = await FireStoreUtils.submitAdReport(report);
+                        isSubmitting.value = false;
 
-                              if (success) {
-                                Get.back();
-                                controller.onReportSubmitted(report);
-                                ShowToastDialog.showSuccess("Report submitted. Thank you!");
-                              } else {
-                                ShowToastDialog.showError("Failed to submit report. Please try again.");
-                              }
-                            },
+                        if (success) {
+                          Get.back();
+                          _controller.onReportSubmitted(report);
+                          ShowToastDialog.showSuccess("Report submitted. Thank you!");
+                        } else {
+                          ShowToastDialog.showError("Failed to submit report. Please try again.");
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isSubmitting.value ? AppThemeData.grey5 : AppThemeData.danger300,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1237,6 +1276,312 @@ class AdListingDetailView extends GetView<AdListingDetailController> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── SIMILAR ADS SECTION ─────────────────────────────────────────────────────
+class _SimilarAdsSection extends StatefulWidget {
+  final AdListingDetailController controller;
+  final bool isDark;
+
+  const _SimilarAdsSection({required this.controller, required this.isDark});
+
+  @override
+  State<_SimilarAdsSection> createState() => _SimilarAdsSectionState();
+}
+
+class _SimilarAdsSectionState extends State<_SimilarAdsSection> {
+  bool _triggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Deferred fetch — runs after the first frame so it does not block
+    // the initial ad detail render (lazy loading).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_triggered && mounted) {
+        _triggered = true;
+        widget.controller.fetchSimilarAds();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+
+    return Obx(() {
+      final isLoading = widget.controller.isSimilarAdsLoading.value;
+      final ads = widget.controller.similarAds;
+
+      // Hide section entirely when not loading and no results
+      if (!isLoading && ads.isEmpty) return const SizedBox.shrink();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Text(
+              "Similar Ads",
+              style: TextStyle(
+                fontSize: 16,
+                fontFamily: FontFamily.bold,
+                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+              ),
+            ),
+          ),
+
+          if (isLoading)
+          // ── Shimmer placeholder while fetching ────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 4,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 6,
+                  mainAxisSpacing: 6,
+                  mainAxisExtent: 265,
+                ),
+                itemBuilder: (_, __) => Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? AppThemeData.grey9 : AppThemeData.grey3,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            )
+          else
+          // ── Actual ads grid ───────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: ads.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 6,
+                  mainAxisSpacing: 6,
+                  mainAxisExtent: 265,
+                ),
+                itemBuilder: (_, index) {
+                  final ad = ads[index];
+                  return GestureDetector(
+                    onTap: () => goToSimilarAdDetail(ad),
+                    child: _SimilarAdCard(ad: ad, isDark: isDark),
+                  );
+                },
+              ),
+            ),
+        ],
+      );
+    });
+  }
+}
+
+// ─── SIMILAR AD CARD (mirrors _buildGridCard from AdsListingView) ─────────────
+class _SimilarAdCard extends StatelessWidget {
+  final AdModel ad;
+  final bool isDark;
+
+  const _SimilarAdCard({required this.ad, required this.isDark});
+
+  String _formatShortLocation(String? address) {
+    if (address == null || address.isEmpty) return '';
+    final parts = address.split(',');
+    if (parts.length < 2) return address.replaceAll('State', '').trim();
+    final localGovt = parts.first.trim();
+    final String state = parts[1]
+        .replaceAll('State', '')
+        .replaceAll('(FCT)', '')
+        .trim();
+    return '$state, $localGovt';
+  }
+
+  String _getCondition(AdModel ad) {
+    try {
+      if (ad.customFields == null || ad.customFields!.isEmpty) return '';
+      for (final field in ad.customFields!) {
+        final name = field['name']?.toString().toLowerCase() ?? '';
+        if (name.contains('condition')) return field['value']?.toString() ?? '';
+      }
+      return '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final condition = _getCondition(ad);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: ad.isFeatured == true
+              ? AppThemeData.primary4
+              : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+          width: 1.8,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          // ── Image ────────────────────────────────────────────────────────
+          Expanded(
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                  child: (ad.mainImage != null && ad.mainImage!.isNotEmpty)
+                      ? CachedNetworkImage(
+                    imageUrl: ad.mainImage!,
+                    height: double.infinity,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                    ),
+                  )
+                      : Container(
+                    color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                    child: Center(
+                      child: Icon(
+                        Icons.image_outlined,
+                        size: 32,
+                        color: isDark ? AppThemeData.grey6 : AppThemeData.grey5,
+                      ),
+                    ),
+                  ),
+                ),
+                if (ad.isFeatured == true)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xffFF9500),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, size: 10, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(
+                            "Featured",
+                            style: TextStyle(fontSize: 8, fontFamily: FontFamily.bold, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // ── Details ──────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                // Price
+                TextCustom(
+                  title: PriceFormatter.format(ad),
+                  fontSize: 14,
+                  fontFamily: FontFamily.bold,
+                  color: AppThemeData.primary4,
+                  maxLine: 1,
+                ),
+
+                spaceH(height: 2),
+
+                // Title
+                TextCustom(
+                  title: ad.title ?? '',
+                  fontSize: 12,
+                  fontFamily: FontFamily.medium,
+                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                  maxLine: 1,
+                ),
+
+                spaceH(height: 4),
+
+                // Condition + Verified badge
+                Row(
+                  children: [
+                    if (condition.isNotEmpty) ...[
+                      Flexible(
+                        child: TextCustom(
+                          title: condition,
+                          fontSize: 10,
+                          fontFamily: FontFamily.medium,
+                          color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                          maxLine: 1,
+                        ),
+                      ),
+                    ],
+                    if (condition.isNotEmpty && ad.isSellerVerified == true) ...[
+                      spaceW(width: 5),
+                      TextCustom(
+                        title: "•",
+                        fontSize: 10,
+                        fontFamily: FontFamily.medium,
+                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                      ),
+                      spaceW(width: 5),
+                    ],
+                    if (ad.isSellerVerified == true) ...[
+                      Icon(Icons.verified_user, size: 11, color: AppThemeData.primary4),
+                      spaceW(width: 4),
+                      TextCustom(
+                        title: "Verified ID",
+                        fontSize: 10,
+                        fontFamily: FontFamily.semiBold,
+                        color: AppThemeData.primary4,
+                      ),
+                    ],
+                  ],
+                ),
+
+                spaceH(height: 4),
+
+                // Location
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 11,
+                      color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                    ),
+                    spaceW(width: 2),
+                    Expanded(
+                      child: TextCustom(
+                        title: _formatShortLocation(ad.address),
+                        fontSize: 10,
+                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                        maxLine: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1292,22 +1637,22 @@ class _ImageGalleryState extends State<_ImageGallery> {
           width: double.infinity,
           child: widget.images.isEmpty
               ? Container(
-                  color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3,
-                  child: Center(child: Icon(Icons.image_outlined, size: 64, color: widget.isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
-                )
+            color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3,
+            child: Center(child: Icon(Icons.image_outlined, size: 64, color: widget.isDark ? AppThemeData.grey6 : AppThemeData.grey5)),
+          )
               : PageView.builder(
-                  controller: _pageController,
-                  itemCount: widget.images.length,
-                  onPageChanged: (i) => setState(() => _current = i),
-                  itemBuilder: (_, i) => GestureDetector(
-                    onTap: () => _openFullScreen(context, i),
-                    child: CachedNetworkImage(
-                      imageUrl: widget.images[i],
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
-                    ),
-                  ),
-                ),
+            controller: _pageController,
+            itemCount: widget.images.length,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (_, i) => GestureDetector(
+              onTap: () => _openFullScreen(context, i),
+              child: CachedNetworkImage(
+                imageUrl: widget.images[i],
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
+              ),
+            ),
+          ),
         ),
         if (widget.images.length > 1)
           Positioned(
@@ -1318,7 +1663,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 widget.images.length,
-                (i) => AnimatedContainer(
+                    (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: i == _current ? 16 : 6,

@@ -1,7 +1,5 @@
 import 'package:get/get.dart';
 
-import '../modules/ad_listing_detail/bindings/ad_listing_detail_binding.dart';
-import '../modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 import '../modules/add_products/bindings/add_products_binding.dart';
 import '../modules/add_products/views/add_products_view.dart';
 import '../modules/ads_listing/bindings/ads_listing_binding.dart';
@@ -101,7 +99,6 @@ class AppPages {
     GetPage(name: _Paths.SUB_CATEGORY, page: () => const SubCategoryView(), binding: SubCategoryBinding()),
     GetPage(name: _Paths.ADD_PRODUCTS, page: () => const AddProductsView(), binding: AddProductsBinding()),
     GetPage(name: _Paths.ADS_LISTING, page: () => const AdsListingView(), binding: AdsListingBinding()),
-    GetPage(name: _Paths.AD_LISTING_DETAIL, page: () => const AdListingDetailView(), binding: AdListingDetailBinding()),
     GetPage(name: _Paths.BLOCKED_USERS, page: () => const BlockedUsersView(), binding: BlockedUsersBinding()),
     GetPage(name: _Paths.MY_REPORTS, page: () => const MyReportsView(), binding: MyReportsBinding()),
     GetPage(name: _Paths.PAYMENT_METHOD, page: () => const PaymentMethodView(), binding: PaymentMethodBinding()),

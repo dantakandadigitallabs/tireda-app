@@ -1,8 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/ad_model.dart';
-import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
-import 'package:eSellify/app/modules/ads_listing/views/ads_listing_view.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
 import 'package:eSellify/app/modules/sub_category/views/sub_category_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
@@ -248,7 +247,7 @@ class SearchView extends GetView<AdSearchController> {
     return GestureDetector(
       onTap: () {
         controller.submitSearch(controller.query.value);
-        AdService.showInterstitial(onDismissed: () => Get.to(() => const AdListingDetailView(), arguments: {"ad": ad}));
+        AdService.showInterstitial(onDismissed: () => goToAdDetail(ad));
       },
       child: Container(
         padding: const EdgeInsets.all(10),

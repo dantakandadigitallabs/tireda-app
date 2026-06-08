@@ -8,11 +8,12 @@ import 'package:eSellify/app/models/chat_message_model.dart';
 import 'package:eSellify/app/models/job_application_model.dart';
 import 'package:eSellify/app/modules/chats/views/chat_detail_view.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 
-class AdListingDetailController extends GetxController {
+class AdListingDetailController extends ChangeNotifier {
   late AdModel ad;
   RxBool isLiked = false.obs;
   RxInt likeCount = 0.obs;
@@ -27,19 +28,25 @@ class AdListingDetailController extends GetxController {
   RxDouble sellerRating = 0.0.obs;
   RxInt sellerReviewCount = 0.obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-    final args = Get.arguments;
-    if (args != null && args['ad'] != null) {
-      ad = args['ad'] as AdModel;
-      likeCount.value = ad.likes ?? 0;
-      viewCount.value = ad.views ?? 0;
-      _checkLiked();
-      _incrementViews();
-      _checkReportStatus();
-      _checkSellerVerification();
-    }
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
+
+  /// Called by the StatefulWidget's initState to load the ad.
+  /// Replaces the old onInit/Get.arguments pattern so each page instance
+  /// owns its own controller with no GetX registry dependency.
+  void initWithAd(AdModel adModel) {
+    ad = adModel;
+    likeCount.value = ad.likes ?? 0;
+    viewCount.value = ad.views ?? 0;
+    _checkLiked();
+    _incrementViews();
+    _checkReportStatus();
+    _checkSellerVerification();
+  }
+
+  /// Called by the StatefulWidget's dispose to clean up any resources.
+  void disposeController() {
+    // RxBool/RxInt/etc. manage their own cleanup via GetX.
+    // Nothing additional to dispose here for now.
   }
 
   Future<void> _checkSellerVerification() async {
@@ -126,7 +133,7 @@ class AdListingDetailController extends GetxController {
   String _formatPrice() {
     // Keeps the crucial v1.3 job application integration line
     if (ad.isJobAd) return ad.formattedSalary();
-    
+
     // Standard product pricing fallback logic
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
     final c = ad.currency;
@@ -329,8 +336,7 @@ class AdListingDetailController extends GetxController {
   // ─── Ported Helpers (v1.2) ────────────────────────────────────────────
 
   /// Refresh controller with new ad data when navigating from seller profile,
-  /// favourites, search, or any screen where controller already exists.
-  /// Prevents back-navigation crashes by reusing the existing controller.
+  /// favourites, search, or any screen where the goToAdDetail helper is used.
   void refreshWithAd(AdModel newAd) {
     ad = newAd;
 
@@ -344,13 +350,66 @@ class AdListingDetailController extends GetxController {
     sellerRating.value = 0.0;
     sellerReviewCount.value = 0;
 
+    // Reset similar ads state so they are re-fetched for the new ad
+    similarAds.clear();
+    isSimilarAdsLoading.value = false;
+    _similarAdsFetched = false;
+
     // Re-initialize all data fetching
     _checkLiked();
     _incrementViews();
     _checkReportStatus();
     _checkSellerVerification();
 
-    // Trigger GetBuilder rebuild
-    update();
+    // Notify AnimatedBuilder in the view to rebuild
+    notifyListeners();
+  }
+
+  // ─── Similar Ads ───────────────────────────────────────────────────────────
+
+  RxList<AdModel> similarAds = <AdModel>[].obs;
+  RxBool isSimilarAdsLoading = false.obs;
+  bool _similarAdsFetched = false;
+
+  /// Called lazily from the view when the Similar Ads section first becomes
+  /// visible. Tries subcategory (leaf) first; falls back to parent category
+  /// if fewer than 4 results are returned. Excludes the current ad. Limit: 12.
+  Future<void> fetchSimilarAds() async {
+    if (_similarAdsFetched) return;
+    _similarAdsFetched = true;
+
+    final leafId = ad.leafCategoryId;
+    final parentId = ad.parentCategoryId;
+
+    if (leafId == null && parentId == null) return;
+
+    isSimilarAdsLoading.value = true;
+    try {
+      List<AdModel> results = [];
+
+      // Step 1: try subcategory (leaf) first
+      if (leafId != null) {
+        results = await FireStoreUtils.getSimilarAds(
+          categoryId: leafId,
+          excludeAdId: ad.id!,
+          limit: 16,
+        );
+      }
+
+      // Step 2: fall back to parent category if too few results
+      if (results.length < 4 && parentId != null && parentId != leafId) {
+        results = await FireStoreUtils.getSimilarAds(
+          categoryId: parentId,
+          excludeAdId: ad.id!,
+          limit: 16,
+        );
+      }
+
+      similarAds.assignAll(results);
+    } catch (_) {
+      // Silently fail — similar ads are non-critical
+    } finally {
+      isSimilarAdsLoading.value = false;
+    }
   }
 }
