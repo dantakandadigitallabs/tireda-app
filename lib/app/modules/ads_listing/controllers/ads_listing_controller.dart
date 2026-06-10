@@ -9,6 +9,7 @@ import 'package:eSellify/app/models/feature_section_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:eSellify/utils/network_utils.dart';
 
 class AdsListingController extends GetxController {
   RxString title = ''.obs;
@@ -184,6 +185,10 @@ class AdsListingController extends GetxController {
   }
 
   Future<void> _loadData() async {
+    if (!await NetworkUtils.isConnected()) {
+      isLoading.value = false;
+      return;
+    }
     isLoading.value = true;
     try {
       await Future.wait([_fetchAds(), _loadCategories(), _loadCategoryCounts()]);
