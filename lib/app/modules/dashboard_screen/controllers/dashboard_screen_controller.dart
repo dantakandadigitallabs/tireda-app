@@ -71,7 +71,27 @@ class DashboardScreenController extends GetxController {
     selectedIndex.value = index;
   }
 
+  void onTabTap(int index) {
+    // Home (0) is always accessible to guests
+    if (index == 0) {
+      selectedIndex.value = index;
+      return;
+    }
+    // All other tabs require login
+    if (FireStoreUtils.getCurrentUid() == null) {
+      Get.toNamed(Routes.LOGIN_SCREEN);
+      return;
+    }
+    selectedIndex.value = index;
+  }
+
   Future<void> onSellTap() async {
+    // Guest guard
+    if (FireStoreUtils.getCurrentUid() == null) {
+      Get.toNamed(Routes.LOGIN_SCREEN);
+      return;
+    }
+
     // ... [Your existing Sell Tap Logic remains unchanged] ...
     if (Constant.freeAdListing) {
       selectedIndex.value = 2;

@@ -35,41 +35,30 @@ class SplashController extends GetxController {
       }
 
       bool isLogin = await FireStoreUtils.isLogin();
-      if (!isLogin) {
-        developer.log("User not logged in, going to login screen");
-        await FirebaseAuth.instance.signOut();
-        Get.offAllNamed(Routes.LOGIN_SCREEN);
-        return;
+      if (isLogin) {
+        Constant.userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()!);
+
+        if (Constant.userModel == null) {
+          developer.log("User model is null, signing out");
+          await FirebaseAuth.instance.signOut();
+        } else if (Constant.userModel!.isActive != true) {
+          developer.log("Account disabled");
+          Get.offAll(const AccountDisabledScreen());
+          return;
+        } else if (Constant.userModel!.addAddresses == null || Constant.userModel!.addAddresses!.isEmpty) {
+          developer.log("No addresses found");
+          Get.to(EnterLocationView(isRedirectDashboard: true));
+          return;
+        }
       }
 
-      Constant.userModel = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()!);
-      if (Constant.userModel == null) {
-        developer.log("User model is null, signing out");
-        await FirebaseAuth.instance.signOut();
-        Get.offAllNamed(Routes.LOGIN_SCREEN);
-        return;
-      }
-
-      developer.log("User isActive: ${Constant.userModel!.isActive}");
-      developer.log("User addresses: ${Constant.userModel!.addAddresses?.length ?? 0}");
-
-      if (Constant.userModel!.isActive != true) {
-        developer.log("Account disabled");
-        Get.offAll(const AccountDisabledScreen());
-        return;
-      }
-
-      if (Constant.userModel!.addAddresses == null || Constant.userModel!.addAddresses!.isEmpty) {
-        developer.log("No addresses found");
-        Get.to(EnterLocationView(isRedirectDashboard: true));
-        return;
-      }
-
-      developer.log("All good, going to dashboard");
+      // Guest or logged-in user both go to Dashboard
+      developer.log("Going to dashboard — isLogin: $isLogin");
       Get.offAll(const DashboardScreenView());
     } catch (e, stack) {
       developer.log("Error in redirectScreen: ", error: e, stackTrace: stack);
-      Get.offAllNamed(Routes.LOGIN_SCREEN);
+      // On error, still go to dashboard as guest rather than blocking the user
+      Get.offAll(const DashboardScreenView());
     }
   }
 }

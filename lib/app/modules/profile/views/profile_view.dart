@@ -10,6 +10,7 @@ import 'package:eSellify/app/modules/my_ads/views/my_ads_view.dart';
 import 'package:eSellify/app/modules/notifications/views/notifications_view.dart';
 import 'package:eSellify/app/modules/payment_history/views/payment_history_view.dart';
 import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart';
+import 'package:eSellify/app/modules/dashboard_screen/views/dashboard_screen_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/verified_badge.dart';
@@ -484,7 +485,7 @@ class ProfileView extends GetView<ProfileController> {
               await FirebaseAuth.instance.signOut();
               Constant.userModel = null;
               ShowToastDialog.closeLoader();
-              Get.offAllNamed(Routes.LOGIN_SCREEN);
+              Get.offAll(const DashboardScreenView());
             } catch (e) {
               ShowToastDialog.closeLoader();
               ShowToastDialog.showError("Failed to logout. Please try again.".tr);
@@ -526,7 +527,7 @@ class ProfileView extends GetView<ProfileController> {
               await FireStoreUtils.deleteUserAccount();
               Constant.userModel = null;
               ShowToastDialog.closeLoader();
-              Get.offAllNamed(Routes.LOGIN_SCREEN);
+              Get.offAll(const DashboardScreenView());
               ShowToastDialog.showSuccess("Account deleted successfully".tr);
             } on FirebaseAuthException catch (_) {
               // If Auth delete fails (requires recent login), sign out and redirect

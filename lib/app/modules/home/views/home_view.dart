@@ -57,7 +57,13 @@ class HomeView extends StatelessWidget {
             leading: Padding(
               padding: const EdgeInsets.only(left: 16),
               child: GestureDetector(
-                onTap: () => Get.toNamed(Routes.PROFILE),
+                onTap: () {
+                  if (FireStoreUtils.getCurrentUid() == null) {
+                    Get.toNamed(Routes.LOGIN_SCREEN);
+                    return;
+                  }
+                  Get.toNamed(Routes.PROFILE);
+                },
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,

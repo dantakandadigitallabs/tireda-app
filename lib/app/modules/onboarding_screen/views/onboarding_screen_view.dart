@@ -1,5 +1,6 @@
 import 'package:eSellify/app/constant/round_shape_button.dart';
 import 'package:eSellify/app/modules/login_screen/views/login_screen_view.dart';
+import 'package:eSellify/app/modules/dashboard_screen/views/dashboard_screen_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
@@ -104,7 +105,7 @@ class OnboardingScreenView extends StatelessWidget {
                       buttonTextColor: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
                       onTap: () {
                         Preferences.setBoolean(Preferences.isFinishOnBoardingKey, true);
-                        Get.offAll(LoginScreenView());
+                        Get.offAll(const DashboardScreenView());
                       },
                       size: Size(450, 56),
                     ),

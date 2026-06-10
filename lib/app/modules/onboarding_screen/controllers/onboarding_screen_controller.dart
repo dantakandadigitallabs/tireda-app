@@ -2,7 +2,7 @@ import 'package:eSellify/app/models/onboarding_model.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:eSellify/app/modules/dashboard_screen/views/dashboard_screen_view.dart';
 class OnboardingScreenController extends GetxController {
   final pageController = PageController();
   final currentPage = 0.obs;
@@ -32,6 +32,6 @@ class OnboardingScreenController extends GetxController {
   }
 
   void skipToEnd() {
-    Get.offNamed(Routes.LOGIN_SCREEN);
+    Get.offAll(const DashboardScreenView());
   }
 }

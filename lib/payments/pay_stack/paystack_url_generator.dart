@@ -1,7 +1,6 @@
 // ignore_for_file: depend_on_referenced_packages
 
 import 'dart:convert';
-import 'package:eSellify/app/models/payment_method_model.dart';
 import 'package:eSellify/app/models/user_model.dart';
 import 'package:eSellify/payments/pay_stack/pay_stack_url_model.dart';
 import 'package:flutter/foundation.dart';
@@ -35,28 +34,5 @@ class PayStackURLGen {
     }
 
     return data["status"];
-
-    //PayPalClientSettleModel.fromJson(data);
-  }
-
-  static Future<String> getPayHTML({required String amount, required PayFast payFastSettingData, required UserModel userModel}) async {
-    String newUrl = 'https://${payFastSettingData.isSandbox == false ? "www" : "sandbox"}.payfast.co.za/eng/process';
-    Map body = {
-      'merchant_id': payFastSettingData.merchantId,
-      'merchant_key': payFastSettingData.merchantKey,
-      'amount': amount,
-      'item_name': "goRide online payment",
-      'return_url': payFastSettingData.returnUrl,
-      'cancel_url': payFastSettingData.cancelUrl,
-      'notify_url': payFastSettingData.notifyUrl,
-      'name_first': userModel.firstName,
-      'name_last': userModel.lastName,
-      'email_address': userModel.email,
-    };
-
-    final response = await http.post(Uri.parse(newUrl), body: body);
-
-    debugPrint(response.body);
-    return response.body;
   }
 }

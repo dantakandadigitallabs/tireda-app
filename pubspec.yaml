@@ -24,6 +24,7 @@ dependencies:
 
   firebase_app_check: ^0.4.4+1
   flutter_local_notifications: ^21.0.0
+  flutter_native_splash: ^2.4.1
 
   google_sign_in: ^7.2.0
   crypto: ^3.0.7
@@ -58,8 +59,7 @@ dependencies:
 
   webview_flutter: ^4.13.1
 
-  flutter_stripe: ^12.6.0
-  razorpay_flutter: ^1.4.5
+
   google_mobile_ads: ^8.0.0
   cloud_functions: ^6.3.1
 
@@ -67,9 +67,33 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.1
 
 dependency_overrides:
   latlong2: ^0.10.1
+
+# Native splash configuration
+flutter_native_splash:
+  # Tireda primary5 background — matches Flutter splash bg exactly
+  color: "#0F6E56"
+
+  # Logo PNG — place at assets/images/splash_logo.png
+  # (export logo.svg as 300x300 PNG)
+  image: assets/images/splash_logo.png
+
+  # Fill the entire screen with the bg color (no white edges)
+  fullscreen: true
+
+  # Android 12+ uses the new SplashScreen API
+  android_12:
+    color: "#0F6E56"
+    # Android 12 icon must be 1152x1152px with content in center 768x768px
+    # Use the same PNG — the package handles sizing
+    image: assets/images/splash_logo.png
+    icon_background_color: "#0F6E56"
+
+  # iOS
+  ios: true
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -77,7 +101,6 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
-    - assets/fonts/
 
   fonts:
     - family: HelveticaNowText-Black
