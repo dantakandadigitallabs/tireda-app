@@ -4,7 +4,7 @@ import 'package:eSellify/app/constant_widgets/custom_dialog_box.dart';
 import 'package:eSellify/app/modules/contact_us/views/contact_us_view.dart';
 import 'package:eSellify/app/modules/favourites/views/favourites_view.dart';
 import 'package:eSellify/app/modules/language/views/language_view.dart';
-import 'package:eSellify/app/modules/login_screen/views/login_screen_view.dart';
+import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_screen_controller.dart';
 import 'package:eSellify/app/modules/my_address/views/my_address_view.dart';
 import 'package:eSellify/app/modules/my_ads/views/my_ads_view.dart';
 import 'package:eSellify/app/modules/notifications/views/notifications_view.dart';
@@ -485,6 +485,7 @@ class ProfileView extends GetView<ProfileController> {
               await FirebaseAuth.instance.signOut();
               Constant.userModel = null;
               ShowToastDialog.closeLoader();
+              Get.delete<DashboardScreenController>(); // ← clears stale state
               Get.offAll(const DashboardScreenView());
             } catch (e) {
               ShowToastDialog.closeLoader();
@@ -527,6 +528,7 @@ class ProfileView extends GetView<ProfileController> {
               await FireStoreUtils.deleteUserAccount();
               Constant.userModel = null;
               ShowToastDialog.closeLoader();
+              Get.delete<DashboardScreenController>(); // ← clears stale state
               Get.offAll(const DashboardScreenView());
               ShowToastDialog.showSuccess("Account deleted successfully".tr);
             } on FirebaseAuthException catch (_) {

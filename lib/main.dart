@@ -22,17 +22,19 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'app/routes/app_pages.dart';
 
-import 'package:flutter_native_splash/flutter_native_splash.dart';
-
 void main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  // NOTE: We intentionally do NOT call FlutterNativeSplash.preserve()
+  // so the native splash dismisses on its own as soon as Flutter renders
+  // its first frame — regardless of how long Firebase takes to init.
+  // This prevents the native splash from freezing on slow/no network.
 
   Preferences.initPref();
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  FirebaseFirestore.instance.settings = Settings(
+  FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
@@ -73,7 +75,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void getCurrentAppTheme() async {
-    themeChangeProvider.darkTheme = await themeChangeProvider.darkThemePreference.isDarkThemee();
+    themeChangeProvider.darkTheme =
+    await themeChangeProvider.darkThemePreference.isDarkThemee();
   }
 
   @override
@@ -100,7 +103,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 context,
               ),
               darkTheme: Styles.themeData(true, context),
-              themeMode: themeChangeProvider.darkTheme == 1 ? ThemeMode.light : ThemeMode.dark,
+              themeMode: themeChangeProvider.darkTheme == 1
+                  ? ThemeMode.light
+                  : ThemeMode.dark,
               localizationsDelegates: const [CountryLocalizations.delegate],
               locale: LocalizationService.locale,
               fallbackLocale: LocalizationService.locale,
