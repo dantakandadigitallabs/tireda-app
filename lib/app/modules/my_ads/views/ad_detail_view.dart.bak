@@ -4,18 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/modules/my_ads/controllers/ad_detail_controller.dart';
-import 'package:eSellify/app/routes/app_pages.dart';
-import 'package:eSellify/app/constant/show_toast.dart';
-import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/price_formatter.dart';
-import 'package:eSellify/widgets/expandable_text.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/image_preview_dialog.dart';
-import 'package:eSellify/widgets/watermarked_image.dart';
 import 'package:eSellify/widgets/map_view_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
@@ -148,61 +142,21 @@ class _AdDetailBody extends StatelessWidget {
     if (result == true) Get.back(result: true);
   }
 
-  /// Job ads: close the position (no buyer selection). Reuses the 'sold' status
-  /// so the job drops out of active listings and stops accepting applications.
-  Future<void> _closeJobPosition(BuildContext context) async {
-    final isDark = Provider.of<DarkThemeProvider>(context, listen: false).isDarkTheme();
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          "Close Position?",
-          style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-        ),
-        content: Text(
-          "This job will no longer accept applications and will be removed from active listings.",
-          style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: TextCustom(title: "Cancel".tr, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: TextCustom(title: "Close Position".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: const Color(0xff4CAF50)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    ShowToastDialog.showLoader("Closing position...");
-    final ok = await FireStoreUtils.updateAdStatus(ad.id!, 'sold', false);
-    ShowToastDialog.closeLoader();
-    if (ok) {
-      ShowToastDialog.showSuccess("Position closed");
-      Get.back(result: true);
-    } else {
-      ShowToastDialog.showError("Failed to close position. Please try again.");
-    }
+  Future<void> _makeFeatured() async {
+    await controller.featureAd();
   }
 
   Widget _buildFeaturedBanner(bool isDark) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [const Color(0xffE0F7FA), const Color(0xffE0F2F1)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(colors: [Color(0xffE0F7FA), Color(0xffE0F2F1)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xff00BCD4).withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          // Ad icon
           Container(
             height: 48,
             width: 48,
@@ -211,26 +165,25 @@ class _AdDetailBody extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
             ),
-            child: const Center(
-              child: Text(
+            child: Center( // Removed const
+              child: Text( // Removed const
                 "AD",
-                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: Color(0xffFF6B35)),
+                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: const Color(0xffFF6B35)),
               ),
             ),
           ),
           spaceW(width: 16),
-          // Text + button
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text( // Removed const
                   "Promote your ad, attract\nmore clients and sell faster",
-                  style: TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: Color(0xff37474F), height: 1.4),
+                  style: TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: const Color(0xff37474F), height: 1.4),
                 ),
                 spaceH(height: 10),
                 GestureDetector(
-                  onTap: () => controller.featureAd(),
+                  onTap: _makeFeatured,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
                     decoration: BoxDecoration(
@@ -238,8 +191,8 @@ class _AdDetailBody extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [BoxShadow(color: const Color(0xff00BCD4).withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
                     ),
-                    child: const Text(
-                      "Create Promoted Ad",
+                    child: Text( // Removed const
+                      "Promote Ad",
                       style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
                   ),
@@ -408,7 +361,7 @@ class _AdDetailBody extends StatelessWidget {
       case 'pending':
         return 'Under Review';
       case 'sold':
-        return ad.isJobAd ? 'Closed' : 'Sold Out';
+        return 'Sold Out';
       case 'expired':
         return 'Expired';
       case 'inactive':
@@ -957,8 +910,7 @@ class _Divider extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CUSTOM FIELDS SECTION — 2-column grid
-// Each item in customFields: { 'name': String, 'icon': String, 'value': String }
+// CUSTOM FIELDS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 class _CustomFieldsSection extends StatelessWidget {
   final List<Map<String, dynamic>> customFields;
@@ -968,11 +920,9 @@ class _CustomFieldsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Keep only items that have a non-empty value
-    final items = customFields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).toList();
+    final items = customFields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).take(6).toList();
     if (items.isEmpty) return const SizedBox.shrink();
 
-    // Build rows of 2
     final List<Widget> rows = [];
     for (int i = 0; i < items.length; i += 2) {
       rows.add(
@@ -1002,7 +952,6 @@ class _CustomFieldsSection extends StatelessWidget {
 }
 
 class _FieldCell extends StatelessWidget {
-  /// item = { 'name': String, 'icon': String, 'value': String }
   final Map<String, dynamic> item;
   final bool isDark;
 
@@ -1018,22 +967,21 @@ class _FieldCell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        // Icon box — network image if URL present, else fallback Material icon
         Container(
           width: 32,
           height: 32,
-          padding: EdgeInsets.all(6),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
           child: iconUrl.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: iconUrl,
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => const SizedBox.shrink(),
-                  errorWidget: (_, __, ___) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
-                )
-              : Center(child: Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5)),
+            imageUrl: iconUrl,
+            width: 32,
+            height: 32,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => const SizedBox.shrink(),
+            errorWidget: (_, __, ___) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
+          )
+              : Center(child: Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5)), // Removed const
         ),
         spaceW(width: 10),
         Expanded(
@@ -1042,12 +990,12 @@ class _FieldCell extends StatelessWidget {
             children: [
               Text(
                 name,
-                style: TextStyle(fontSize: 11, fontFamily: FontFamily.regular, color: AppThemeData.grey5),
+                style: TextStyle(fontSize: 11, fontFamily: FontFamily.regular, color: AppThemeData.grey5), // Removed const
               ),
               spaceH(height: 2),
               Text(
                 value,
-                style: TextStyle(fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                style: TextStyle(fontSize: 13, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ),
             ],
           ),
@@ -1154,8 +1102,6 @@ class WhoBoughtScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          // Buyer list
           Expanded(
             child: Obx(() {
               if (wbController.isLoading.value) return _buildBuyerShimmer(isDark);
@@ -1252,7 +1198,7 @@ class WhoBoughtScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: const Text(
+                    child: Text( // Removed const
                       "Mark As Sold Out",
                       style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),

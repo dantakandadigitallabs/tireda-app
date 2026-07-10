@@ -18,59 +18,37 @@ import 'package:provider/provider.dart';
 import '../controllers/sub_category_controller.dart';
 
 class SubCategoryView extends StatelessWidget {
-  /// Preferred: pass the category directly. This survives back navigation
-  /// because Flutter retains the widget (and its constructor args) in the
-  /// route stack, whereas `Get.arguments` can return null on re-build after
-  /// a deeper push/pop cycle.
-  final CategoryModel? category;
-
-  const SubCategoryView({super.key, this.category});
+  const SubCategoryView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     final isDark = themeChange.isDarkTheme();
 
-    // Resolve the category from the constructor first (stable across
-    // back-navigation), falling back to legacy Get.arguments for any old
-    // call site that still passes the map.
+    // Get the category from arguments to create a unique tag
     final args = Get.arguments;
-    final argCategory = (args is Map && args['category'] is CategoryModel) ? args['category'] as CategoryModel : null;
-    final CategoryModel resolved = category ?? argCategory ?? CategoryModel();
-
-    // Stable tag derived from the category id — no timestamp fallback, so
-    // popping back onto this view returns the same controller instance
-    // with its already-loaded subCategoryList intact.
-    final tag = 'sub_${resolved.id ?? 'root'}';
+    final CategoryModel category = args != null ? args['category'] as CategoryModel : CategoryModel();
+    final tag = 'sub_${category.id ?? DateTime.now().millisecondsSinceEpoch}';
 
     // Force a fresh controller for each category level
     final controller = Get.put(SubCategoryController(), tag: tag);
 
-    // Hydrate the controller on first mount for this category. Idempotent:
-    // re-hydration with the same category is a no-op on the controller side.
-    if (resolved.id != null && controller.categoryModel.value.id != resolved.id) {
-      // Schedule for post-frame so we don't mutate Rx state during build.
-      WidgetsBinding.instance.addPostFrameCallback((_) => controller.hydrate(resolved));
-    }
-
-    return Obx(
-      () => Scaffold(
-        backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-        appBar: UiInterface.customAppBar(context, themeChange, controller.categoryModel.value.categoryName.toString()),
-        body: Column(
-          children: [
-            const Center(child: AdBannerWidget()),
-            Expanded(
-              child: controller.isLoading.value
-                  ? _buildShimmer(isDark)
-                  : controller.subCategoryList.isEmpty
-                  ? _buildNoSubCategories(controller, isDark)
-                  : _buildSubCategoryList(controller, isDark),
-            ),
-          ],
-        ),
+    return Obx(() => Scaffold(
+      backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+      appBar: UiInterface.customAppBar(context, themeChange, controller.categoryModel.value.categoryName.toString()),
+      body: Column(
+        children: [
+          const Center(child: AdBannerWidget()),
+          Expanded(
+            child: controller.isLoading.value
+                ? _buildShimmer(isDark)
+                : controller.subCategoryList.isEmpty
+                ? _buildNoSubCategories(controller, isDark)
+                : _buildSubCategoryList(controller, isDark),
+          ),
+        ],
       ),
-    );
+    ));
   }
 
   /// When parent category has NO subcategories — show ads directly
@@ -148,9 +126,8 @@ class SubCategoryView extends StatelessWidget {
     ShowToastDialog.closeLoader();
 
     if (hasChildren) {
-      // Has subcategories → navigate to SubCategoryView again (N-level).
-      // Pass via constructor so the next level's view survives back-nav.
-      Get.to(() => SubCategoryView(category: category), preventDuplicates: false);
+      // Has subcategories → navigate to SubCategoryView again (N-level)
+      Get.to(() => const SubCategoryView(), arguments: {"category": category}, preventDuplicates: false);
     } else {
       // Leaf category → show ads
       Get.to(() => const AdsListingView(), arguments: {"categoryId": category.id, "categoryName": category.categoryName});

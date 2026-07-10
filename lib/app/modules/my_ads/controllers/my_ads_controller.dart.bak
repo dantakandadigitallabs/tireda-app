@@ -261,7 +261,6 @@ class MyAdsController extends GetxController {
 
   // ─── Helpers ─────────────────────────────────────────────
   String formatPrice(AdModel ad) {
-    if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
     final currency = ad.currency;
     final symbol = currency?.symbol ?? '';

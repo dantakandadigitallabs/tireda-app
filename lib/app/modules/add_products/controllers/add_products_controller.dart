@@ -12,6 +12,7 @@ import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/custom_field_model.dart';
 import 'package:eSellify/app/models/location_lat_lng.dart';
 import 'package:eSellify/app/models/positions_model.dart';
+import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/openai_service.dart';
@@ -289,53 +290,53 @@ class AddProductsController extends GetxController {
       switch (field.type) {
         case "Radio":
           if (!selectedRadioValues.containsKey(id)) {
-            ShowToastDialog.showError("Please select a value for '$name'.");
+            ShowToastDialog.showError("please_select_value_for".trParams({"field": name}));
             return false;
           }
           break;
         case "Text Input":
           final ctrl = textControllers[id];
           if (ctrl == null || ctrl.text.trim().isEmpty) {
-            ShowToastDialog.showError("Please fill in '$name'.");
+            ShowToastDialog.showError("please_fill_field".trParams({"field": name}));
             return false;
           }
           break;
         case "Number Input":
           final ctrl = textControllers[id];
           if (ctrl == null || ctrl.text.trim().isEmpty) {
-            ShowToastDialog.showError("Please enter a number for '$name'.");
+            ShowToastDialog.showError("please_enter_number_for".trParams({"field": name}));
             return false;
           }
           final num = double.tryParse(ctrl.text.trim());
           if (num == null) {
-            ShowToastDialog.showError("'$name' must be a valid number.");
+            ShowToastDialog.showError("must_be_valid_number".trParams({"field": name}));
             return false;
           }
           if (field.min != null && num < field.min!) {
-            ShowToastDialog.showError("'$name' must be at least ${field.min}.");
+            ShowToastDialog.showError("minimum_number_validation".trParams({"field": name, "value": field.min.toString()}));
             return false;
           }
           if (field.max != null && num > field.max!) {
-            ShowToastDialog.showError("'$name' must be at most ${field.max}.");
+            ShowToastDialog.showError("maximum_number_validation".trParams({"field": name, "value": field.max.toString()}));
             return false;
           }
           break;
         case "Dropdown":
           if (!selectedDropdownValues.containsKey(id)) {
-            ShowToastDialog.showError("Please select a value for '$name'.");
+            ShowToastDialog.showError("please_select_value_for".trParams({"field": name}));
             return false;
           }
           break;
         case "Checkboxes":
           final selected = selectedCheckboxValues[id] ?? [];
           if (selected.isEmpty) {
-            ShowToastDialog.showError("Please select at least one option for '$name'.");
+            ShowToastDialog.showError("please_select_one_option".trParams({"field": name}));
             return false;
           }
           break;
         case "File Input":
           if (selectedFileValues[id] == null) {
-            ShowToastDialog.showError("Please upload a file for '$name'.");
+            ShowToastDialog.showError("please_upload_file_for".trParams({"field": name}));
             return false;
           }
           break;
@@ -396,16 +397,16 @@ class AddProductsController extends GetxController {
   /// title (if any), then fills the form fields with the AI's suggestions.
   Future<void> generateWithAi() async {
     if (!OpenAiService.isEnabled) {
-      ShowToastDialog.showError("AI auto-generation is not enabled");
+      ShowToastDialog.showError("AI auto-generation is not enabled".tr);
       return;
     }
     if (mainImage.value == null) {
-      ShowToastDialog.showError("Please add at least the main photo first");
+      ShowToastDialog.showError("Please add at least the main photo first".tr);
       return;
     }
 
     isAiGenerating.value = true;
-    ShowToastDialog.showLoader("Generating with AI...");
+    ShowToastDialog.showLoader("Generating with AI...".tr);
     try {
       final images = <File>[mainImage.value!];
       for (final p in otherImages) {
@@ -426,15 +427,17 @@ class AddProductsController extends GetxController {
 
       ShowToastDialog.closeLoader();
       if (result == null) {
-        ShowToastDialog.showError("AI couldn't generate. Try again or check API key in admin panel.");
+        ShowToastDialog.showError("AI couldn't generate. Try again or check API key in admin panel.".tr);
         return;
       }
 
       // ── Switch category if AI picked a different one ─────────────
       bool switched = false;
       final pickedCategory = _resolveCategory(result, allCategories);
-      log('AI categoryId=${result.suggestedCategoryId} suggestedName=${result.suggestedCategoryName} '
-          'resolved=${pickedCategory?.categoryName} (id=${pickedCategory?.id})');
+      log(
+        'AI categoryId=${result.suggestedCategoryId} suggestedName=${result.suggestedCategoryName} '
+            'resolved=${pickedCategory?.categoryName} (id=${pickedCategory?.id})',
+      );
       if (pickedCategory != null && pickedCategory.id != categoryModel.value.id) {
         await _switchCategory(pickedCategory, allCategories);
         switched = true;
@@ -448,9 +451,7 @@ class AddProductsController extends GetxController {
 
       // Apply suggestions to custom fields by matching field name
       result.customFieldValues.forEach((name, value) {
-        final field = customFields.firstWhereOrNull(
-              (f) => (f.name ?? '').toLowerCase().trim() == name.toLowerCase().trim(),
-        );
+        final field = customFields.firstWhereOrNull((f) => (f.name ?? '').toLowerCase().trim() == name.toLowerCase().trim());
         if (field == null || field.id == null) return;
         switch (field.type) {
           case 'text':
@@ -460,9 +461,7 @@ class AddProductsController extends GetxController {
             break;
           case 'radio':
           case 'dropdown':
-            final match = (field.options ?? []).firstWhereOrNull(
-                  (o) => o.toLowerCase() == value.toLowerCase(),
-            );
+            final match = (field.options ?? []).firstWhereOrNull((o) => o.toLowerCase() == value.toLowerCase());
             if (match != null) {
               if (field.type == 'radio') {
                 selectedRadioValues[field.id!] = match;
@@ -479,9 +478,7 @@ class AddProductsController extends GetxController {
         }
       });
 
-      ShowToastDialog.showSuccess(switched
-          ? "Category changed to ${categoryModel.value.categoryName} based on your photo"
-          : "AI suggestions applied");
+      ShowToastDialog.showSuccess(switched ? "category_changed".trParams({"categoryName": categoryModel.value.categoryName.toString()}) : "AI suggestions applied".tr);
     } catch (e) {
       ShowToastDialog.closeLoader();
       ShowToastDialog.showError("Error: $e");
@@ -491,8 +488,18 @@ class AddProductsController extends GetxController {
   }
 
   /// Resolves the AI's category suggestion to a real local CategoryModel.
+  /// Tries (in order):
+  ///  1. Exact ID match (the AI returned a verbatim ID from our list).
+  ///  2. Exact case-insensitive name match against categoryName.
+  ///  3. Substring match where any category name contains the AI's text or
+  ///     vice-versa (handles "iPhone" → "iPhones", "Phone" → "Mobile Phones").
+  /// Restricts matches to leaf categories (no children) since only leaves are
+  /// valid ad targets.
   CategoryModel? _resolveCategory(AiGeneratedAd result, List<CategoryModel> all) {
-    final hasChild = <String>{for (final c in all) if ((c.parentCategoryId ?? '').isNotEmpty) c.parentCategoryId!};
+    final hasChild = <String>{
+      for (final c in all)
+        if ((c.parentCategoryId ?? '').isNotEmpty) c.parentCategoryId!,
+    };
     bool isLeaf(CategoryModel c) => c.id != null && !hasChild.contains(c.id);
 
     // 1. Exact ID
@@ -507,25 +514,23 @@ class AddProductsController extends GetxController {
     if (name == null || name.isEmpty) return null;
 
     // 2. Exact name (prefer leaf)
-    final exact = all.firstWhereOrNull(
-          (c) => isLeaf(c) && (c.categoryName ?? '').toLowerCase().trim() == name,
-    );
+    final exact = all.firstWhereOrNull((c) => isLeaf(c) && (c.categoryName ?? '').toLowerCase().trim() == name);
     if (exact != null) return exact;
     final exactAny = all.firstWhereOrNull((c) => (c.categoryName ?? '').toLowerCase().trim() == name);
     if (exactAny != null) return exactAny;
 
     // 3. Substring match (prefer leaf, prefer longest name)
     final candidates =
-        all.where((c) {
-          final cn = (c.categoryName ?? '').toLowerCase().trim();
-          if (cn.isEmpty) return false;
-          return cn.contains(name) || name.contains(cn);
-        }).toList()..sort((a, b) {
-          final aLeaf = isLeaf(a) ? 1 : 0;
-          final bLeaf = isLeaf(b) ? 1 : 0;
-          if (aLeaf != bLeaf) return bLeaf - aLeaf; // leaves first
-          return (b.categoryName?.length ?? 0) - (a.categoryName?.length ?? 0); // longer name first
-        });
+    all.where((c) {
+      final cn = (c.categoryName ?? '').toLowerCase().trim();
+      if (cn.isEmpty) return false;
+      return cn.contains(name) || name.contains(cn);
+    }).toList()..sort((a, b) {
+      final aLeaf = isLeaf(a) ? 1 : 0;
+      final bLeaf = isLeaf(b) ? 1 : 0;
+      if (aLeaf != bLeaf) return bLeaf - aLeaf; // leaves first
+      return (b.categoryName?.length ?? 0) - (a.categoryName?.length ?? 0); // longer name first
+    });
     return candidates.isEmpty ? null : candidates.first;
   }
 
@@ -614,8 +619,29 @@ class AddProductsController extends GetxController {
   Future<void> submitAd() async {
     if (!_validateStep2()) return;
 
-    isSubmitting.value = true;
     final bool editing = isEditing.value;
+
+    if (!editing && !Constant.freeAdListing) {
+      final uid = FireStoreUtils.getCurrentUid();
+      if (uid != null) {
+        final activeSub = await FireStoreUtils.getActiveSubscription(uid, 'ad_listing');
+        if (activeSub == null) {
+          ShowToastDialog.showWarning("You need a subscription to post ads".tr);
+          Get.to(() => const SubscriptionsView());
+          return;
+        }
+        if (activeSub.isItemLimitUnlimited != true) {
+          final activeAdCount = await FireStoreUtils.countUserActiveAds(uid);
+          if (activeAdCount >= (activeSub.adLimit ?? 0)) {
+            ShowToastDialog.showError("You have $activeAdCount active ads (limit: ${activeSub.adLimit}). Please upgrade your plan.".tr);
+            Get.to(() => const SubscriptionsView());
+            return;
+          }
+        }
+      }
+    }
+
+    isSubmitting.value = true;
     ShowToastDialog.showLoader(editing ? "Updating your ad...".tr : "Posting your ad...".tr);
 
     try {
@@ -752,6 +778,14 @@ class AddProductsController extends GetxController {
               await FireStoreUtils.syncAdsPosted(activeSub.id!, uid);
             }
           }
+        }
+
+        // Notify followers about the new ad (fire-and-forget; new ads only).
+        if (!editing) {
+          FireStoreUtils.notifyFollowersOfNewAd(
+            adId: ad.id ?? '',
+            adTitle: ad.title ?? '',
+          );
         }
 
         if (editing) {

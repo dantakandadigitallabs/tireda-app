@@ -86,7 +86,7 @@ class ChatDetailView extends StatelessWidget {
                     children: [
                       Icon(Icons.lock_open_rounded, color: AppThemeData.primary4, size: 20),
                       const SizedBox(width: 10),
-                      TextCustom(title: "Unblock User", fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
+                      TextCustom(title: "Unblock User".tr, fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
                     ],
                   ),
                 )
@@ -97,7 +97,7 @@ class ChatDetailView extends StatelessWidget {
                     children: [
                       const Icon(Icons.block, color: Colors.red, size: 20),
                       const SizedBox(width: 10),
-                      TextCustom(title: "Block User", fontSize: 14, fontFamily: FontFamily.medium, color: Colors.red),
+                      TextCustom(title: "Block User".tr, fontSize: 14, fontFamily: FontFamily.medium, color: Colors.red),
                     ],
                   ),
                 ),
@@ -117,7 +117,7 @@ class ChatDetailView extends StatelessWidget {
                 return _buildMessageShimmer(isDark);
               }
               if (controller.messages.isEmpty) {
-                return Center(child: TextCustom(title: "No messages yet.\nSay hello or make an offer!", fontSize: 14, color: AppThemeData.grey5, textAlign: TextAlign.center));
+                return Center(child: TextCustom(title: "No messages yet.\nSay hello or make an offer!".tr, fontSize: 14, color: AppThemeData.grey5, textAlign: TextAlign.center));
               }
               return ListView.builder(
                 controller: controller.scrollController,
@@ -226,7 +226,7 @@ class ChatDetailView extends StatelessWidget {
                 spaceH(height: 24),
                 TextCustom(title: "Make an Offer".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                 spaceH(height: 4),
-                TextCustom(title: "Enter your offer price below", fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                TextCustom(title: "Enter your offer price below".tr, fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 spaceH(height: 16),
                 TextField(
                   controller: offerCtrl,
@@ -341,11 +341,11 @@ class ChatDetailView extends StatelessWidget {
               spaceH(height: 16),
               TextCustom(title: "Block $otherName?", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, textAlign: TextAlign.center),
               spaceH(height: 8),
-              TextCustom(title: "They won't be able to message you\nand their chats will be hidden.", fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, textAlign: TextAlign.center),
+              TextCustom(title: "They won't be able to message you\nand their chats will be hidden.".tr, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, textAlign: TextAlign.center),
               spaceH(height: 24),
-              SizedBox(width: double.infinity, height: 46, child: ElevatedButton(onPressed: () { Get.back(); controller.blockUser(); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), child: const Text("Block", style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)))),
+              SizedBox(width: double.infinity, height: 46, child: ElevatedButton(onPressed: () { Get.back(); controller.blockUser(); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), child: Text("Block".tr, style: const TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)))),
               spaceH(height: 10),
-              SizedBox(width: double.infinity, height: 46, child: TextButton(onPressed: () => Get.back(), style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: TextCustom(title: "Cancel", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6))),
+              SizedBox(width: double.infinity, height: 46, child: TextButton(onPressed: () => Get.back(), style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: TextCustom(title: "Cancel".tr, fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6))),
             ],
           ),
         ),
@@ -374,11 +374,11 @@ class ChatDetailView extends StatelessWidget {
               spaceH(height: 16),
               TextCustom(title: "Unblock $otherName?", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, textAlign: TextAlign.center),
               spaceH(height: 8),
-              TextCustom(title: "They will be able to\nmessage you again.", fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, textAlign: TextAlign.center),
+              TextCustom(title: "They will be able to\nmessage you again.".tr, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, textAlign: TextAlign.center),
               spaceH(height: 24),
               SizedBox(width: double.infinity, height: 46, child: ElevatedButton(onPressed: () { Get.back(); controller.unblockUser(); }, style: ElevatedButton.styleFrom(backgroundColor: AppThemeData.primary4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), child: const Text("Unblock", style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)))),
               spaceH(height: 10),
-              SizedBox(width: double.infinity, height: 46, child: TextButton(onPressed: () => Get.back(), style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: TextCustom(title: "Cancel", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6))),
+              SizedBox(width: double.infinity, height: 46, child: TextButton(onPressed: () => Get.back(), style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: TextCustom(title: "Cancel".tr, fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6))),
             ],
           ),
         ),
@@ -478,11 +478,11 @@ class _AdBanner extends StatelessWidget {
             child: chatRoom.adImage != null && chatRoom.adImage!.isNotEmpty
                 ? CachedNetworkImage(imageUrl: chatRoom.adImage!, width: 44, height: 44, fit: BoxFit.cover)
                 : Container(
-                    width: 44,
-                    height: 44,
-                    color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                    child: const Icon(Icons.image, size: 20, color: AppThemeData.grey5),
-                  ),
+              width: 44,
+              height: 44,
+              color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+              child: const Icon(Icons.image, size: 20, color: AppThemeData.grey5),
+            ),
           ),
           spaceW(width: 12),
           Expanded(
@@ -869,8 +869,8 @@ class _MediaBubble extends StatelessWidget {
                 child: isVideo
                     ? _buildVideoThumbnail(videoUrl)
                     : images.length == 1
-                        ? _buildSingleImage(context, images.first)
-                        : _buildImageGrid(context, images),
+                    ? _buildSingleImage(context, images.first)
+                    : _buildImageGrid(context, images),
               ),
               // Timestamp
               Padding(
@@ -965,20 +965,20 @@ class _MediaBubble extends StatelessWidget {
                 Expanded(
                   child: count > 4
                       ? GestureDetector(
-                          onTap: () => _openFullScreen(context, urls, 3),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              CachedNetworkImage(imageUrl: urls[3], fit: BoxFit.cover),
-                              Container(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                child: Center(
-                                  child: Text('+${count - 4}', style: const TextStyle(fontSize: 22, fontFamily: FontFamily.bold, color: Colors.white)),
-                                ),
-                              ),
-                            ],
+                    onTap: () => _openFullScreen(context, urls, 3),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CachedNetworkImage(imageUrl: urls[3], fit: BoxFit.cover),
+                        Container(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          child: Center(
+                            child: Text('+${count - 4}', style: const TextStyle(fontSize: 22, fontFamily: FontFamily.bold, color: Colors.white)),
                           ),
-                        )
+                        ),
+                      ],
+                    ),
+                  )
                       : _gridImage(context, urls, 3),
                 ),
               ],

@@ -16,34 +16,14 @@ class SubCategoryController extends GetxController {
     super.onInit();
   }
 
-  /// Legacy entry point: still supports the old
-  /// `Get.to(..., arguments: {"category": cat})` call shape. Defensive � a
-  /// missing/null/wrong-typed `category` no longer throws; we just stay in
-  /// the loading state and wait for [hydrate] to be called explicitly.
   Future<void> getArguments() async {
-    final args = Get.arguments;
-    if (args is Map) {
-      final raw = args['category'];
-      if (raw is CategoryModel) {
-        await hydrate(raw);
-      }
-    }
-  }
-
-  /// Authoritative initializer used by [SubCategoryView] when the category
-  /// is passed as a constructor parameter. Idempotent: re-hydrating with
-  /// the same category is a no-op.
-  Future<void> hydrate(CategoryModel category) async {
-    if (category.id == null || category.id!.isEmpty) return;
-    if (categoryModel.value.id == category.id && subCategoryList.isNotEmpty) {
+    dynamic arguments = Get.arguments;
+    if (arguments != null) {
+      categoryModel.value = arguments['category'];
+      final subcategory = await getSubCategories(categoryModel.value.id!);
+      subCategoryList.value = subcategory;
       isLoading.value = false;
-      return;
     }
-    categoryModel.value = category;
-    isLoading.value = true;
-    final sub = await getSubCategories(category.id!);
-    subCategoryList.value = sub;
-    isLoading.value = false;
   }
 
   /// Fetch children for any category ID (supports N-level)

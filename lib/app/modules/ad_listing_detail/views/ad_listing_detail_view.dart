@@ -16,6 +16,9 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:uuid/uuid.dart';
 import 'package:eSellify/utils/app_colors.dart';
+import 'package:eSellify/widgets/expandable_text.dart';
+import 'package:eSellify/widgets/follow_button.dart';
+import 'package:eSellify/widgets/watermarked_image.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
@@ -210,12 +213,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                               spaceH(height: 6),
                               Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
                               spaceH(height: 12),
-                              Text(
-                                "Description",
-                                style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                              ),
-                              spaceH(height: 6),
-                              TextCustom(title: ad.description!, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 50),
+                              ExpandableText(text: ad.description!, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLines: 3),
                             ],
 
                             // Seller Info Trust Card
@@ -591,7 +589,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                       spaceH(height: 8),
                       GestureDetector(
                         onTap: () async {
-                          final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx']);
+                          final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx']);
                           if (result != null && result.files.single.path != null) {
                             setState(() {
                               cvFile = File(result.files.single.path!);
@@ -881,8 +879,11 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                 ],
               ),
             ),
-            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, size: 20),
-          ],
+            if (ad.sellerId != null && ad.sellerId!.isNotEmpty) ...[
+              spaceW(width: 8),
+              FollowButton(targetUid: ad.sellerId!, dense: true),
+            ],
+            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, size: 20),          ],
         ),
       ),
     );
@@ -1646,10 +1647,12 @@ class _ImageGalleryState extends State<_ImageGallery> {
             onPageChanged: (i) => setState(() => _current = i),
             itemBuilder: (_, i) => GestureDetector(
               onTap: () => _openFullScreen(context, i),
-              child: CachedNetworkImage(
-                imageUrl: widget.images[i],
-                fit: BoxFit.cover,
-                placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
+              child: WatermarkedImage(
+                child: CachedNetworkImage(
+                  imageUrl: widget.images[i],
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => Container(color: widget.isDark ? AppThemeData.grey9 : AppThemeData.grey3),
+                ),
               ),
             ),
           ),
@@ -1741,14 +1744,16 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
           minScale: 0.8,
           maxScale: 4.0,
           child: Center(
-            child: CachedNetworkImage(
-              imageUrl: widget.images[i],
-              fit: BoxFit.contain,
-              placeholder: (_, _) => const Center(
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-              ),
-              errorWidget: (_, _, _) => const Center(
-                child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 64),
+            child: WatermarkedImage(
+              child: CachedNetworkImage(
+                imageUrl: widget.images[i],
+                fit: BoxFit.contain,
+                placeholder: (_, _) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                ),
+                errorWidget: (_, _, _) => const Center(
+                  child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 64),
+                ),
               ),
             ),
           ),

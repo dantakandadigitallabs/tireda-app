@@ -21,24 +21,19 @@ class SubscriptionsController extends GetxController {
 
   String? get currentUserId => FireStoreUtils.getCurrentUid();
 
-  bool get showAdListing => !Constant.freeAdListing;
-  bool get showFeaturedAds => !Constant.freeAdFeaturing;
-
   @override
   void onInit() {
-    if (!showAdListing && showFeaturedAds) {
-      selectedTab.value = 1;
-    }
     getData();
     super.onInit();
   }
 
   Future<void> getData() async {
     isLoading.value = true;
-    final futures = <Future>[_loadActiveSubscriptions()];
-    if (showAdListing) futures.add(getAdsListingSubscription());
-    if (showFeaturedAds) futures.add(getFeaturedAdsSubscription());
-    await Future.wait(futures);
+    await Future.wait([
+      getAdsListingSubscription(),
+      getFeaturedAdsSubscription(),
+      _loadActiveSubscriptions(),
+    ]);
     isLoading.value = false;
   }
 

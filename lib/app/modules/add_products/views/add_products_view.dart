@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/round_shape_button.dart';
-import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/data/nigeria_locations.dart';
 import 'package:eSellify/app/dependency/dotted_border/dotted_border.dart';
 import 'package:eSellify/app/models/category_model.dart';
@@ -52,6 +51,7 @@ class AddProductsView extends GetView<AddProductsController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ── Category breadcrumb ───────────────────────────
+                      // Wrapped in Obx so AI category re-classification triggers a rebuild.
                       Obx(() => _CategoryBreadcrumb(path: controller.categoryPath.toList(), isDark: isDark)),
                       spaceH(height: 16),
 
@@ -79,6 +79,9 @@ class AddProductsView extends GetView<AddProductsController> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // AI Generate button — shown whenever admin has enabled
+                            // OpenAI. Disabled-look until a main photo is added so the
+                            // user discovers the feature even before uploading.
                             Obx(() {
                               if (!controller.isAiEnabled) return const SizedBox.shrink();
                               final ready = controller.canUseAi;
@@ -159,6 +162,8 @@ class AddProductsView extends GetView<AddProductsController> {
                       Obx(() {
                         final isJobCategory = controller.categoryModel.value.isJobCategory ?? false;
                         final isPriceOptional = controller.categoryModel.value.priceOptional ?? false;
+                        // Hide the spacer only when the price field itself is hidden
+                        // (i.e. a non-job category whose price is optional).
                         return (!isJobCategory && isPriceOptional) ? const SizedBox.shrink() : spaceH(height: 12);
                       }),
 
@@ -554,7 +559,7 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
                         padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 10),
                         child: RoundShapeButton(
                           title: controller.isSubmitting.value
-                              ? (controller.isEditing.value ? "Updating..." : "Posting...")
+                              ? (controller.isEditing.value ? "Updating...".tr : "Posting...")
                               : (controller.isEditing.value ? "Update Ad" : "Post Ad"),
                           buttonColor: controller.isSubmitting.value ? AppThemeData.grey5 : AppThemeData.primary4,
                           buttonTextColor: AppThemeData.primaryWhite,
@@ -612,6 +617,7 @@ class _StepIndicator extends StatelessWidget {
   }
 }
 
+/// N-level category breadcrumb:  Electronics  >  Phones  >  Samsung
 class _CategoryBreadcrumb extends StatelessWidget {
   final List<CategoryModel> path;
   final bool isDark;
@@ -692,10 +698,8 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SALARY SECTION (v1.3 — Job Categories)
-// ─────────────────────────────────────────────────────────────────────────────
-
+/// Job Category salary range — Minimum & Maximum salary fields shown in place
+/// of the Price field. Both are required (validated in the controller).
 class _SalarySection extends StatelessWidget {
   final AddProductsController controller;
   final bool isDark;
@@ -915,8 +919,16 @@ class _MainImagePicker extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _SourceOption(icon: Icons.camera_alt, label: "Camera", onTap: () => controller.pickMainImage(source: ImageSource.camera)),
-                  _SourceOption(icon: Icons.photo_library, label: "Gallery", onTap: () => controller.pickMainImage(source: ImageSource.gallery)),
+                  _SourceOption(
+                    icon: Icons.camera_alt,
+                    label: "Camera",
+                    onTap: () => controller.pickMainImage(source: ImageSource.camera),
+                  ),
+                  _SourceOption(
+                    icon: Icons.photo_library,
+                    label: "Gallery",
+                    onTap: () => controller.pickMainImage(source: ImageSource.gallery),
+                  ),
                 ],
               ),
               spaceH(height: 8),
@@ -1144,6 +1156,8 @@ class _DropdownField extends StatelessWidget {
                 () => DropdownButtonFormField<String>(
               initialValue: controller.selectedDropdownValues[field.id],
               hint: Text("Select ${field.name}", style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
+              // Selected value text — explicit theme color so it stays readable
+              // in both light and dark mode (default was washed-out grey).
               style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               dropdownColor: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
               iconEnabledColor: isDark ? AppThemeData.grey3 : AppThemeData.grey7,
@@ -1165,6 +1179,9 @@ class _DropdownField extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NUMBER INPUT FIELD — numeric keyboard + optional min/max hint
+// ─────────────────────────────────────────────────────────────────────────────
 class _NumberInputField extends StatelessWidget {
   final CustomFieldModel field;
   final AddProductsController controller;
@@ -1178,6 +1195,7 @@ class _NumberInputField extends StatelessWidget {
       controller.textControllers[field.id!] = TextEditingController();
     }
 
+    // Build hint: e.g.  "Enter Year  (1990 – 2025)"
     String hint = "Enter ${field.name}";
     if (field.min != null && field.max != null) {
       hint += "  (${field.min} – ${field.max})";
@@ -1207,9 +1225,11 @@ class _NumberInputField extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  if (field.min != null) TextCustom(title: "Min: ${field.min}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  if (field.min != null)
+                    TextCustom(title: "Min: ${field.min}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                   if (field.min != null && field.max != null) spaceW(width: 12),
-                  if (field.max != null) TextCustom(title: "Max: ${field.max}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  if (field.max != null)
+                    TextCustom(title: "Max: ${field.max}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 ],
               ),
             ),
@@ -1219,6 +1239,9 @@ class _NumberInputField extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECKBOXES FIELD — multi-select chip grid (same style as Radio)
+// ─────────────────────────────────────────────────────────────────────────────
 class _CheckboxField extends StatelessWidget {
   final CustomFieldModel field;
   final AddProductsController controller;
@@ -1250,7 +1273,10 @@ class _CheckboxField extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected ? AppThemeData.primary4.withOpacity(0.1) : (isDark ? AppThemeData.grey9 : AppThemeData.grey2),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4), width: isSelected ? 1.5 : 1),
+                      border: Border.all(
+                        color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+                        width: isSelected ? 1.5 : 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1286,6 +1312,9 @@ class _CheckboxField extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE INPUT FIELD — pick image from gallery, show preview
+// ─────────────────────────────────────────────────────────────────────────────
 class _FileInputField extends StatelessWidget {
   final CustomFieldModel field;
   final AddProductsController controller;
@@ -1324,7 +1353,11 @@ class _FileInputField extends StatelessWidget {
                   children: [
                     Icon(Icons.upload_file_outlined, size: 28, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     spaceH(height: 6),
-                    TextCustom(title: "Tap to upload", fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    TextCustom(
+                      title: "Tap to upload",
+                      fontSize: 13,
+                      color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                    ),
                   ],
                 )
                     : Stack(
@@ -1333,14 +1366,21 @@ class _FileInputField extends StatelessWidget {
                       borderRadius: BorderRadius.circular(11),
                       child: Image.file(file, width: double.infinity, height: 140, fit: BoxFit.cover),
                     ),
+                    // Change / Remove overlay
                     Positioned(
                       top: 8,
                       right: 8,
                       child: Row(
                         children: [
-                          _FileActionButton(icon: Icons.edit_outlined, onTap: () => controller.pickFileForField(field.id!)),
+                          _FileActionButton(
+                            icon: Icons.edit_outlined,
+                            onTap: () => controller.pickFileForField(field.id!),
+                          ),
                           spaceW(width: 8),
-                          _FileActionButton(icon: Icons.close, onTap: () => controller.selectedFileValues[field.id!] = null),
+                          _FileActionButton(
+                            icon: Icons.close,
+                            onTap: () => controller.selectedFileValues[field.id!] = null,
+                          ),
                         ],
                       ),
                     ),

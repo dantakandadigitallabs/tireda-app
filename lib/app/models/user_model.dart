@@ -25,6 +25,12 @@ class UserModel {
   bool? isVerified;
   String? verificationStatus;
   VerificationData? verificationData;
+  // Denormalized follow counters — written from FireStoreUtils.followUser /
+  // unfollowUser / removeFollower via FieldValue.increment. Always kept in
+  // sync with the Firestore user doc so they survive logout/login and any
+  // profile-edit save.
+  int? followersCount;
+  int? followingCount;
 
   UserModel({
     this.firstName,
@@ -47,6 +53,8 @@ class UserModel {
     this.isVerified,
     this.verificationStatus,
     this.verificationData,
+    this.followersCount,
+    this.followingCount,
   });
 
   String fullNameString() {
@@ -73,6 +81,8 @@ class UserModel {
     blockedUsers = json['blockedUsers'] != null ? List<String>.from(json['blockedUsers']) : [];
     isVerified = json['isVerified'] ?? false;
     verificationStatus = json['verificationStatus'] ?? 'unverified';
+    followersCount = (json['followersCount'] as num?)?.toInt() ?? 0;
+    followingCount = (json['followingCount'] as num?)?.toInt() ?? 0;
     if (json['verificationData'] != null && json['verificationData'] is Map) {
       verificationData = VerificationData.fromJson(Map<String, dynamic>.from(json['verificationData']));
     }
@@ -108,6 +118,11 @@ class UserModel {
     data['isVerified'] = isVerified ?? false;
     data['verificationStatus'] = verificationStatus ?? 'unverified';
     data['verificationData'] = verificationData?.toJson();
+    // Persist counters so a profile-save never wipes them. Existing values
+    // win when null — the increment-based writes from follow/unfollow are
+    // authoritative; toJson must not clobber them with 0 on round-trips.
+    if (followersCount != null) data['followersCount'] = followersCount;
+    if (followingCount != null) data['followingCount'] = followingCount;
     if (addAddresses != null) {
       data['customerAddresses'] = addAddresses!.map((address) => address.toJson()).toList();
     }

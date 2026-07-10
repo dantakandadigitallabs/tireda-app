@@ -134,7 +134,7 @@ class VerificationController extends GetxController {
 
   Future<void> pickFile(String documentId) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx'],
       );

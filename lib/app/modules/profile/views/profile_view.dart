@@ -3,6 +3,7 @@ import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/constant_widgets/custom_dialog_box.dart';
 import 'package:eSellify/app/modules/contact_us/views/contact_us_view.dart';
 import 'package:eSellify/app/modules/favourites/views/favourites_view.dart';
+import 'package:eSellify/app/modules/follow/views/follow_list_view.dart';
 import 'package:eSellify/app/modules/language/views/language_view.dart';
 import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_screen_controller.dart';
 import 'package:eSellify/app/modules/my_address/views/my_address_view.dart';
@@ -122,6 +123,8 @@ class ProfileView extends GetView<ProfileController> {
             TextCustom(title: controller.userModel.value.fullNameString(), fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
             spaceH(height: 2),
             TextCustom(title: controller.userModel.value.email.toString(), fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            spaceH(height: 12),
+            _buildFollowStats(isDark),
             spaceH(height: 14),
             // Verification banner
             GestureDetector(
@@ -211,6 +214,55 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
+  // ─── Followers / Following stats ─────────────────────────────────
+  Widget _buildFollowStats(bool isDark) {
+    final uid = controller.userModel.value.id ?? '';
+    if (uid.isEmpty) return const SizedBox.shrink();
+    return StreamBuilder<Map<String, int>>(
+      stream: FireStoreUtils.followCountsStream(uid),
+      builder: (context, snap) {
+        final c = snap.data ?? const {'followers': 0, 'following': 0};
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _statChip(
+              isDark,
+              count: c['followers']!,
+              label: c['followers'] == 1 ? 'Follower'.tr : 'Followers'.tr,
+              onTap: () => Get.to(() => FollowListView(uid: uid, mode: FollowListMode.followers)),
+            ),
+            Container(width: 1, height: 26, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+            _statChip(
+              isDark,
+              count: c['following']!,
+              label: 'Following'.tr,
+              onTap: () => Get.to(() => FollowListView(uid: uid, mode: FollowListMode.following)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _statChip(bool isDark, {required int count, required String label, required VoidCallback onTap}) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            children: [
+              TextCustom(title: '$count', fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+              spaceH(height: 2),
+              TextCustom(title: label, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─── Menu Sections ────────────────────────────────────────────────
   Widget _buildMenuSection(BuildContext context, DarkThemeProvider theme) {
     final isDark = theme.isDarkTheme();
@@ -234,9 +286,11 @@ class ProfileView extends GetView<ProfileController> {
           ),
         ]),
         spaceH(height: 12),
+
         // Subscriptions & Payments
-        _buildSectionCard(isDark, 'Subscriptions & Payments'.tr, [
-          _MenuItem(svg: "assets/icons/ic_subscription.svg", title: "Subscriptions".tr, onTap: () => Get.to(SubscriptionsView())),
+        _buildSectionCard(isDark, !Constant.freeAdListing || !Constant.freeAdFeaturing ? 'Subscriptions & Payments'.tr : 'Payments', [
+          if (!Constant.freeAdListing || !Constant.freeAdFeaturing)
+            _MenuItem(svg: "assets/icons/ic_subscription.svg", title: "Subscriptions".tr, onTap: () => Get.to(SubscriptionsView())),
           _MenuItem(svg: "assets/icons/ic_payment_history.svg", title: "Payment History".tr, onTap: () => Get.to(PaymentHistoryView())),
         ]),
         spaceH(height: 12),

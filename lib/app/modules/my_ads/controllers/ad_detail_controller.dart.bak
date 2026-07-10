@@ -1,5 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
-import 'package:eSellify/app/constant/constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/models/chat_room_model.dart';
@@ -34,7 +33,6 @@ class AdDetailController extends GetxController {
   List<String> get images => [if (ad.mainImage != null && ad.mainImage!.isNotEmpty) ad.mainImage!, ...?ad.otherImages?.where((u) => u.isNotEmpty)];
 
   String formatPrice() {
-    if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
     final currency = ad.currency;
     final symbol = currency?.symbol ?? '';
@@ -64,7 +62,7 @@ class AdDetailController extends GetxController {
   }
 
   Future<bool> markAsSold({String? soldToUserId, String? soldToUserName}) async {
-    ShowToastDialog.showLoader("Updating...".tr);
+    ShowToastDialog.showLoader("Updating...");
     final success = await FireStoreUtils.updateAdStatus(ad.id!, 'sold', false, soldToUserId: soldToUserId, soldToUserName: soldToUserName);
     ShowToastDialog.closeLoader();
 
@@ -80,20 +78,6 @@ class AdDetailController extends GetxController {
   Future<void> featureAd() async {
     final uid = FireStoreUtils.getCurrentUid();
     if (uid == null || ad.id == null) return;
-
-    if (Constant.freeAdFeaturing) {
-      ShowToastDialog.showLoader("Featuring ad...");
-      final success = await FireStoreUtils.markAdAsFeatured(ad.id!, null);
-      ShowToastDialog.closeLoader();
-      if (success) {
-        isFeatured.value = true;
-        ad.isFeatured = true;
-        ShowToastDialog.showSuccess("Ad is now featured!");
-      } else {
-        ShowToastDialog.showError("Failed to feature ad");
-      }
-      return;
-    }
 
     final activeSub = await FireStoreUtils.getActiveSubscription(uid, 'featured_ads');
 
@@ -233,7 +217,7 @@ class AdDetailController extends GetxController {
                 height: 44,
                 child: TextButton(
                   onPressed: () => Get.back(),
-                  child: TextCustom(title: "Maybe Later".tr, fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey5),
+                  child: TextCustom(title: "Maybe Later", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey5),
                 ),
               ),
             ],
@@ -297,7 +281,7 @@ class WhoBoughtController extends GetxController {
   }
 
   Future<bool> markSold() async {
-    ShowToastDialog.showLoader("Updating...".tr);
+    ShowToastDialog.showLoader("Updating...");
     final success = await FireStoreUtils.updateAdStatus(
       ad.id!,
       'sold',
@@ -316,7 +300,6 @@ class WhoBoughtController extends GetxController {
   }
 
   String formatPrice() {
-    if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
     final c = ad.currency;
     final s = c?.symbol ?? '';

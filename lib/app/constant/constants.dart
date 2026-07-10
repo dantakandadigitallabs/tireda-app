@@ -34,6 +34,10 @@ class Constant {
   static RxString appName = "Tireda".obs;
   static String? appIconLight;
   static String? appIconDark;
+  // Admin-configured watermark image URL. Empty string means "use the bundled
+  // logo.svg fallback". Reactive so widgets in an Obx rebuild live when the
+  // admin updates it in the App Settings page.
+  static RxString watermarkUrl = ''.obs;
 
   /// Admin-configured app download / web links (from `settings/contact_us`).
   /// Share feature and "Rate the app" / "Download" CTAs use these so URLs
@@ -64,6 +68,7 @@ class Constant {
   static bool autoApproveAds = false;
   static bool autoApproveEditedAds = false;
   static bool freeAdListing = false;
+  static bool freeAdFeaturing = false;
   static bool unlimitedAdDuration = false;
   static int freeAdListingDays = 30;
   static int minRange = 50;

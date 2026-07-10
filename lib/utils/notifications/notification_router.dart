@@ -6,6 +6,7 @@ import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_scre
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:get/get.dart';
+// Tireda Customs. ad details listings stateless refactor. Must use Navigation Helper
 import 'package:eSellify/utils/navigation_helper.dart';
 
 class NotificationRouter {
@@ -31,13 +32,13 @@ class NotificationRouter {
     developer.log('Notification tap: type=$type, data=$data');
 
     switch (type) {
-      // ── Chat / Offer ── go to Chat tab (index 1)
+    // ── Chat / Offer ── go to Chat tab (index 1)
       case 'chat':
       case 'offer_response':
         _goToDashboardTab(1);
         break;
 
-      // ── Ad events ── open ad detail
+    // ── Ad events ── open ad detail
       case 'ad_approved':
       case 'ad_rejected':
       case 'ad_active':
@@ -58,7 +59,7 @@ class NotificationRouter {
         _goToDashboardTab(3);
         break;
 
-      // ── Job application ── employer opens the applicants list for their ad
+    // ── Job application ── employer opens the applicants list for their ad
       case 'job_application':
         final adId = data['adId'] as String?;
         if (adId != null && adId.isNotEmpty) {
@@ -72,18 +73,18 @@ class NotificationRouter {
         _goToDashboardTab(3);
         break;
 
-      // ── Job application status (shortlisted/rejected) ── applicant opens Job Applications
+    // ── Job application status (shortlisted/rejected) ── applicant opens Job Applications
       case 'job_application_status':
         Get.toNamed(Routes.JOB_APPLICATIONS);
         break;
 
-      // ── Verification ──
+    // ── Verification ──
       case 'verification_approved':
       case 'verification_rejected':
         Get.toNamed(Routes.VERIFICATION);
         break;
 
-      // ── Broadcast ── just open app (stay on home)
+    // ── Broadcast ── just open app (stay on home)
       case 'broadcast_promotion':
       case 'broadcast_info':
       case 'broadcast_update':

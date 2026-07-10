@@ -3,8 +3,6 @@ import 'dart:developer' as developer;
 import 'dart:developer';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/utils/distance_utils.dart';
-import 'package:eSellify/app/dependency/geoflutterfire/src/models/point.dart';
-import 'package:eSellify/app/dependency/geoflutterfire/src/utils/math.dart';
 import 'package:eSellify/app/models/ad_report_model.dart';
 import 'package:eSellify/app/models/banner_model.dart';
 import 'package:eSellify/app/models/report_reason_model.dart';
@@ -85,6 +83,7 @@ class FireStoreUtils {
         Constant.appName.value = data["appName"] ?? "Tireda";
         Constant.appIconLight = data["appIconLight"];
         Constant.appIconDark = data["appIconDark"];
+        Constant.watermarkUrl.value = (data["watermarkUrl"] ?? '').toString();
         Constant.termsAndConditions = data["termsAndConditions"];
         Constant.aboutApp = data["aboutApp"];
         Constant.privacyPolicy = data["privacyPolicy"];
@@ -120,6 +119,7 @@ class FireStoreUtils {
         Constant.maxRange = data["maxRange"] ?? 200;
         Constant.unlimitedAdDuration = data["unlimitedAdDuration"] ?? false;
         Constant.freeAdListingDays = data["freeAdListingDays"] ?? 30;
+        Constant.freeAdFeaturing = data["freeAdFeaturing"] ?? false;
       }
       // 4. Advertisement config
       final advDoc = results[3];
@@ -135,19 +135,44 @@ class FireStoreUtils {
 
       // 6. Safety Tips (separate collection, dynamic from admin)
       await loadSafetyTips();
+
+      // 7. Subscribe to live updates on the constant doc so app name +
+      // watermark URL refresh across the app the moment the admin saves
+      // a change. Idempotent — _liveSettingsSub guards against duplicates.
+      _attachLiveSettingsListener();
     } catch (e) {
       developer.log('Error in getSettings: $e');
     }
   }
 
+  static StreamSubscription? _liveSettingsSub;
+
+  static void _attachLiveSettingsListener() {
+    _liveSettingsSub?.cancel();
+    _liveSettingsSub = fireStore
+        .collection(CollectionName.settings)
+        .doc('constant')
+        .snapshots()
+        .listen((doc) {
+      final data = doc.data();
+      if (data == null) return;
+      final newName = (data['appName'] ?? '').toString();
+      if (newName.isNotEmpty && Constant.appName.value != newName) {
+        Constant.appName.value = newName;
+      }
+      final newWatermark = (data['watermarkUrl'] ?? '').toString();
+      if (Constant.watermarkUrl.value != newWatermark) {
+        Constant.watermarkUrl.value = newWatermark;
+      }
+    }, onError: (e) {
+      developer.log('_attachLiveSettingsListener Error: $e');
+    });
+  }
+
   Future<void> loadSafetyTips() async {
     try {
       final snap = await fireStore.collection(CollectionName.safetyTips).orderBy('sortOrder').get();
-      Constant.safetyTips = snap.docs
-          .where((d) => (d.data()['active'] ?? true) == true)
-          .map((d) => (d.data()['tip'] ?? '').toString())
-          .where((t) => t.isNotEmpty)
-          .toList();
+      Constant.safetyTips = snap.docs.where((d) => (d.data()['active'] ?? true) == true).map((d) => (d.data()['tip'] ?? '').toString()).where((t) => t.isNotEmpty).toList();
     } catch (e) {
       developer.log('loadSafetyTips Error: $e');
     }
@@ -281,7 +306,10 @@ class FireStoreUtils {
       final newName = userModel.fullNameString();
       final newPic = userModel.profilePic ?? '';
 
-      await fireStore.collection(CollectionName.customers).doc(userModel.id).set(userModel.toJson());
+      // Merge instead of full overwrite — guarantees that fields not present
+      // on the local UserModel (e.g. followersCount/followingCount maintained
+      // server-side by FieldValue.increment) are never wiped on a profile save.
+      await fireStore.collection(CollectionName.customers).doc(userModel.id).set(userModel.toJson(), SetOptions(merge: true));
       Constant.userModel = userModel;
 
       // Save current values for next comparison
@@ -447,20 +475,20 @@ class FireStoreUtils {
         .doc('contact_us')
         .get()
         .then((value) {
-          if (value.data() != null) {
-            contactUsModel = ContactUsModel.fromJson(value.data()!);
-            // Mirror admin-configured URLs into Constants so features
-            // (Share, store-download CTAs, etc.) can reach them without
-            // a new fetch.
-            Constant.androidAppUrl.value = contactUsModel?.androidURL ?? '';
-            Constant.iosAppUrl.value = contactUsModel?.iosURL ?? '';
-            Constant.webAppUrl.value = contactUsModel?.webAppURL ?? '';
-          }
-        })
+      if (value.data() != null) {
+        contactUsModel = ContactUsModel.fromJson(value.data()!);
+        // Mirror admin-configured URLs into Constants so features
+        // (Share, store-download CTAs, etc.) can reach them without
+        // a new fetch.
+        Constant.androidAppUrl.value = contactUsModel?.androidURL ?? '';
+        Constant.iosAppUrl.value = contactUsModel?.iosURL ?? '';
+        Constant.webAppUrl.value = contactUsModel?.webAppURL ?? '';
+      }
+    })
         .catchError((error) {
-          log("Failed to get data: $error");
-          return null;
-        });
+      log("Failed to get data: $error");
+      return null;
+    });
     return contactUsModel;
   }
 
@@ -1273,16 +1301,16 @@ class FireStoreUtils {
         .map((snap) => snap.docs.map((doc) => ChatRoomModel.fromJson(doc.data())).toList())
         .listen(
           (rooms) {
-            senderRooms = rooms;
-            senderReady = true;
-            emitCombined();
-          },
-          onError: (e) {
-            developer.log('getChatRoomsStream senderStream error: $e');
-            senderReady = true; // mark ready even on error so UI can still load
-            emitCombined();
-          },
-        );
+        senderRooms = rooms;
+        senderReady = true;
+        emitCombined();
+      },
+      onError: (e) {
+        developer.log('getChatRoomsStream senderStream error: $e');
+        senderReady = true; // mark ready even on error so UI can still load
+        emitCombined();
+      },
+    );
 
     final sub2 = fireStore
         .collection(CollectionName.chatRooms)
@@ -1292,16 +1320,16 @@ class FireStoreUtils {
         .map((snap) => snap.docs.map((doc) => ChatRoomModel.fromJson(doc.data())).toList())
         .listen(
           (rooms) {
-            receiverRooms = rooms;
-            receiverReady = true;
-            emitCombined();
-          },
-          onError: (e) {
-            developer.log('getChatRoomsStream receiverStream error: $e');
-            receiverReady = true;
-            emitCombined();
-          },
-        );
+        receiverRooms = rooms;
+        receiverReady = true;
+        emitCombined();
+      },
+      onError: (e) {
+        developer.log('getChatRoomsStream receiverStream error: $e');
+        receiverReady = true;
+        emitCombined();
+      },
+    );
 
     controller.onCancel = () {
       sub1.cancel();
@@ -1622,6 +1650,228 @@ class FireStoreUtils {
     }
   }
 
+  // ───────── FOLLOW / UNFOLLOW ─────────────────────────────────────
+  // Subcollections:
+  //   customers/{uid}/followers/{followerUid}  -> { followerId, createdAt }
+  //   customers/{uid}/following/{targetUid}    -> { targetId,   createdAt }
+  // Denormalized counters on the user doc: followersCount, followingCount.
+
+  static const String _followersSub = 'followers';
+  static const String _followingSub = 'following';
+
+  static Future<bool> followUser(String targetUid) async {
+    final myUid = getCurrentUid();
+    if (myUid == null || myUid.isEmpty || myUid == targetUid) return false;
+    try {
+      final batch = fireStore.batch();
+      final ts = Timestamp.now();
+      final myFollowingDoc = fireStore.collection(CollectionName.customers).doc(myUid).collection(_followingSub).doc(targetUid);
+      final targetFollowerDoc = fireStore.collection(CollectionName.customers).doc(targetUid).collection(_followersSub).doc(myUid);
+
+      batch.set(myFollowingDoc, {'targetId': targetUid, 'createdAt': ts}, SetOptions(merge: true));
+      batch.set(targetFollowerDoc, {'followerId': myUid, 'createdAt': ts}, SetOptions(merge: true));
+
+      batch.set(fireStore.collection(CollectionName.customers).doc(myUid), {'followingCount': FieldValue.increment(1)}, SetOptions(merge: true));
+      batch.set(fireStore.collection(CollectionName.customers).doc(targetUid), {'followersCount': FieldValue.increment(1)}, SetOptions(merge: true));
+
+      await batch.commit();
+
+      // Fire-and-forget notification to the followed user.
+      _sendFollowNotification(myUid: myUid, targetUid: targetUid);
+      return true;
+    } catch (e) {
+      developer.log('followUser Error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> unfollowUser(String targetUid) async {
+    final myUid = getCurrentUid();
+    if (myUid == null || myUid.isEmpty || myUid == targetUid) return false;
+    try {
+      final myFollowingDoc = fireStore.collection(CollectionName.customers).doc(myUid).collection(_followingSub).doc(targetUid);
+      final existing = await myFollowingDoc.get();
+      if (!existing.exists) return true; // idempotent
+
+      final batch = fireStore.batch();
+      final targetFollowerDoc = fireStore.collection(CollectionName.customers).doc(targetUid).collection(_followersSub).doc(myUid);
+      batch.delete(myFollowingDoc);
+      batch.delete(targetFollowerDoc);
+      batch.set(fireStore.collection(CollectionName.customers).doc(myUid), {'followingCount': FieldValue.increment(-1)}, SetOptions(merge: true));
+      batch.set(fireStore.collection(CollectionName.customers).doc(targetUid), {'followersCount': FieldValue.increment(-1)}, SetOptions(merge: true));
+      await batch.commit();
+      return true;
+    } catch (e) {
+      developer.log('unfollowUser Error: $e');
+      return false;
+    }
+  }
+
+  /// Remove a follower from my followers list (and remove me from their
+  /// following list). Mirror image of [unfollowUser] but initiated by the
+  /// account being followed. Idempotent.
+  static Future<bool> removeFollower(String followerUid) async {
+    final myUid = getCurrentUid();
+    if (myUid == null || myUid.isEmpty || myUid == followerUid) return false;
+    try {
+      final followerDoc = fireStore.collection(CollectionName.customers).doc(myUid).collection(_followersSub).doc(followerUid);
+      final existing = await followerDoc.get();
+      if (!existing.exists) return true;
+
+      final theirFollowingDoc = fireStore.collection(CollectionName.customers).doc(followerUid).collection(_followingSub).doc(myUid);
+
+      final batch = fireStore.batch();
+      batch.delete(followerDoc);
+      batch.delete(theirFollowingDoc);
+      batch.set(fireStore.collection(CollectionName.customers).doc(myUid), {'followersCount': FieldValue.increment(-1)}, SetOptions(merge: true));
+      batch.set(fireStore.collection(CollectionName.customers).doc(followerUid), {'followingCount': FieldValue.increment(-1)}, SetOptions(merge: true));
+      await batch.commit();
+      return true;
+    } catch (e) {
+      developer.log('removeFollower Error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> isFollowing(String targetUid) async {
+    final myUid = getCurrentUid();
+    if (myUid == null || myUid.isEmpty || myUid == targetUid) return false;
+    try {
+      final doc = await fireStore.collection(CollectionName.customers).doc(myUid).collection(_followingSub).doc(targetUid).get();
+      return doc.exists;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<List<UserModel>> getFollowers(String uid) async {
+    try {
+      final snap = await fireStore.collection(CollectionName.customers).doc(uid).collection(_followersSub).orderBy('createdAt', descending: true).get();
+      final ids = snap.docs.map((d) => d.id).toList();
+      if (ids.isEmpty) return [];
+      return getUserProfiles(ids);
+    } catch (e) {
+      developer.log('getFollowers Error: $e');
+      return [];
+    }
+  }
+
+  static Future<List<UserModel>> getFollowing(String uid) async {
+    try {
+      final snap = await fireStore.collection(CollectionName.customers).doc(uid).collection(_followingSub).orderBy('createdAt', descending: true).get();
+      final ids = snap.docs.map((d) => d.id).toList();
+      if (ids.isEmpty) return [];
+      return getUserProfiles(ids);
+    } catch (e) {
+      developer.log('getFollowing Error: $e');
+      return [];
+    }
+  }
+
+  /// Live count stream: returns [followersCount, followingCount] from the user doc.
+  static Stream<Map<String, int>> followCountsStream(String uid) {
+    return fireStore.collection(CollectionName.customers).doc(uid).snapshots().map((snap) {
+      final d = snap.data() ?? {};
+      return {'followers': (d['followersCount'] as num?)?.toInt() ?? 0, 'following': (d['followingCount'] as num?)?.toInt() ?? 0};
+    });
+  }
+
+  /// Fan-out a "new ad" notification to every follower of the current user.
+  /// Fire-and-forget — call after saveAd succeeds. Safe to await or detach.
+  static Future<void> notifyFollowersOfNewAd({required String adId, required String adTitle}) async {
+    final myUid = getCurrentUid();
+    if (myUid == null || myUid.isEmpty) return;
+    try {
+      // 1. List of follower uids (single query on a subcollection).
+      final followersSnap = await fireStore.collection(CollectionName.customers).doc(myUid).collection(_followersSub).get();
+      if (followersSnap.docs.isEmpty) return;
+
+      final me = await getUserProfile(myUid);
+      final senderName = (me?.fullNameString() ?? '').isEmpty ? 'A seller you follow' : me!.fullNameString();
+      final title = 'New ad from someone you follow';
+      final body = '$senderName just posted "$adTitle"';
+
+      // 2. Resolve follower profiles in chunks of 10 (whereIn limit).
+      final followerIds = followersSnap.docs.map((d) => d.id).toList();
+      final followers = await getUserProfiles(followerIds);
+
+      // 3. Persist notification docs in batches of 400 (Firestore cap = 500).
+      const batchSize = 400;
+      for (int i = 0; i < followers.length; i += batchSize) {
+        final batch = fireStore.batch();
+        final chunk = followers.skip(i).take(batchSize);
+        for (final follower in chunk) {
+          final notifId = Constant.getUuid();
+          batch.set(fireStore.collection(CollectionName.notification).doc(notifId), {
+            'id': notifId,
+            'type': 'followed_seller_new_ad',
+            'userType': 'customer',
+            'title': title,
+            'description': body,
+            'adId': adId,
+            'senderId': myUid,
+            'receiverId': follower.id,
+            'isRead': false,
+            'createdAt': Timestamp.now(),
+          });
+        }
+        await batch.commit();
+      }
+
+      // 4. Push FCM in parallel — sendOneNotification swallows its own errors.
+      await Future.wait(
+        followers.where((f) => (f.fcmToken ?? '').isNotEmpty).map((follower) {
+          return SendNotification.sendOneNotification(
+            token: follower.fcmToken!,
+            title: title,
+            body: body,
+            isPayment: false,
+            isSaveNotification: false,
+            payload: {'type': 'followed_seller_new_ad', 'adId': adId, 'senderId': myUid, 'receiverId': follower.id ?? '', 'userType': 'customer'},
+          );
+        }),
+      );
+    } catch (e) {
+      developer.log('notifyFollowersOfNewAd Error: $e');
+    }
+  }
+
+  static Future<void> _sendFollowNotification({required String myUid, required String targetUid}) async {
+    try {
+      final me = await getUserProfile(myUid);
+      final target = await getUserProfile(targetUid);
+      if (target == null) return;
+      final senderName = (me?.fullNameString() ?? '').isEmpty ? 'Someone' : me!.fullNameString();
+
+      final notif = NotificationModel(
+        id: Constant.getUuid(),
+        type: 'new_follower',
+        userType: 'customer',
+        title: 'New follower',
+        description: '$senderName started following you',
+        senderId: myUid,
+        receiverId: targetUid,
+        isRead: false,
+        createdAt: Timestamp.now(),
+      );
+      await setNotification(notif);
+
+      final token = target.fcmToken ?? '';
+      if (token.isNotEmpty) {
+        await SendNotification.sendOneNotification(
+          token: token,
+          title: notif.title!,
+          body: notif.description!,
+          isPayment: false,
+          isSaveNotification: false,
+          payload: {'type': 'new_follower', 'senderId': myUid, 'receiverId': targetUid, 'userType': 'customer'},
+        );
+      }
+    } catch (e) {
+      developer.log('_sendFollowNotification Error: $e');
+    }
+  }
+
   static Future<bool> setNotification(NotificationModel notificationModel) async {
     try {
       await fireStore.collection(CollectionName.notification).doc(notificationModel.id).set(notificationModel.toJson(), SetOptions(merge: false));
@@ -1863,17 +2113,6 @@ class FireStoreUtils {
     }
   }
 
-  /// Update a user subscription
-  static Future<bool> updateUserSubscription(UserSubscriptionModel sub) async {
-    try {
-      await fireStore.collection(CollectionName.userSubscriptions).doc(sub.id).update(sub.toJson());
-      return true;
-    } catch (e) {
-      developer.log('updateUserSubscription Error: $e');
-      return false;
-    }
-  }
-
   /// Cancel all active subscriptions of a specific type for a user
   static Future<void> cancelActiveSubscriptions(String userId, String packageType) async {
     try {
@@ -1984,19 +2223,6 @@ class FireStoreUtils {
     } catch (e) {
       developer.log('removeAdFeatured Error: $e');
       return false;
-    }
-  }
-
-  /// Get featured ads for current user
-  static Future<List<AdModel>> getMyFeaturedAds(String sellerId) async {
-    try {
-      final snap = await fireStore.collection(CollectionName.ads).where('sellerId', isEqualTo: sellerId).where('isFeatured', isEqualTo: true).get();
-      final list = snap.docs.map((doc) => AdModel.fromJson(doc.data())).toList();
-      list.sort((a, b) => (b.createdAt?.toDate() ?? DateTime(2000)).compareTo(a.createdAt?.toDate() ?? DateTime(2000)));
-      return list;
-    } catch (e) {
-      developer.log('getMyFeaturedAds Error: $e');
-      return [];
     }
   }
 

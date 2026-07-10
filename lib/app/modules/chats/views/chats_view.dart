@@ -40,7 +40,7 @@ class ChatsView extends GetView<ChatsController> {
               centerTitle: false,
               title: Padding(
                 padding: const EdgeInsets.only(left: 8.0),
-                child: TextCustom(title: "Chats", fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                child: TextCustom(title: "Chats".tr, fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ),
               actions: [
                 // Blocked users
@@ -86,26 +86,26 @@ class ChatsView extends GetView<ChatsController> {
                 const Center(child: AdBannerWidget()),
                 Expanded(
                   child: Obx(() {
-              if (controller.isLoading.value || controller.isAdsLoading.value) {
-                return TabBarView(
-                  children: [
-                    _SellingShimmerList(isDark: isDark),
-                    _BuyingShimmerList(isDark: isDark),
-                  ],
-                );
-              }
+                    if (controller.isLoading.value || controller.isAdsLoading.value) {
+                      return TabBarView(
+                        children: [
+                          _SellingShimmerList(isDark: isDark),
+                          _BuyingShimmerList(isDark: isDark),
+                        ],
+                      );
+                    }
 
-              if (controller.currentUserId == null) {
-                return TabBarView(
-                  children: [
-                    _buildEmptyState(isDark, "Please login to view your messages", Icons.login_rounded),
-                    _buildEmptyState(isDark, "Please login to view your messages", Icons.login_rounded),
-                  ],
-                );
-              }
+                    if (controller.currentUserId == null) {
+                      return TabBarView(
+                        children: [
+                          _buildEmptyState(isDark, "Please login to view your messages", Icons.login_rounded),
+                          _buildEmptyState(isDark, "Please login to view your messages", Icons.login_rounded),
+                        ],
+                      );
+                    }
 
-              return TabBarView(children: [_buildSellingTab(context, controller, isDark), _buildBuyingTab(controller, isDark)]);
-            }),
+                    return TabBarView(children: [_buildSellingTab(context, controller, isDark), _buildBuyingTab(controller, isDark)]);
+                  }),
                 ),
               ],
             ),
@@ -166,7 +166,7 @@ class ChatsView extends GetView<ChatsController> {
                     children: [
                       Icon(Icons.sell_outlined, size: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
                       const SizedBox(width: 6),
-                      TextCustom(title: "Sold Out", fontSize: 12, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                      TextCustom(title: "Sold Out".tr, fontSize: 12, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
                     ],
                   ),
                 ),
@@ -277,9 +277,9 @@ class ChatsView extends GetView<ChatsController> {
                     backgroundImage: otherProfile.isNotEmpty ? CachedNetworkImageProvider(otherProfile) : null,
                     child: otherProfile.isEmpty
                         ? Text(
-                            otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
-                            style: TextStyle(fontSize: 24, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
-                          )
+                      otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
+                      style: TextStyle(fontSize: 24, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
+                    )
                         : null,
                   ),
                   Container(
@@ -336,7 +336,7 @@ class ChatsView extends GetView<ChatsController> {
                 child: TextButton(
                   onPressed: () => Get.back(),
                   style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: TextCustom(title: "Cancel", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                  child: TextCustom(title: "Cancel".tr, fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
                 ),
               ),
             ],
@@ -396,18 +396,18 @@ class _SellingAdCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     child: (ad.mainImage != null && ad.mainImage!.isNotEmpty)
                         ? CachedNetworkImage(
-                            imageUrl: ad.mainImage!,
-                            height: 56,
-                            width: 56,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(height: 56, width: 56, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-                          )
+                      imageUrl: ad.mainImage!,
+                      height: 56,
+                      width: 56,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(height: 56, width: 56, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+                    )
                         : Container(
-                            height: 56,
-                            width: 56,
-                            decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
-                            child: Icon(Icons.image_outlined, size: 22, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                          ),
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
+                      child: Icon(Icons.image_outlined, size: 22, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                    ),
                   ),
                   spaceW(width: 12),
                   // Ad info
@@ -431,7 +431,7 @@ class _SellingAdCard extends StatelessWidget {
                                 margin: const EdgeInsets.only(left: 8),
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(color: const Color(0xff007AFF).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                                child: const TextCustom(title: "Sold", fontSize: 10, fontFamily: FontFamily.bold, color: Color(0xff007AFF)),
+                                child: TextCustom(title: "Sold".tr, fontSize: 10, fontFamily: FontFamily.bold, color: const Color(0xff007AFF)),
                               ),
                           ],
                         ),
@@ -495,9 +495,9 @@ class _SellingAdCard extends StatelessWidget {
                         backgroundImage: buyerProfile.isNotEmpty ? CachedNetworkImageProvider(buyerProfile) : null,
                         child: buyerProfile.isEmpty
                             ? Text(
-                                buyerName.isNotEmpty ? buyerName[0].toUpperCase() : '?',
-                                style: TextStyle(fontSize: 13, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
-                              )
+                          buyerName.isNotEmpty ? buyerName[0].toUpperCase() : '?',
+                          style: TextStyle(fontSize: 13, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
+                        )
                             : null,
                       ),
                       spaceW(width: 10),
@@ -638,13 +638,13 @@ class _BuyingChatCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               child: (room.adImage != null && room.adImage!.isNotEmpty)
                   ? CachedNetworkImage(
-                      imageUrl: room.adImage!,
-                      height: 64,
-                      width: 64,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(height: 64, width: 64, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-                      errorWidget: (_, __, ___) => _imagePlaceholder(),
-                    )
+                imageUrl: room.adImage!,
+                height: 64,
+                width: 64,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(height: 64, width: 64, color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+                errorWidget: (_, __, ___) => _imagePlaceholder(),
+              )
                   : _imagePlaceholder(),
             ),
             spaceW(width: 14),
@@ -793,11 +793,11 @@ class AdBuyerChatsView extends StatelessWidget {
                   child: (ad.mainImage != null && ad.mainImage!.isNotEmpty)
                       ? CachedNetworkImage(imageUrl: ad.mainImage!, height: 34, width: 34, fit: BoxFit.cover)
                       : Container(
-                          height: 34,
-                          width: 34,
-                          decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.image_outlined, size: 16, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                        ),
+                    height: 34,
+                    width: 34,
+                    decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, borderRadius: BorderRadius.circular(8)),
+                    child: Icon(Icons.image_outlined, size: 16, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  ),
                 ),
                 spaceW(width: 10),
                 Expanded(
@@ -833,7 +833,7 @@ class AdBuyerChatsView extends StatelessWidget {
                       child: Icon(Icons.chat_bubble_outline_rounded, size: 32, color: isDark ? AppThemeData.grey5 : AppThemeData.grey5),
                     ),
                     spaceH(height: 16),
-                    TextCustom(title: "No inquiries yet", fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    TextCustom(title: "No inquiries yet".tr, fontSize: 14, fontFamily: FontFamily.regular, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                   ],
                 ),
               );
@@ -871,9 +871,9 @@ class AdBuyerChatsView extends StatelessWidget {
                             backgroundImage: buyerProfile.isNotEmpty ? CachedNetworkImageProvider(buyerProfile) : null,
                             child: buyerProfile.isEmpty
                                 ? Text(
-                                    buyerName.isNotEmpty ? buyerName[0].toUpperCase() : '?',
-                                    style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
-                                  )
+                              buyerName.isNotEmpty ? buyerName[0].toUpperCase() : '?',
+                              style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
+                            )
                                 : null,
                           ),
                           spaceW(width: 12),
@@ -962,9 +962,9 @@ class AdBuyerChatsView extends StatelessWidget {
                     backgroundImage: otherProfile.isNotEmpty ? CachedNetworkImageProvider(otherProfile) : null,
                     child: otherProfile.isEmpty
                         ? Text(
-                            otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
-                            style: TextStyle(fontSize: 24, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
-                          )
+                      otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
+                      style: TextStyle(fontSize: 24, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
+                    )
                         : null,
                   ),
                   Container(
@@ -1021,7 +1021,7 @@ class AdBuyerChatsView extends StatelessWidget {
                 child: TextButton(
                   onPressed: () => Get.back(),
                   style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: TextCustom(title: "Cancel", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                  child: TextCustom(title: "Cancel".tr, fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
                 ),
               ),
             ],

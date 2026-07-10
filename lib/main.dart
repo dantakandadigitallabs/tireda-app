@@ -6,7 +6,6 @@ import 'package:eSellify/app/constant/toast_service.dart';
 import 'package:eSellify/app/modules/splash/views/splash_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
-import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/ad_service.dart';
 import 'package:eSellify/utils/notifications/notification_service.dart';
 import 'package:eSellify/utils/preferences.dart';
@@ -47,8 +46,7 @@ void main() async {
   configLoading();
   Constant.getAddress();
   await AdService.init();
-  await NotificationService().initInfo();
-
+  NotificationService().initInfo();
   runApp(const MyApp());
 }
 

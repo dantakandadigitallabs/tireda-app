@@ -76,92 +76,92 @@ class TextFieldWidget extends StatelessWidget {
           style: TextStyle(color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.regular, fontSize: 14),
           decoration: prefix != null
               ? InputDecoration(
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
-                  errorStyle: const TextStyle(fontFamily: FontFamily.regular),
-                  isDense: true,
-                  filled: true,
-                  enabled: enable ?? true,
-                  fillColor: fillColor ?? (themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  prefix: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [prefix!, spaceW(width: 16)]),
-                  suffixIcon: suffix != null ? Padding(padding: const EdgeInsets.all(8), child: suffix) : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppThemeData.danger300, width: 1),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppThemeData.danger300, width: 1),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppThemeData.primary4, width: 1),
-                  ),
-                  hint: TextCustom(
-                    title: hintText.tr,
-                    fontSize: 14,
-                    fontFamily: FontFamily.regular,
-                    color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5,
-                    textAlign: TextAlign.left,
-                  ),
-                  labelText: title!.tr,
-                  labelStyle: TextStyle(fontSize: 16, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.regular),
-                )
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+            errorStyle: const TextStyle(fontFamily: FontFamily.regular),
+            isDense: true,
+            filled: true,
+            enabled: enable ?? true,
+            fillColor: fillColor ?? (themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1),
+            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            prefix: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [prefix!, spaceW(width: 16)]),
+            suffixIcon: suffix != null ? Padding(padding: const EdgeInsets.all(8), child: suffix) : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppThemeData.danger300, width: 1),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppThemeData.danger300, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppThemeData.primary4, width: 1),
+            ),
+            hint: TextCustom(
+              title: hintText.tr,
+              fontSize: 14,
+              fontFamily: FontFamily.regular,
+              color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5,
+              textAlign: TextAlign.left,
+            ),
+            labelText: title!.tr,
+            labelStyle: TextStyle(fontSize: 16, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.regular),
+          )
               : InputDecoration(
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
-                  errorStyle: const TextStyle(fontFamily: FontFamily.regular),
-                  isDense: true,
-                  filled: true,
-                  enabled: enable ?? true,
-                  fillColor: fillColor ?? (themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  suffixIcon: suffix != null ? Padding(padding: const EdgeInsets.all(8), child: suffix) : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppThemeData.danger300, width: 1),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppThemeData.danger300, width: 1),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppThemeData.primary4, width: 1),
-                  ),
-                  labelText: title!.tr,
-                  hint: TextCustom(
-                    title: hintText.tr,
-                    fontSize: 14,
-                    fontFamily: FontFamily.regular,
-                    color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5,
-                    textAlign: TextAlign.left,
-                  ),
-                  labelStyle: TextStyle(fontSize: 16, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.regular),
-                ),
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+            errorStyle: const TextStyle(fontFamily: FontFamily.regular),
+            isDense: true,
+            filled: true,
+            enabled: enable ?? true,
+            fillColor: fillColor ?? (themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1),
+            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            suffixIcon: suffix != null ? Padding(padding: const EdgeInsets.all(8), child: suffix) : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppThemeData.danger300, width: 1),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppThemeData.danger300, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppThemeData.primary4, width: 1),
+            ),
+            labelText: title!.tr,
+            hint: TextCustom(
+              title: hintText.tr,
+              fontSize: 14,
+              fontFamily: FontFamily.regular,
+              color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5,
+              textAlign: TextAlign.left,
+            ),
+            labelStyle: TextStyle(fontSize: 16, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.regular),
+          ),
         ),
       ],
     );
@@ -224,6 +224,17 @@ class MobileNumberTextField extends StatelessWidget {
                   onChanged: (value) {
                     final code = value.dialCode.toString();
                     onCountryCodeChanged(code);
+                    final digits = onlyDigits(controller.text);
+                    final newMax = phoneMaxLengthForCountryCode(code);
+                    final trimmed = (newMax != null && digits.length > newMax) ? digits.substring(0, newMax) : digits;
+                    final newMask = phoneMaskForCountryCode(code);
+                    if (newMask != null && trimmed.isNotEmpty) {
+                      final formatter = PhoneNumberInputFormatter(mask: newMask, maxLength: newMax);
+                      final result = formatter.formatEditUpdate(TextEditingValue.empty, TextEditingValue(text: trimmed));
+                      controller.value = TextEditingValue(text: result.text, selection: TextSelection.collapsed(offset: result.text.length));
+                    } else {
+                      controller.value = TextEditingValue(text: trimmed, selection: TextSelection.collapsed(offset: trimmed.length));
+                    }
                   },
                   dialogTextStyle: TextStyle(fontFamily: FontFamily.regular, color: themeChange.isDarkTheme() ? AppThemeData.grey2 : AppThemeData.grey10),
                   dialogBackgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey2,
