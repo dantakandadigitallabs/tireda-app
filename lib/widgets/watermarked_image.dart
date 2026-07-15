@@ -57,7 +57,7 @@ class WatermarkedImage extends StatelessWidget {
                   opacity: opacity,
                   child: Obx(() {
                     final remoteUrl = Constant.watermarkUrl.value;
-                    final name = Constant.appName.value.isNotEmpty ? Constant.appName.value : 'eSellify';
+                    final name = Constant.appName.value.isNotEmpty ? Constant.appName.value : 'Tireda';
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,

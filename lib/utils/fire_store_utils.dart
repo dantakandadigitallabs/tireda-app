@@ -443,15 +443,25 @@ class FireStoreUtils {
   }
 
   static Future<List<CategoryModel>> getParentCategory() async {
-    // Fetch only root categories (no parentCategoryId or empty)
-    final snapshot = await fireStore.collection(CollectionName.category).where('parentCategoryId', isEqualTo: '').get();
-    final snapshot2 = await fireStore.collection(CollectionName.category).where('parentCategoryId', isNull: true).get();
+    // Tireda Custom: added try/catch — this was the only Firestore method with
+    // no error handling; an unhandled exception here (e.g. brief network drop)
+    // left Home's categoryList permanently empty with no recovery. Also runs
+    // both queries in parallel instead of sequentially.
+    try {
+      final results = await Future.wait([
+        fireStore.collection(CollectionName.category).where('parentCategoryId', isEqualTo: '').get(),
+        fireStore.collection(CollectionName.category).where('parentCategoryId', isNull: true).get(),
+      ]);
 
-    final list = <CategoryModel>[];
-    for (var doc in [...snapshot.docs, ...snapshot2.docs]) {
-      list.add(CategoryModel.fromJson(doc.data()));
+      final list = <CategoryModel>[];
+      for (var doc in [...results[0].docs, ...results[1].docs]) {
+        list.add(CategoryModel.fromJson(doc.data()));
+      }
+      return list;
+    } catch (e) {
+      developer.log('getParentCategory Error: $e');
+      return [];
     }
-    return list;
   }
   static Future<List<CategoryModel>> getSubCategories(String parentId) async {
     try {

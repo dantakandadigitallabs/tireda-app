@@ -19,7 +19,9 @@ class SplashController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    Timer(const Duration(seconds: 3), () {
+    // Tireda Custom: reduced from 3s to 2s — splash animation is 1.6s, so this
+    // still gives a small buffer without the extra dead time
+    Timer(const Duration(seconds: 2), () {
       redirectScreen();
     });
   }

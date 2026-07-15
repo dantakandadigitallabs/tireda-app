@@ -7,7 +7,7 @@ class NetworkUtils {
   static Future<bool> isConnected({bool showError = true}) async {
     try {
       final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 3));
       if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
         return true;
       }

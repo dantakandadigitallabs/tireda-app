@@ -45,9 +45,12 @@ void main() async {
 
   configLoading();
   Constant.getAddress();
-  await AdService.init();
   NotificationService().initInfo();
   runApp(const MyApp());
+  // Tireda Custom: moved AdService.init() to after runApp() and made it
+// fire-and-forget (was previously awaited mid-startup, blocking first frame
+// for ad SDK init even though ads aren't currently active in the app)
+  AdService.init();
 }
 
 class MyApp extends StatefulWidget {
