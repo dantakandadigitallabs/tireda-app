@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart'; // Added intl import
 
 class FavouritesController extends GetxController {
   RxBool isLoading = true.obs;
@@ -43,10 +44,21 @@ class FavouritesController extends GetxController {
   String formatPrice(AdModel ad) {
     if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
-    final c = ad.currency;
-    final s = c?.symbol ?? '';
-    final d = c?.decimalDigits ?? 0;
-    final p = ad.price!.toStringAsFixed(d);
-    return c?.symbolAtRight == true ? "$p $s".trim() : "$s$p".trim();
+
+    final currency = ad.currency;
+    final symbol = currency?.symbol ?? '';
+    final decimals = currency?.decimalDigits ?? 0;
+
+    // Use NumberFormat to add the thousands separator
+    final formatter = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: '',
+      decimalDigits: decimals,
+    );
+
+    final formattedPrice = formatter.format(ad.price).trim();
+
+    if (currency?.symbolAtRight == true) return "$formattedPrice $symbol".trim();
+    return "$symbol$formattedPrice".trim();
   }
 }

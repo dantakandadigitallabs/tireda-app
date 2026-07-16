@@ -240,8 +240,8 @@ class AddProductsController extends GetxController {
     final isJobCategory = categoryModel.value.isJobCategory ?? false;
     if (isJobCategory) {
       // Job Category: salary range replaces price and is required.
-      final minText = minSalaryController.text.trim();
-      final maxText = maxSalaryController.text.trim();
+      final minText = minSalaryController.text.replaceAll(',', '').trim(); //Tireda Custom Comma Separator
+      final maxText = maxSalaryController.text.replaceAll(',', '').trim();
       final minVal = double.tryParse(minText);
       final maxVal = double.tryParse(maxText);
       if (minText.isEmpty || minVal == null) {
@@ -259,7 +259,7 @@ class AddProductsController extends GetxController {
     } else {
       final isPriceOptional = categoryModel.value.priceOptional ?? false;
       if (!isPriceOptional) {
-        final priceText = priceController.text.trim();
+        final priceText = priceController.text.replaceAll(',', '').trim();
         if (priceText.isEmpty || double.tryParse(priceText) == null) {
           ShowToastDialog.showError("Please enter a valid price.".tr);
           return false;
@@ -307,7 +307,7 @@ class AddProductsController extends GetxController {
             ShowToastDialog.showError("please_enter_number_for".trParams({"field": name}));
             return false;
           }
-          final num = double.tryParse(ctrl.text.trim());
+          final num = double.tryParse(ctrl.text.replaceAll(',', '').trim());
           if (num == null) {
             ShowToastDialog.showError("must_be_valid_number".trParams({"field": name}));
             return false;
@@ -682,7 +682,7 @@ class AddProductsController extends GetxController {
             value = textControllers[id]?.text.trim() ?? '';
             break;
           case "Number Input":
-            value = textControllers[id]?.text.trim() ?? '';
+            value = textControllers[id]?.text.replaceAll(',', '').trim() ?? '';
             break;
           case "Dropdown":
             value = selectedDropdownValues[id] ?? '';
@@ -710,12 +710,12 @@ class AddProductsController extends GetxController {
       final List<String> catNamePath = categoryPath.map((c) => c.categoryName ?? '').toList();
 
       // 7. Build AdModel
-      final priceText = priceController.text.trim();
+      final priceText = priceController.text.replaceAll(',', '').trim();
       final isJobCategory = categoryModel.value.isJobCategory ?? false;
       // For job categories price is replaced by a salary range.
       final isPriceOptional = isJobCategory ? false : (categoryModel.value.priceOptional ?? false);
-      final double? minSalary = isJobCategory ? double.tryParse(minSalaryController.text.trim()) : null;
-      final double? maxSalary = isJobCategory ? double.tryParse(maxSalaryController.text.trim()) : null;
+      final double? minSalary = isJobCategory ? double.tryParse(minSalaryController.text.replaceAll(',', '').trim()) : null;
+      final double? maxSalary = isJobCategory ? double.tryParse(maxSalaryController.text.replaceAll(',', '').trim()) : null;
 
       GeoFirePoint geoPoint = Geoflutterfire().point(latitude: selectedLatitude.value ?? 0.0, longitude: selectedLongitude.value ?? 0.0);
 

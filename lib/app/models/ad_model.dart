@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/location_lat_lng.dart';
 import 'package:eSellify/app/models/positions_model.dart';
+import 'package:intl/intl.dart';
 
 class AdModel {
   String? id;
@@ -36,13 +37,22 @@ class AdModel {
 
   /// Formats the salary range using the ad's currency, e.g. "$1000 – $2000".
   /// Falls back gracefully when only one bound is present.
+  /// Formats the salary range using the ad's currency, e.g. "$1,000 – $2,000".
   String formattedSalary() {
     final c = currency;
     final s = c?.symbol ?? '';
     final d = c?.decimalDigits ?? 0;
     final atRight = c?.symbolAtRight == true;
+
+    // Add the thousands separator using NumberFormat
+    final formatter = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: '',
+      decimalDigits: d,
+    );
+
     String fmt(double v) {
-      final p = v.toStringAsFixed(d);
+      final p = formatter.format(v).trim();
       return atRight ? "$p $s".trim() : "$s$p".trim();
     }
 
@@ -53,6 +63,7 @@ class AdModel {
     if (maxSalary != null) return "Up to ${fmt(maxSalary!)}";
     return "Negotiable";
   }
+
   String? sellerId;
   String? sellerName;
   String? sellerProfile;

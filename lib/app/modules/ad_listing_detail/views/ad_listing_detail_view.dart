@@ -10,10 +10,12 @@ import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/models/ad_report_model.dart';
 import 'package:eSellify/app/modules/seller_reviews/views/seller_reviews_view.dart';
 import 'package:eSellify/app/models/report_reason_model.dart';
+import 'package:eSellify/app/routes/app_pages.dart'; // Tireda Custom: for LOGIN_SCREEN / DASHBOARD_SCREEN routes
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/price_formatter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_screen_controller.dart'; // Tireda Custom
 import 'package:uuid/uuid.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/widgets/expandable_text.dart';
@@ -93,17 +95,18 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                   const SizedBox(width: 16),
                   Icon(Icons.arrow_back, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
                   const SizedBox(width: 6),
-                  TextCustom(title: "back", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                  TextCustom(title: "Back", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                 ],
               ),
             ),
             actions: [
+              // Tireda Custom: like icon swapped from favorite heart to bookmark, filled/outline
               ObxValue<RxBool>(
                     (isLiked) => GestureDetector(
                   onTap: _controller.toggleLike,
                   child: Icon(
-                    isLiked.value ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked.value ? Colors.red : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    isLiked.value ? Icons.bookmark : Icons.bookmark_border,
+                    color: isLiked.value ? AppThemeData.primary4 : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                     size: 22,
                   ),
                 ),
@@ -128,7 +131,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                       // ── Image Gallery (Edge-to-Edge) ──
                       _ImageGallery(images: images, isDark: isDark),
 
-                      // ── Hero Section (Title -> Location -> Price) ──
+                      // ── Hero Section (Title -> Location -> Price -> Chat Card) ──
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                         child: Column(
@@ -190,6 +193,11 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
 
                             // Price
                             TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+
+                            spaceH(height: 12),
+                            // Tireda Custom: compact "Chat with the seller" skeleton card.
+                            // All taps route straight to real chat — no in-card chat logic.
+                            _buildChatSkeletonCard(isDark),
                           ],
                         ),
                       ),
@@ -201,19 +209,72 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            // Custom Fields (Limited to 6)
+                            // Custom Fields (Limited to 6) — Tireda Custom: bordered "Summary" card
                             if (hasCustomFields) ...[
-                              Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                              spaceH(height: 6),
-                              _buildCustomFields(ad.customFields!, isDark),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: isDark ? AppThemeData.grey7 : AppThemeData.grey4, width: 1.2),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Tireda Custom: icon badge for visual anchor
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.1), shape: BoxShape.circle),
+                                          child: Icon(Icons.list_alt_rounded, size: 14, color: AppThemeData.primary4),
+                                        ),
+                                        spaceW(width: 8),
+                                        TextCustom(title: "Summary", fontSize: 13, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                      ],
+                                    ),
+                                    spaceH(height: 8),
+                                    Divider(height: 1, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                                    spaceH(height: 10),
+                                    _buildCustomFields(ad.customFields!, isDark),
+                                  ],
+                                ),
+                              ),
+                              spaceH(height: 12),
                             ],
 
-                            // Description
+                            // Description — Tireda Custom: bordered "Description" card
                             if (ad.description != null && ad.description!.isNotEmpty) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.primary4, width: 1.2),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Tireda Custom: icon badge for visual anchor
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.1), shape: BoxShape.circle),
+                                          child: Icon(Icons.description_outlined, size: 14, color: AppThemeData.primary4),
+                                        ),
+                                        spaceW(width: 8),
+                                        TextCustom(title: "Description", fontSize: 13, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                      ],
+                                    ),
+                                    spaceH(height: 8),
+                                    Divider(height: 1, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+                                    spaceH(height: 10),
+                                    ExpandableText(text: ad.description!, fontSize: 13, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8, maxLines: 3),
+                                  ],
+                                ),
+                              ),
                               spaceH(height: 6),
-                              Divider(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                              spaceH(height: 12),
-                              ExpandableText(text: ad.description!, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLines: 3),
                             ],
 
                             // Seller Info Trust Card
@@ -222,7 +283,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                             spaceH(height: 12),
                             _buildSellerInfo(ad, isDark),
 
-                            // Action Row (Mark Unavailable / Report Abuse)
+                            // Action Row (Mark Unavailable / Report Abuse / Post Ad Like This)
                             spaceH(height: 16),
                             _buildActionRow(ad, isDark),
                             spaceH(height: 16),
@@ -237,7 +298,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                 ),
               ),
 
-              // ── 3-Button Sticky Bottom Bar ─────────────────────────────
+              // ── 3-Button Sticky Bottom Bar (moderated sizing) ─────────────────────────────
               Container(
                 color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
                 padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
@@ -253,9 +314,9 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                             if (await canLaunchUrl(uri)) launchUrl(uri);
                           },
                           child: Container(
-                            height: 48,
+                            height: 44,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: AppThemeData.primary4, width: 1.5),
                             ),
                             child: Row(
@@ -274,34 +335,40 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                       spaceW(width: 8),
                     ],
 
-                    // 2. Chat Button
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => SafetyTipsBottomSheet.show(
-                          context,
-                          continueLabel: "Continue to chat",
-                          onContinue: _controller.openChat,
-                        ),
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppThemeData.primary4, width: 1.5),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.chat_bubble_outline_rounded, size: 16, color: AppThemeData.primary4),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text("Chat", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4), overflow: TextOverflow.ellipsis),
-                              ),
-                            ],
+                    // 2. WhatsApp Button — Tireda Custom: replaces Chat button.
+                    // Mirrors Call's phone-extraction logic, then opens WhatsApp chat.
+                    if (ad.phoneNumber != null && ad.phoneNumber!.isNotEmpty) ...[
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final rawPhone = '${ad.countryCode ?? ''}${ad.phoneNumber}';
+                            final digitsOnly = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
+                            final uri = Uri.parse('https://wa.me/$digitsOnly');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          child: Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF25D366), width: 1.5),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                HugeIcon(icon: HugeIcons.strokeRoundedWhatsapp, color: const Color(0xFF25D366), size: 16),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text("WhatsApp", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: const Color(0xFF25D366)), overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    spaceW(width: 8),
+                      spaceW(width: 8),
+                    ],
 
                     // 3. Offer Button (Standard ads) / Apply Now Button (Job ads)
                     Expanded(
@@ -317,8 +384,8 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           },
                         ),
                         child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                          height: 44,
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: AppThemeData.primary4),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -338,8 +405,8 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           onContinue: () => _showMakeOfferSheet(context, _controller, isDark),
                         ),
                         child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.primary4),
+                          height: 44,
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: AppThemeData.primary4),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -363,7 +430,80 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     );
   }
 
-  // ─── Make an Offer Bottom Sheet ────────────────────────────
+  // ─── Chat Skeleton Card (Tireda Custom) ─────────────────────
+
+  Widget _buildChatSkeletonCard(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? AppThemeData.grey9 : AppThemeData.grey1,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isDark ? AppThemeData.grey7 : AppThemeData.grey4, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextCustom(title: "Chat with the seller", fontSize: 13, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+          spaceH(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _chatQuickChip("Make an offer", isDark),
+              _chatQuickChip("Is this available?", isDark),
+              _chatQuickChip("Last price", isDark),
+            ],
+          ),
+          spaceH(height: 8),
+          GestureDetector(
+            onTap: _controller.openChat,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                children: [
+                  Expanded(child: TextCustom(title: "Write your message here", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
+                  Icon(Icons.send_rounded, size: 16, color: AppThemeData.primary4),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chatQuickChip(String label, bool isDark) {
+    return GestureDetector(
+      onTap: _controller.openChat,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppThemeData.primary4.withValues(alpha: 0.5)),
+        ),
+        child: Text(label, style: TextStyle(fontSize: 11, fontFamily: FontFamily.medium, color: AppThemeData.primary4)),
+      ),
+    );
+  }
+
+  // Tireda Custom: navigate to Dashboard root, then explicitly trigger the
+  // Sell flow via Get.find — awaiting offAllNamed ensures the Dashboard is
+  // fully mounted first. This avoids relying on onInit()/arguments, which
+  // don't re-fire if DashboardScreenController is already alive in memory.
+  Future<void> _goToPostAd() async {
+    if (FireStoreUtils.getCurrentUid() == null) {
+      Get.toNamed(Routes.LOGIN_SCREEN);
+      return;
+    }
+    await Get.offAllNamed(Routes.DASHBOARD_SCREEN);
+    if (Get.isRegistered<DashboardScreenController>()) {
+      await Get.find<DashboardScreenController>().onSellTap();
+    }
+  }
+
+  // ─── Make an Offer Bottom Sheet (moderated sizing) ────────────────────────────
 
   void _showMakeOfferSheet(BuildContext context, AdListingDetailController controller, bool isDark) {
     final offerController = TextEditingController();
@@ -377,10 +517,10 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -394,17 +534,17 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                     decoration: BoxDecoration(color: isDark ? AppThemeData.grey7 : AppThemeData.grey4, borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
-                spaceH(height: 20),
+                spaceH(height: 16),
                 // Ad info
                 Row(
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: ad.mainImage != null && ad.mainImage!.isNotEmpty
-                          ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
+                          ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 46, height: 46, fit: BoxFit.cover)
                           : Container(
-                        width: 50,
-                        height: 50,
+                        width: 46,
+                        height: 46,
                         color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
                         child: const Icon(Icons.image, color: AppThemeData.grey5),
                       ),
@@ -422,32 +562,32 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                     ),
                   ],
                 ),
-                spaceH(height: 20),
-                TextCustom(title: "Make an Offer", fontSize: 18, fontFamily: FontFamily.bold),
+                spaceH(height: 16),
+                TextCustom(title: "Make an Offer", fontSize: 16, fontFamily: FontFamily.bold),
                 spaceH(height: 4),
                 TextCustom(title: "Enter your offer price below", fontSize: 13, color: AppThemeData.grey5),
-                spaceH(height: 16),
+                spaceH(height: 14),
                 // Price input
                 TextField(
                   controller: offerController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   autofocus: true,
-                  style: TextStyle(fontSize: 22, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                  style: TextStyle(fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                   decoration: InputDecoration(
                     prefixText: ad.currency?.symbol ?? '\$ ',
-                    prefixStyle: TextStyle(fontSize: 22, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    prefixStyle: TextStyle(fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                     hintText: "0.00",
-                    hintStyle: TextStyle(fontSize: 22, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+                    hintStyle: TextStyle(fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
                     filled: true,
                     fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   ),
                 ),
-                spaceH(height: 20),
+                spaceH(height: 18),
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 46,
                   child: ElevatedButton(
                     onPressed: () {
                       final amount = double.tryParse(offerController.text.trim());
@@ -459,12 +599,12 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppThemeData.primary4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 0,
                     ),
                     child: const Text(
                       "Send Offer",
-                      style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                      style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
                   ),
                 ),
@@ -477,7 +617,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     );
   }
 
-  // ─── Apply for Job Bottom Sheet (v1.3 — Job Category) ─────
+  // ─── Apply for Job Bottom Sheet (v1.3 — Job Category) (moderated sizing) ─────
 
   void _showApplyJobSheet(BuildContext context, AdListingDetailController controller, bool isDark) {
     final initialName = Constant.userModel?.fullNameString() ?? '';
@@ -501,10 +641,10 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
             return Padding(
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               child: Container(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: SingleChildScrollView(
                   child: Column(
@@ -519,17 +659,17 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           decoration: BoxDecoration(color: isDark ? AppThemeData.grey7 : AppThemeData.grey4, borderRadius: BorderRadius.circular(2)),
                         ),
                       ),
-                      spaceH(height: 20),
+                      spaceH(height: 16),
                       // Job info header
                       Row(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: ad.mainImage != null && ad.mainImage!.isNotEmpty
-                                ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 50, height: 50, fit: BoxFit.cover)
+                                ? CachedNetworkImage(imageUrl: ad.mainImage!, width: 46, height: 46, fit: BoxFit.cover)
                                 : Container(
-                              width: 50,
-                              height: 50,
+                              width: 46,
+                              height: 46,
                               color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
                               child: const Icon(Icons.work_outline_rounded, color: AppThemeData.grey5),
                             ),
@@ -547,11 +687,11 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           ),
                         ],
                       ),
-                      spaceH(height: 20),
-                      TextCustom(title: "Apply for this job", fontSize: 18, fontFamily: FontFamily.bold),
+                      spaceH(height: 16),
+                      TextCustom(title: "Apply for this job", fontSize: 16, fontFamily: FontFamily.bold),
                       spaceH(height: 4),
                       TextCustom(title: "Upload your CV and add a short note", fontSize: 13, color: AppThemeData.grey5),
-                      spaceH(height: 18),
+                      spaceH(height: 16),
 
                       // Full Name
                       TextFieldWidget(
@@ -561,7 +701,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                         onPress: () {},
                         fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                       ),
-                      spaceH(height: 16),
+                      spaceH(height: 14),
 
                       // Email
                       TextFieldWidget(
@@ -572,7 +712,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                         textInputType: TextInputType.emailAddress,
                         fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                       ),
-                      spaceH(height: 16),
+                      spaceH(height: 14),
 
                       // Phone with country code
                       MobileNumberTextField(
@@ -582,7 +722,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                         onCountryCodeChanged: (code) => setState(() => countryCode = code),
                         onPress: () {},
                       ),
-                      spaceH(height: 16),
+                      spaceH(height: 14),
 
                       // CV Upload
                       TextCustom(title: "CV / Resume *", fontSize: 14, fontFamily: FontFamily.medium),
@@ -599,10 +739,10 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                         },
                         child: Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
                             color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: cvFile != null ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
                               width: cvFile != null ? 1.5 : 1,
@@ -612,7 +752,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                             children: [
                               Icon(
                                 cvFile != null ? Icons.check_circle_rounded : Icons.upload_file_outlined,
-                                size: 22,
+                                size: 20,
                                 color: cvFile != null ? AppThemeData.primary4 : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                               ),
                               spaceW(width: 12),
@@ -636,7 +776,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           ),
                         ),
                       ),
-                      spaceH(height: 16),
+                      spaceH(height: 14),
 
                       // Cover Note
                       TextCustom(title: "Cover Note (optional)", fontSize: 14, fontFamily: FontFamily.medium),
@@ -651,16 +791,16 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           hintStyle: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                           filled: true,
                           fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         ),
                       ),
-                      spaceH(height: 22),
+                      spaceH(height: 18),
 
                       // Submit
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 46,
                         child: ElevatedButton(
                           onPressed: () {
                             if (nameController.text.trim().isEmpty) {
@@ -692,12 +832,12 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppThemeData.primary4,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             elevation: 0,
                           ),
                           child: Text(
                             "Submit Application".tr,
-                            style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                            style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
                           ),
                         ),
                       ),
@@ -792,6 +932,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     return Icons.info_outline;
   }
 
+  // ─── Seller Info Card (Tireda Custom: subtle brand-tinted background) ─────
   Widget _buildSellerInfo(AdModel ad, bool isDark) {
     return GestureDetector(
       onTap: () {
@@ -800,56 +941,66 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+          // Tireda Custom: soft brand tint instead of flat grey/white, for a subtle uplift
+          color: isDark ? AppThemeData.primary4.withValues(alpha: 0.06) : AppThemeData.primary4.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 1.2),
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-              backgroundImage: (ad.sellerProfile != null && ad.sellerProfile!.isNotEmpty) ? CachedNetworkImageProvider(ad.sellerProfile!) : null,
-              child: (ad.sellerProfile == null || ad.sellerProfile!.isEmpty) ? Icon(Icons.person, color: AppThemeData.grey5) : null,
+            // Avatar with verified badge as a corner overlay
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 1.5),
+                  ),
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                    backgroundImage: (ad.sellerProfile != null && ad.sellerProfile!.isNotEmpty) ? CachedNetworkImageProvider(ad.sellerProfile!) : null,
+                    child: (ad.sellerProfile == null || ad.sellerProfile!.isEmpty) ? Icon(Icons.person, color: AppThemeData.grey5) : null,
+                  ),
+                ),
+                if (ad.sellerId != null)
+                  ObxValue<RxBool>(
+                        (isVerified) => isVerified.value
+                        ? Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: AppThemeData.primary4,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite, width: 2),
+                        ),
+                        child: const Icon(Icons.verified_rounded, size: 11, color: Colors.white),
+                      ),
+                    )
+                        : const SizedBox(),
+                    _controller.isSellerVerified,
+                  ),
+              ],
             ),
             spaceW(width: 12),
+
+            // Name + rating/views
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          ad.sellerName ?? 'Seller',
-                          style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (ad.sellerId != null)
-                        ObxValue<RxBool>(
-                              (isVerified) => isVerified.value
-                              ? Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset("assets/icons/ic_crown.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn)),
-                                spaceW(width: 4),
-                                TextCustom(title: "Verified", fontSize: 10, color: AppThemeData.primaryWhite),
-                              ],
-                            ),
-                          )
-                              : const SizedBox(),
-                          _controller.isSellerVerified,
-                        ),
-                    ],
+                  Text(
+                    ad.sellerName ?? 'Seller',
+                    style: TextStyle(fontSize: 14.5, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  spaceH(height: 4),
+                  spaceH(height: 3),
                   ObxValue<RxInt>(
                         (count) {
                       final rating = _controller.sellerRating.value;
@@ -857,16 +1008,17 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                       return Row(
                         children: [
                           if (c > 0) ...[
-                            Icon(Icons.star_rounded, size: 14, color: const Color(0xffFF9500)),
-                            spaceW(width: 4),
-                            TextCustom(title: rating.toStringAsFixed(1), fontSize: 12, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
-                            spaceW(width: 4),
-                            TextCustom(title: '($c)', fontSize: 11, color: AppThemeData.primary4),
+                            Icon(Icons.star_rounded, size: 13, color: const Color(0xffFF9500)),
+                            spaceW(width: 3),
+                            TextCustom(title: rating.toStringAsFixed(1), fontSize: 11.5, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey9),
+                            spaceW(width: 3),
+                            TextCustom(title: '($c)', fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                           ] else
                             TextCustom(title: 'No reviews', fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                          spaceW(width: 6),
-                          TextCustom(title: '·', fontSize: 12, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                          spaceW(width: 6),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Container(width: 3, height: 3, decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4)),
+                          ),
                           ObxValue<RxInt>(
                                 (views) => TextCustom(title: "${views.value} views", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             _controller.viewCount,
@@ -879,11 +1031,13 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                 ],
               ),
             ),
+
             if (ad.sellerId != null && ad.sellerId!.isNotEmpty) ...[
-              spaceW(width: 8),
               FollowButton(targetUid: ad.sellerId!, dense: true),
+              spaceW(width: 4),
             ],
-            HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, size: 20),          ],
+            Icon(Icons.chevron_right_rounded, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5, size: 22),
+          ],
         ),
       ),
     );
@@ -895,74 +1049,107 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
         final report = _controller.existingReport.value;
 
         if (hasReported.value && report != null) {
-          return Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppThemeData.danger300.withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppThemeData.danger300.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.flag_rounded, size: 18, color: AppThemeData.danger300),
-                    spaceW(width: 8),
-                    Expanded(
-                      child: TextCustom(title: "You flagged this ad", fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
+                    Row(
+                      children: [
+                        Icon(Icons.flag_rounded, size: 16, color: AppThemeData.danger300),
+                        spaceW(width: 8),
+                        Expanded(
+                          child: TextCustom(title: "You flagged this ad", fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
+                        ),
+                        _reportStatusBadge(report.status),
+                      ],
                     ),
-                    _reportStatusBadge(report.status),
+                    spaceH(height: 8),
+                    Row(
+                      children: [
+                        TextCustom(title: "Reason: ", fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                        Expanded(
+                          child: TextCustom(title: report.reasonTitle ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
+                        ),
+                      ],
+                    ),
+                    if (report.description != null && report.description!.isNotEmpty) ...[
+                      spaceH(height: 4),
+                      TextCustom(title: report.description!, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
+                    ],
                   ],
                 ),
-                spaceH(height: 8),
-                Row(
-                  children: [
-                    TextCustom(title: "Reason: ", fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-                    Expanded(
-                      child: TextCustom(title: report.reasonTitle ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                    ),
-                  ],
-                ),
-                if (report.description != null && report.description!.isNotEmpty) ...[
-                  spaceH(height: 4),
-                  TextCustom(title: report.description!, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
-                ],
-              ],
-            ),
+              ),
+              spaceH(height: 10),
+              _buildPostAdButton(),
+            ],
           );
         }
 
-        return Row(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => _markAsUnavailable(context, ad, isDark),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _markAsUnavailable(context, ad, isDark),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text("Mark unavailable", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Color(0xFF2196F3))),
+                  ),
                 ),
-                child: const Text("Mark unavailable", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: Color(0xFF2196F3))),
-              ),
-            ),
-            spaceW(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showReportDialog(context, ad, isDark),
-                icon: Icon(Icons.flag_outlined, size: 18, color: AppThemeData.danger300),
-                label: Text("Report abuse", style: TextStyle(fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: AppThemeData.danger300, width: 1.2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                spaceW(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showReportDialog(context, ad, isDark),
+                    icon: Icon(Icons.flag_outlined, size: 16, color: AppThemeData.danger300),
+                    label: Text("Report abuse", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: BorderSide(color: AppThemeData.danger300, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+            spaceH(height: 10),
+            _buildPostAdButton(),
           ],
         );
       },
       _controller.hasReported,
+    );
+  }
+
+  // Tireda Custom: "Post ad like this" button — filled with primary color for
+  // more visual character; navigates to Dashboard root and re-triggers onSellTap().
+  Widget _buildPostAdButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _goToPostAd,
+        icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Colors.white),
+        label: Text("Post ad like this", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppThemeData.primary4,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          elevation: 0,
+        ),
+      ),
     );
   }
 
@@ -982,25 +1169,25 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     Get.dialog(
       Dialog(
         backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.info_outline_rounded, size: 48, color: Color(0xFF2196F3)),
-              spaceH(height: 16),
+              const Icon(Icons.info_outline_rounded, size: 32, color: Color(0xFF2196F3)),
+              spaceH(height: 12),
               Text(
                 "Mark as Unavailable?",
-                style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack),
+                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack),
               ),
-              spaceH(height: 8),
+              spaceH(height: 6),
               Text(
                 "Did the seller mention this item is already sold? Let us know so we can update the community.",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                style: TextStyle(fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
               ),
-              spaceH(height: 24),
+              spaceH(height: 18),
               Row(
                 children: [
                   Expanded(
@@ -1114,7 +1301,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     Get.dialog(
       Dialog(
         backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
         child: Container(
           width: double.infinity,
@@ -1123,19 +1310,19 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppThemeData.danger50,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.flag, size: 22, color: AppThemeData.danger300),
+                    Icon(Icons.flag, size: 18, color: AppThemeData.danger300),
                     spaceW(width: 10),
                     Expanded(
                       child: Text(
                         "Report this Ad",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: FontFamily.bold, color: AppThemeData.danger300),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, fontFamily: FontFamily.bold, color: AppThemeData.danger300),
                       ),
                     ),
                     GestureDetector(
@@ -1165,7 +1352,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                             return GestureDetector(
                               onTap: () => selectedReason.value = reason,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: isSelected ? AppThemeData.danger300 : (isDark ? AppThemeData.grey9 : AppThemeData.grey1),
                                   borderRadius: BorderRadius.circular(20),
@@ -1222,7 +1409,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                 child: Obx(
                       () => SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 44,
                     child: ElevatedButton(
                       onPressed: isSubmitting.value
                           ? null

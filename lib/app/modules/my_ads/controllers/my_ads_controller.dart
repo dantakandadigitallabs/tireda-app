@@ -8,6 +8,7 @@ import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class MyAdsController extends GetxController {
   // ─── Raw stream list ─────────────────────────────────────
@@ -260,15 +261,25 @@ class MyAdsController extends GetxController {
   }
 
   // ─── Helpers ─────────────────────────────────────────────
-  String formatPrice(AdModel ad) {
+   String formatPrice(AdModel ad) {
     if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
+
     final currency = ad.currency;
     final symbol = currency?.symbol ?? '';
     final decimals = currency?.decimalDigits ?? 0;
-    final price = ad.price!.toStringAsFixed(decimals);
-    if (currency?.symbolAtRight == true) return "$price $symbol".trim();
-    return "$symbol$price".trim();
+
+    // Use NumberFormat to add the thousands separator while respecting your decimal digits
+    final formatter = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: '', // We leave the symbol blank here so we can place it left or right manually
+      decimalDigits: decimals,
+    );
+
+    final formattedPrice = formatter.format(ad.price).trim();
+
+    if (currency?.symbolAtRight == true) return "$formattedPrice $symbol".trim();
+    return "$symbol$formattedPrice".trim();
   }
 
   String formatDate(Timestamp? ts) {

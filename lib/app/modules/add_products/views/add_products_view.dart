@@ -9,6 +9,7 @@ import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/custom_field_model.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
+import 'package:eSellify/utils/thousands_formatter.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/screen_size.dart';
@@ -153,7 +154,10 @@ class AddProductsView extends GetView<AddProductsController> {
                               controller: controller.priceController,
                               onPress: () {},
                               textInputType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), // Added comma here
+                                ThousandsFormatter(), // Added your formatter here
+                              ],
                               prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
                             );
                           }),
@@ -730,7 +734,10 @@ class _SalarySection extends StatelessWidget {
               controller: controller.minSalaryController,
               onPress: () {},
               textInputType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ThousandsFormatter(),
+              ],
               prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
             ),
             spaceH(height: 16),
@@ -740,7 +747,10 @@ class _SalarySection extends StatelessWidget {
               controller: controller.maxSalaryController,
               onPress: () {},
               textInputType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ThousandsFormatter(),
+              ],
               prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
             ),
           ],
@@ -1218,7 +1228,10 @@ class _NumberInputField extends StatelessWidget {
             onPress: () {},
             fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
             textInputType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+              ThousandsFormatter(),
+            ],
           ),
           if (field.min != null || field.max != null)
             Padding(
