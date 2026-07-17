@@ -488,19 +488,15 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     );
   }
 
-  // Tireda Custom: navigate to Dashboard root, then explicitly trigger the
-  // Sell flow via Get.find — awaiting offAllNamed ensures the Dashboard is
-  // fully mounted first. This avoids relying on onInit()/arguments, which
-  // don't re-fire if DashboardScreenController is already alive in memory.
+  // Tireda Custom: navigate directly to the Add Products page — no need to
+  // route through Dashboard's tab-switch logic, since Add Products is a
+ // fully self-contained page with its own controller/binding.
   Future<void> _goToPostAd() async {
     if (FireStoreUtils.getCurrentUid() == null) {
       Get.toNamed(Routes.LOGIN_SCREEN);
       return;
     }
-    await Get.offAllNamed(Routes.DASHBOARD_SCREEN);
-    if (Get.isRegistered<DashboardScreenController>()) {
-      await Get.find<DashboardScreenController>().onSellTap();
-    }
+    Get.toNamed(Routes.ADD_PRODUCTS);
   }
 
   // ─── Make an Offer Bottom Sheet (moderated sizing) ────────────────────────────

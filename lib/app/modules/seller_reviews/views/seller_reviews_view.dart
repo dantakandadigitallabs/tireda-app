@@ -4,12 +4,15 @@ import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/models/review_model.dart';
 import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
+import 'package:eSellify/app/modules/follow/views/follow_list_view.dart'; // MERGED: from upstream
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
+import 'package:eSellify/utils/fire_store_utils.dart'; // MERGED: from upstream
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
+import 'package:eSellify/widgets/follow_button.dart'; // MERGED: from upstream
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
@@ -76,98 +79,158 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
   Widget _buildProfileHeader(SellerReviewsController controller, bool isDark) {
     final user = controller.sellerModel.value;
     final isVerified = user?.isVerified == true;
+    final sellerId = controller.sellerId; // MERGED: needed for follow feature
 
     return Container(
       color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Row(
+      child: Column(
         children: [
-          // Avatar + verified badge
-          Stack(
-            alignment: Alignment.bottomRight,
+          Row(
             children: [
-              NetworkImageWidget(
-                imageUrl: user?.profilePic ?? '',
-                height: 64,
-                width: 64,
-                borderRadius: 200,
-                fit: BoxFit.cover,
-              ),
-              if (isVerified)
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                    shape: BoxShape.circle,
+              // Avatar + verified badge
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  NetworkImageWidget(
+                    imageUrl: user?.profilePic ?? '',
+                    height: 64,
+                    width: 64,
+                    borderRadius: 200,
+                    fit: BoxFit.cover,
                   ),
-                  child: const VerifiedBadge(size: 18),
-                ),
-            ],
-          ),
-          spaceW(width: 14),
-          // Name + verified text + joined date
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  controller.sellerName.value,
-                  style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                ),
-                spaceH(height: 4),
-                Row(
-                  children: [
-                    if (isVerified) ...[
-                      Text(
-                        'Verified',
-                        style: TextStyle(fontSize: 12, fontFamily: FontFamily.medium, color: AppThemeData.success300),
+                  if (isVerified)
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                        shape: BoxShape.circle,
                       ),
-                      Text(' • ', style: TextStyle(fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
-                    ],
-                    Text(
-                      controller.memberSince,
-                      style: TextStyle(fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      child: const VerifiedBadge(size: 18),
                     ),
+                ],
+              ),
+              spaceW(width: 14),
+              // Name + verified text + joined date
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            controller.sellerName.value,
+                            style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                          ),
+                        ),
+                        // MERGED: Follow button from upstream, placed beside the name
+                        if (sellerId.isNotEmpty) FollowButton(targetUid: sellerId),
+                      ],
+                    ),
+                    spaceH(height: 4),
+                    Row(
+                      children: [
+                        if (isVerified) ...[
+                          Text(
+                            'Verified',
+                            style: TextStyle(fontSize: 12, fontFamily: FontFamily.medium, color: AppThemeData.success300),
+                          ),
+                          Text(' • ', style: TextStyle(fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
+                        ],
+                        Text(
+                          controller.memberSince,
+                          style: TextStyle(fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                        ),
+                      ],
+                    ),
+                    spaceH(height: 4),
+                    // Rating row
+                    Obx(() {
+                      final rating = controller.averageRating.value;
+                      final count = controller.reviewCount.value;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Row(
+                        children: [
+                          ...List.generate(5, (i) => Icon(
+                            i < rating.round() ? Icons.star_rounded : Icons.star_border_rounded,
+                            size: 14,
+                            color: const Color(0xffFF9500),
+                          )),
+                          spaceW(width: 4),
+                          Text(
+                            '${rating.toStringAsFixed(1)} ($count)',
+                            style: TextStyle(fontSize: 12, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+                          ),
+                        ],
+                      );
+                    }),
                   ],
                 ),
-                spaceH(height: 4),
-                // Rating row
-                Obx(() {
-                  final rating = controller.averageRating.value;
-                  final count = controller.reviewCount.value;
-                  if (count == 0) return const SizedBox.shrink();
-                  return Row(
-                    children: [
-                      ...List.generate(5, (i) => Icon(
-                        i < rating.round() ? Icons.star_rounded : Icons.star_border_rounded,
-                        size: 14,
-                        color: const Color(0xffFF9500),
-                      )),
-                      spaceW(width: 4),
-                      Text(
-                        '${rating.toStringAsFixed(1)} ($count)',
-                        style: TextStyle(fontSize: 12, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
-                      ),
-                    ],
-                  );
-                }),
-              ],
-            ),
-          ),
-          // Listings count badge
-          Obx(() => Column(
-            children: [
-              Text(
-                '${controller.sellerAds.length}',
-                style: TextStyle(fontSize: 20, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
               ),
-              Text(
-                'Listings',
-                style: TextStyle(fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-              ),
+              // Listings count badge
+              Obx(() => Column(
+                children: [
+                  Text(
+                    '${controller.sellerAds.length}',
+                    style: TextStyle(fontSize: 20, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                  ),
+                  Text(
+                    'Listings',
+                    style: TextStyle(fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  ),
+                ],
+              )),
             ],
-          )),
+          ),
+          // MERGED: Follower / Following counts row from upstream
+          if (sellerId.isNotEmpty) ...[
+            spaceH(height: 12),
+            StreamBuilder<Map<String, int>>(
+              stream: FireStoreUtils.followCountsStream(sellerId),
+              builder: (context, snap) {
+                final c = snap.data ?? const {'followers': 0, 'following': 0};
+                return Row(
+                  children: [
+                    _statChip(
+                      isDark,
+                      count: c['followers']!,
+                      label: c['followers'] == 1 ? 'Follower'.tr : 'Followers'.tr,
+                      onTap: () => Get.to(() => FollowListView(uid: sellerId, mode: FollowListMode.followers)),
+                    ),
+                    Container(width: 1, height: 26, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                    _statChip(
+                      isDark,
+                      count: c['following']!,
+                      label: 'Following'.tr,
+                      onTap: () => Get.to(() => FollowListView(uid: sellerId, mode: FollowListMode.following)),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  // MERGED: helper from upstream, used by the follower/following row above
+  Widget _statChip(bool isDark, {required int count, required String label, required VoidCallback onTap}) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            children: [
+              TextCustom(title: '$count', fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+              spaceH(height: 2),
+              TextCustom(title: label, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -327,7 +390,7 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
     );
   }
 
-  // ── FIX A: dynamic → ReviewModel ──────────────────────────
+  // ── FIX A (your customization, kept): dynamic → ReviewModel ──
   Widget _buildReviewCard(ReviewModel review, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -403,7 +466,7 @@ class SellerReviewsView extends GetView<SellerReviewsController> {
     );
   }
 
-  // ── FIX C: Enhanced _timeAgo with week/month granularity ──
+  // ── FIX C (your customization, kept): Enhanced _timeAgo with week/month granularity ──
   String _timeAgo(Timestamp? ts) {
     if (ts == null) return '';
     final now = DateTime.now();

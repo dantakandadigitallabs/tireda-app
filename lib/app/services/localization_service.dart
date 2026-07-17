@@ -1,5 +1,7 @@
 import 'package:eSellify/languages/app_en.dart';
-import 'package:eSellify/languages/app_ha.dart'; // 1. Import new file
+import 'package:eSellify/languages/app_ha.dart';
+import 'package:eSellify/languages/app_yo.dart';
+import 'package:eSellify/languages/app_ig.dart'; // Import Igbo file
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -8,18 +10,24 @@ class LocalizationService extends Translations {
 
   static final locales = [
     const Locale('en'),
-    const Locale('ha'), // 2. Add to supported locales
+    const Locale('ha'),
+    const Locale('yo'),
+    const Locale('ig'), // Add Igbo locale
   ];
 
   static final Map<String, String> languageNames = {
     'en': 'English',
-    'ha': 'Hausa', // 3. Add to display names
+    'ha': 'Hausa',
+    'yo': 'Yorùbá',
+    'ig': 'Igbo', // Add Igbo display name
   };
 
   @override
   Map<String, Map<String, String>> get keys => {
     'en': enUS,
-    'ha': haHA, // 4. Register the map
+    'ha': haHA,
+    'yo': yoYO,
+    'ig': igIG, // Register Igbo map
   };
 
   void changeLocale(String lang) {
