@@ -2142,6 +2142,121 @@ class FireStoreUtils {
     }
   }
 
+  // Tireda Custom: Additive subscription upgrade support.
+//
+// WHY THIS EXISTS:
+// The original eSellify subscription model is "tier-replacement" — buying any
+// new package of the same packageType ('ad_listing' | 'featured_ads') cancels
+// the user's current active subscription outright via cancelActiveSubscriptions(),
+// discarding any unused ad-slot allowance they already paid for.
+// Tireda's business model is "additive/stackable" instead: unused ad slots from
+// the current active subscription should carry forward into the new purchase.
+//
+// WHAT THIS DOES / DOES NOT DO:
+// - Carries forward ONLY the unused item-limit allowance (adLimit - adsPosted).
+// - Does NOT carry forward remaining expiry days — by product decision, the
+//   newly purchased package's own duration/listingDurationType always applies
+//   going forward. This was a deliberate simplification: ads that are already
+//   posted keep whatever expiryDate was calculated for them at post-time
+//   (see AddProductsController._calculateExpiryDate, which runs once per ad
+//   and is untouched by this change), so there is no retroactive reconciliation
+//   needed for already-posted ads. Only *future* posts are governed by the
+//   merged subscription doc this method creates.
+// - Does NOT do anything with categoryType. As of this writing all packages
+//   are hardcoded to categoryType: 'global' (see SubscriptionPackageDialog._savePackage
+//   in the admin panel — the category-picker UI was stubbed out, "Global Package"
+//   is static). If/when the original developer ships category-specific packages,
+//   REVISIT THIS METHOD: it currently keys merges purely on (userId, packageType),
+//   with no awareness of category scope. A category-specific package upgrade might
+//   need to merge only against same-category active subs, not all global ones.
+//
+// MERGE-CONFLICT NOTE FOR FUTURE UPSTREAM UPDATES:
+// This method REPLACES the call site of cancelActiveSubscriptions() in
+// SubscriptionsController._directFreePurchase() and
+// PaymentMethodController._onPaymentSuccess(). cancelActiveSubscriptions() itself
+// is left untouched/unused below so upstream diffs against it stay clean — if the
+// original dev changes that method, review whether this method needs the same fix,
+// since the query logic (userId + packageType + status:'active') is duplicated here.
+//
+// Status values: this introduces a new status 'merged' (distinct from 'cancelled')
+// on the old subscription doc, so purchase history / admin panel transaction views
+// can distinguish "user upgraded" from "user's subscription was cancelled/refunded".
+// If the admin panel or any query filters status == 'cancelled' to mean "not active
+// and not relevant", it will NOT see 'merged' docs — check any such filters if adding
+// admin-side subscription history views later.
+  static Future<int> mergeOrCreateSubscription({
+    required String userId,
+    required String packageType,
+  }) async {
+    // Returns the carried-forward item-limit allowance (0 if none, or if the
+    // old subscription was unlimited — see caller for how unlimited is handled
+    // on the new-package side).
+    try {
+      final snap = await fireStore
+          .collection(CollectionName.userSubscriptions)
+          .where('userId', isEqualTo: userId)
+          .where('packageType', isEqualTo: packageType)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      if (snap.docs.isEmpty) return 0;
+
+      final batch = fireStore.batch();
+      int carriedAllowance = 0;
+
+      for (final doc in snap.docs) {
+        final sub = UserSubscriptionModel.fromJson(doc.data());
+
+        // Unlimited old plans carry forward nothing numeric — there's no
+        // "remaining allowance" concept for unlimited, and the new package's
+        // own limit type (per the business decision above) always governs
+        // going forward regardless.
+        if (sub.isItemLimitUnlimited != true) {
+          final remaining = (sub.adLimit ?? 0) - (sub.adsPosted ?? 0);
+          if (remaining > 0) carriedAllowance += remaining;
+        }
+
+        // Tireda Custom: mark 'merged' instead of 'cancelled' to preserve an
+        // accurate audit trail distinguishing upgrades from real cancellations.
+        batch.update(doc.reference, {'status': 'merged'});
+      }
+
+      await batch.commit();
+      return carriedAllowance;
+    } catch (e) {
+      developer.log('mergeOrCreateSubscription Error: $e');
+      return 0;
+    }
+  }
+
+  // Tireda Custom: Prevent repeat free-plan abuse.
+//
+// WHY: SubscriptionsController._directFreePurchase() had no check preventing
+// a user from reactivating a free plan after exhausting it and upgrading to
+// paid — since mergeOrCreateSubscription() (see above) only merges *active*
+// subscriptions, an expired/merged free subscription doesn't block a fresh
+// free activation. This checks subscription HISTORY (any status) for a prior
+// free redemption of this packageType, regardless of which specific free
+// package doc was used (covers the case where the admin retires and recreates
+// the free package under a new id).
+//
+// SCOPE NOTE: this checks per packageType ('ad_listing' | 'featured_ads')
+// independently — a user gets one free redemption per type, not one total.
+  static Future<bool> hasUsedFreePlan(String userId, String packageType) async {
+    try {
+      final snap = await fireStore
+          .collection(CollectionName.userSubscriptions)
+          .where('userId', isEqualTo: userId)
+          .where('packageType', isEqualTo: packageType)
+          .where('paymentMethod', isEqualTo: 'free')
+          .limit(1)
+          .get();
+      return snap.docs.isNotEmpty;
+    } catch (e) {
+      developer.log('hasUsedFreePlan Error: $e');
+      return false; // fail-open: don't block a legit free purchase on a query error
+    }
+  }
   /// Increment adsPosted count on a subscription
   /// Count user's current active ads (status: active, pending, resubmitted)
   static Future<int> countUserActiveAds(String sellerId) async {

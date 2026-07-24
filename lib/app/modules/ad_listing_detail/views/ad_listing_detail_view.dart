@@ -14,14 +14,12 @@ import 'package:eSellify/app/routes/app_pages.dart'; // Tireda Custom: for LOGIN
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/price_formatter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_screen_controller.dart'; // Tireda Custom
+// Tireda Custom
 import 'package:uuid/uuid.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/widgets/expandable_text.dart';
 import 'package:eSellify/widgets/follow_button.dart';
 import 'package:eSellify/widgets/watermarked_image.dart';
-import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
@@ -270,7 +268,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                                     spaceH(height: 8),
                                     Divider(height: 1, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
                                     spaceH(height: 10),
-                                    ExpandableText(text: ad.description!, fontSize: 13, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8, maxLines: 3),
+                                    ExpandableText(text: ad.description!, fontSize: 13, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey2 : AppThemeData.grey7, maxLines: 3),
                                   ],
                                 ),
                               ),
@@ -464,7 +462,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
               child: Row(
                 children: [
                   Expanded(child: TextCustom(title: "Write your message here", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
-                  Icon(Icons.send_rounded, size: 16, color: AppThemeData.primary4),
+                  Icon(Icons.send_rounded, size: 17, color: AppThemeData.primary4),
                 ],
               ),
             ),
@@ -904,7 +902,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextCustom(title: name, fontSize: 11, color: AppThemeData.grey5),
+              TextCustom(title: name, fontSize: 11, color: AppThemeData.grey6),
               spaceH(height: 2),
               Text(
                 value,
@@ -1079,7 +1077,7 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                     ),
                     if (report.description != null && report.description!.isNotEmpty) ...[
                       spaceH(height: 4),
-                      TextCustom(title: report.description!, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
+                      TextCustom(title: report.description!, fontSize: 11, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 2),
                     ],
                   ],
                 ),
@@ -1480,6 +1478,7 @@ class _SimilarAdsSectionState extends State<_SimilarAdsSection> {
   bool _triggered = false;
 
   @override
+  @override
   void initState() {
     super.initState();
     // Deferred fetch — runs after the first frame so it does not block
@@ -1487,7 +1486,11 @@ class _SimilarAdsSectionState extends State<_SimilarAdsSection> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_triggered && mounted) {
         _triggered = true;
-        widget.controller.fetchSimilarAds();
+        // Tireda Custom: short delay so the hero image wins the initial
+        // connection slots before similar-ads images start downloading.
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted) widget.controller.fetchSimilarAds();
+        });
       }
     });
   }
@@ -1790,6 +1793,13 @@ class _ImageGalleryState extends State<_ImageGallery> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    // Tireda Custom: precache first gallery image ahead of layout/paint,
+    // giving it priority over similar-ads images fired later.
+    if (widget.images.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) precacheImage(CachedNetworkImageProvider(widget.images.first), context);
+      });
+    }
   }
 
   @override
@@ -1926,15 +1936,19 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
         itemBuilder: (_, i) => InteractiveViewer(
           minScale: 0.8,
           maxScale: 4.0,
-          child: Center(
+          // Tireda Custom: SizedBox.expand gives the image a fixed box (the full
+          // screen area) that stays constant across placeholder → loaded states,
+          // so WatermarkedImage's LayoutBuilder always measures the same size and
+          // the watermark no longer jumps position once the image finishes loading.
+          child: SizedBox.expand(
             child: WatermarkedImage(
               child: CachedNetworkImage(
                 imageUrl: widget.images[i],
                 fit: BoxFit.contain,
-                placeholder: (_, _) => const Center(
+                placeholder: (_, __) => const Center(
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                 ),
-                errorWidget: (_, _, _) => const Center(
+                errorWidget: (_, __, ___) => const Center(
                   child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 64),
                 ),
               ),

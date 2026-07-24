@@ -9,9 +9,7 @@ import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/app/models/add_address_model.dart';
 import 'package:eSellify/app/models/category_model.dart';
 import 'package:eSellify/app/models/location_lat_lng.dart';
-import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 import 'package:eSellify/app/modules/ads_listing/views/ads_listing_view.dart';
-import 'package:eSellify/app/modules/categories/views/categories_view.dart';
 import 'package:eSellify/app/modules/sub_category/views/sub_category_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/app_colors.dart';
@@ -27,6 +25,7 @@ import 'package:eSellify/widgets/network_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:eSellify/widgets/shimmer_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -158,10 +157,10 @@ class HomeView extends StatelessWidget {
               // ── Dark Mode Toggle ──
               GestureDetector(
                 onTap: () => themeChange.darkTheme = themeChange.isDarkTheme() ? 1 : 0,
-                child: SvgPicture.asset(
-                  "assets/icons/ic_sun.svg",
-                  height: 22,
-                  colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey1 : AppThemeData.grey10, BlendMode.srcIn),
+                child: Icon(
+                  isDark ? HugeIcons.strokeRoundedSun03 : HugeIcons.strokeRoundedMoon02,
+                  size: 22,
+                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                 ),
               ),
               spaceW(width: 16),
@@ -229,16 +228,16 @@ class HomeView extends StatelessWidget {
 
                     // Categories
                     if (controller.categoryList.isNotEmpty) ...[
-                      _buildSectionHeader("Categories", isDark: isDark),
-                      spaceH(height: 12),
+                      // _buildSectionHeader("Categories", isDark: isDark),
+                      // spaceH(height: 12),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
-                          childAspectRatio: 0.85,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 0.90,
                         ),
                         itemCount: controller.categoryList.length,
                         itemBuilder: (context, index) {
@@ -842,40 +841,72 @@ class HomeView extends StatelessWidget {
     );
   }
 
+  // ─── Category Card Background ───────────────────────────────
+  Color _getCategoryCardBg(bool isDark) {
+    if (isDark) {
+      return AppThemeData.grey9;
+    }
+    return AppThemeData.primary1.withOpacity(0.4);
+  }
+
+  // ─── Category Card Border ───────────────────────────────────
+  Color _getCategoryCardBorderColor(bool isDark) {
+    if (isDark) {
+      return AppThemeData.grey8;
+    }
+    return AppThemeData.grey3;
+  }
+
   // ─── Category Chip ─────────────────────────────────────────
   Widget _buildCategoryChip(CategoryModel category, DarkThemeProvider themeChange) {
     final isDark = themeChange.isDarkTheme();
-    return GestureDetector(
-      onTap: () => Get.to(() => const SubCategoryView(), arguments: {"category": category}),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              height: 36,
-              width: 36,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
-              child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
+    final cardBg = _getCategoryCardBg(isDark);
+    final borderColor = _getCategoryCardBorderColor(isDark);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Get.to(() => const SubCategoryView(), arguments: {"category": category});
+        },
+        borderRadius: BorderRadius.circular(14),
+        splashColor: AppThemeData.primary4.withOpacity(0.12),
+        highlightColor: AppThemeData.primary4.withOpacity(0.06),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: borderColor,
+              width: 0.8,
             ),
-            spaceH(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: TextCustom(
-                title: category.categoryName.toString(),
-                fontSize: 10,
-                fontFamily: FontFamily.medium,
-                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                textAlign: TextAlign.center,
-                maxLine: 2,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // ── Icon centered inside the card ──
+              NetworkImageWidget(
+                imageUrl: category.image.toString(),
+                fit: BoxFit.contain,
+                height: 32,
+                width: 32,
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              // ── Text inside the card, below icon ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: TextCustom(
+                  title: category.categoryName.toString(),
+                  fontSize: 10,
+                  fontFamily: FontFamily.semiBold,
+                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                  textAlign: TextAlign.center,
+                  maxLine: 2,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

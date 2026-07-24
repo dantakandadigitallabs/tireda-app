@@ -8,13 +8,11 @@ import 'package:eSellify/app/modules/language/views/language_view.dart';
 import 'package:eSellify/app/modules/dashboard_screen/controllers/dashboard_screen_controller.dart';
 import 'package:eSellify/app/modules/my_address/views/my_address_view.dart';
 import 'package:eSellify/app/modules/my_ads/views/my_ads_view.dart';
-import 'package:eSellify/app/modules/notifications/views/notifications_view.dart';
 import 'package:eSellify/app/modules/payment_history/views/payment_history_view.dart';
 import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart';
 import 'package:eSellify/app/modules/dashboard_screen/views/dashboard_screen_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
-import 'package:eSellify/widgets/verified_badge.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
@@ -28,6 +26,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/profile_controller.dart';
@@ -51,18 +50,30 @@ class ProfileView extends GetView<ProfileController> {
             "Profile",
             isBack: false,
             actions: [
+              // Tireda Custom: dark mode toggle moved here from App Settings card.
               GestureDetector(
-                onTap: () async {
-                  var result = await Get.toNamed(Routes.EDIT_PROFILE);
-                  if (result == true) controller.getData();
-                },
+                onTap: () => themeChange.darkTheme = isDark ? 1 : 0,
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey1, borderRadius: BorderRadius.circular(10)),
+                  child: HugeIcon(
+                    icon: isDark ? HugeIcons.strokeRoundedSun03 : HugeIcons.strokeRoundedMoon02,
+                    color: isDark ? AppThemeData.grey3 : AppThemeData.grey8,
+                    size: 18,
+                  ),
+                ),
+              ).paddingOnly(right: 10),
+              // Tireda Custom: logout — red tint so it reads as a distinct,
+              // higher-attention action instead of blending with other icons.
+              GestureDetector(
+                onTap: () => _showLogoutDialog(context, controller),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: AppThemeData.danger300.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                   child: SvgPicture.asset(
-                    "assets/icons/ic_edit_2.svg",
+                    "assets/icons/ic_logout.svg",
                     height: 18,
-                    colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey3 : AppThemeData.grey8, BlendMode.srcIn),
+                    colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn),
                   ),
                 ),
               ).paddingOnly(right: 16),
@@ -75,17 +86,17 @@ class ProfileView extends GetView<ProfileController> {
                 child: controller.isLoading.value
                     ? Constant.loader(context: context)
                     : SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                              child: Column(children: [_buildProfileHeader(themeChange), spaceH(height: 16), _buildMenuSection(context, themeChange)]),
-                            ),
-                            spaceH(height: 24),
-                          ],
-                        ),
-                    ),
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                        child: Column(children: [_buildMenuSection(context, themeChange)]),
+                      ),
+                      spaceH(height: 24),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -97,125 +108,55 @@ class ProfileView extends GetView<ProfileController> {
   // ─── Profile Header ───────────────────────────────────────────────
   Widget _buildProfileHeader(DarkThemeProvider theme) {
     final isDark = theme.isDarkTheme();
-    final isVerified = controller.userModel.value.isVerified == true;
-    final verificationStatus = controller.userModel.value.verificationStatus ?? 'unverified';
-
     return Container(
       decoration: BoxDecoration(color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite, borderRadius: BorderRadius.circular(24)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
         child: Column(
           children: [
-            // Avatar + Name
-            Stack(
-              alignment: Alignment.bottomRight,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                NetworkImageWidget(imageUrl: controller.userModel.value.profilePic.toString(), height: 72, width: 72, borderRadius: 200, fit: BoxFit.cover),
-                if (isVerified)
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite, shape: BoxShape.circle),
-                    child: const VerifiedBadge(size: 20),
-                  ),
-              ],
-            ),
-            spaceH(height: 12),
-            TextCustom(title: controller.userModel.value.fullNameString(), fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-            spaceH(height: 2),
-            TextCustom(title: controller.userModel.value.email.toString(), fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-            spaceH(height: 12),
-            _buildFollowStats(isDark),
-            spaceH(height: 14),
-            // Verification banner
-            GestureDetector(
-              onTap: () async {
-                await Get.toNamed(Routes.VERIFICATION);
-                controller.getData();
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isVerified
-                      ? AppThemeData.success300.withValues(alpha: 0.08)
-                      : (verificationStatus == 'pending' || verificationStatus == 'resubmitted')
-                      ? Colors.orange.withValues(alpha: 0.08)
-                      : AppThemeData.primary4.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
+                Stack(
+                  alignment: Alignment.bottomRight,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isVerified
-                            ? AppThemeData.success300.withValues(alpha: 0.15)
-                            : (verificationStatus == 'pending' || verificationStatus == 'resubmitted')
-                            ? Colors.orange.withValues(alpha: 0.15)
-                            : AppThemeData.primary4.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                    NetworkImageWidget(imageUrl: controller.userModel.value.profilePic.toString(), height: 64, width: 64, borderRadius: 200, fit: BoxFit.cover),
+                    if (controller.userModel.value.isVerified == true)
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite, shape: BoxShape.circle),
+                        child: Icon(Icons.verified, color: AppThemeData.primary4, size: 18),
                       ),
-                      child: Center(
-                        child: SvgPicture.asset(
-                          isVerified
-                              ? "assets/icons/ic_crown.svg"
-                              : (verificationStatus == 'pending' || verificationStatus == 'resubmitted')
-                              ? "assets/icons/ic_bell_2.svg"
-                              : "assets/icons/ic_info.svg",
-                          height: 16,
-                          colorFilter: ColorFilter.mode(
-                            isVerified
-                                ? AppThemeData.success300
-                                : (verificationStatus == 'pending' || verificationStatus == 'resubmitted')
-                                ? Colors.orange
-                                : AppThemeData.primary4,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
-                    ),
-                    spaceW(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextCustom(
-                            title: isVerified
-                                ? 'Verified Account'.tr
-                                : (verificationStatus == 'pending' || verificationStatus == 'resubmitted')
-                                ? 'Verification Under Review'.tr
-                                : 'Get Verified'.tr,
-                            fontSize: 13,
-                            fontFamily: FontFamily.medium,
-                            color: isVerified
-                                ? AppThemeData.success300
-                                : (verificationStatus == 'pending' || verificationStatus == 'resubmitted')
-                                ? Colors.orange
-                                : AppThemeData.primary4,
-                          ),
-                          if (!isVerified && verificationStatus != 'pending' && verificationStatus != 'resubmitted')
-                            TextCustom(title: 'Tap to verify your identity'.tr, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                        ],
-                      ),
-                    ),
-                    SvgPicture.asset(
-                      "assets/icons/ic_arrow_right.svg",
-                      height: 14,
-                      colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey5 : AppThemeData.grey6, BlendMode.srcIn),
-                    ),
                   ],
                 ),
-              ),
+                spaceW(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tireda Custom: bolder, higher-contrast name per new
+                      // profile-menu typography direction.
+                      TextCustom(title: controller.userModel.value.fullNameString(), fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                      spaceH(height: 2),
+                      TextCustom(title: controller.userModel.value.email.toString(), fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      spaceH(height: 8),
+                      _buildStatsInline(isDark),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            spaceH(height: 16),
+            _buildHeaderActionButtons(isDark),
           ],
         ),
       ),
     );
   }
 
-  // ─── Followers / Following stats ─────────────────────────────────
-  Widget _buildFollowStats(bool isDark) {
+  // Tireda Custom: followers/following facelift — chip-style, tappable,
+  // visually invites interaction instead of bare text.
+  Widget _buildStatsInline(bool isDark) {
     final uid = controller.userModel.value.id ?? '';
     if (uid.isEmpty) return const SizedBox.shrink();
     return StreamBuilder<Map<String, int>>(
@@ -223,16 +164,15 @@ class ProfileView extends GetView<ProfileController> {
       builder: (context, snap) {
         final c = snap.data ?? const {'followers': 0, 'following': 0};
         return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _statChip(
+            _statPill(
               isDark,
               count: c['followers']!,
               label: c['followers'] == 1 ? 'Follower'.tr : 'Followers'.tr,
               onTap: () => Get.to(() => FollowListView(uid: uid, mode: FollowListMode.followers)),
             ),
-            Container(width: 1, height: 26, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-            _statChip(
+            spaceW(width: 8),
+            _statPill(
               isDark,
               count: c['following']!,
               label: 'Following'.tr,
@@ -244,18 +184,142 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _statChip(bool isDark, {required int count, required String label, required VoidCallback onTap}) {
-    return Expanded(
+  Widget _statPill(bool isDark, {required int count, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.people_alt_rounded, size: 13, color: AppThemeData.primary4),
+            spaceW(width: 4),
+            TextCustom(title: '$count', fontSize: 12, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+            spaceW(width: 3),
+            TextCustom(title: label, fontSize: 12, color: AppThemeData.primary4),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Tireda Custom: Edit Profile + Verified/Get Verified buttons.
+  Widget _buildHeaderActionButtons(bool isDark) {
+    final isVerified = controller.userModel.value.isVerified == true;
+    final verificationStatus = controller.userModel.value.verificationStatus ?? 'unverified';
+    final isPending = verificationStatus == 'pending' || verificationStatus == 'resubmitted';
+
+    final verifyColor = isVerified ? AppThemeData.success300 : (isPending ? Colors.orange : AppThemeData.primary4);
+    final verifyLabel = isVerified ? 'Verified'.tr : (isPending ? 'Pending'.tr : 'Get Verified'.tr);
+
+    // Tireda Custom: verified state reuses Icons.verified — same icon as the
+    // avatar's VerifiedBadge — for visual consistency.
+    final Widget verifyIcon = isVerified
+        ? Icon(Icons.verified, size: 15, color: verifyColor)
+        : SvgPicture.asset(
+      isPending ? "assets/icons/ic_bell_2.svg" : "assets/icons/ic_info.svg",
+      height: 15,
+      colorFilter: ColorFilter.mode(verifyColor, BlendMode.srcIn),
+    );
+
+    return Row(
+      children: [
+        Expanded(
+          child: _headerButton(
+            isDark: isDark,
+            // Tireda Custom: edit-profile icon now tinted primary, matching
+            // the small-icon-container treatment used elsewhere.
+            icon: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+              child: Center(child: SvgPicture.asset("assets/icons/ic_edit_2.svg", height: 12, colorFilter: ColorFilter.mode(AppThemeData.primary4, BlendMode.srcIn))),
+            ),
+            label: "Edit Profile".tr,
+            color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+            onTap: () async {
+              var result = await Get.toNamed(Routes.EDIT_PROFILE);
+              if (result == true) controller.getData();
+            },
+          ),
+        ),
+        spaceW(width: 10),
+        Expanded(
+          child: _headerButton(
+            isDark: isDark,
+            icon: verifyIcon,
+            label: verifyLabel,
+            color: verifyColor,
+            onTap: () async {
+              await Get.toNamed(Routes.VERIFICATION);
+              controller.getData();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerButton({required bool isDark, required Widget icon, required String label, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey2),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            icon,
+            spaceW(width: 6),
+            Flexible(child: TextCustom(title: label, fontSize: 13, fontFamily: FontFamily.bold, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Plan Card ────────────────────────────────────────────────────
+  // Tireda Custom: high-contrast primary-colored card (mirrors reference
+  // app's "Unlock PRO Features" treatment) so the plan is the visual anchor
+  // of this section. Dynamic Upgrade/Manage pill based on plan status.
+  Widget _buildPlanCard(BuildContext context, DarkThemeProvider theme) {
+    if (!controller.showPlanCard) return const SizedBox.shrink();
+    return Container(
+      decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Get.to(SubscriptionsView()),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
             children: [
-              TextCustom(title: '$count', fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-              spaceH(height: 2),
-              TextCustom(title: label, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: AppThemeData.primaryWhite.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                child: Center(child: SvgPicture.asset("assets/icons/ic_cart.svg", height: 18, colorFilter: ColorFilter.mode(AppThemeData.primaryWhite, BlendMode.srcIn))),
+              ),
+              spaceW(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextCustom(title: "Your current plan".tr, fontSize: 12, fontFamily: FontFamily.semiBold, color: AppThemeData.primaryWhite.withValues(alpha: 0.85)),
+                    TextCustom(title: controller.displayedPlanName, fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.primaryWhite),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(color: AppThemeData.primaryWhite, borderRadius: BorderRadius.circular(20)),
+                child: TextCustom(title: controller.planCtaLabel.tr, fontSize: 12, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+              ),
             ],
           ),
         ),
@@ -268,9 +332,14 @@ class ProfileView extends GetView<ProfileController> {
     final isDark = theme.isDarkTheme();
     return Column(
       children: [
-        // My Activity — things users check most often
+        _buildProfileHeader(theme),
+        spaceH(height: 12),
+        _buildPlanCard(context, theme),
+        spaceH(height: 12),
+
+        // My Activity — Notifications removed (redundant: home-screen bell
+        // icon is the natural entry point for that).
         _buildSectionCard(isDark, 'My Activity'.tr, [
-          _MenuItem(svg: "assets/icons/ic_bell_2.svg", title: "Notifications".tr, onTap: () => Get.to(NotificationsView())),
           _MenuItem(svg: "assets/icons/ic_heart.svg", title: "Favourites".tr, onTap: () => Get.to(FavouritesView())),
           _MenuItem(
             svg: "assets/icons/ic_crown.svg",
@@ -287,16 +356,10 @@ class ProfileView extends GetView<ProfileController> {
         ]),
         spaceH(height: 12),
 
-        // Subscriptions & Payments
-        _buildSectionCard(isDark, !Constant.freeAdListing || !Constant.freeAdFeaturing ? 'Subscriptions & Payments'.tr : 'Payments', [
-          if (!Constant.freeAdListing || !Constant.freeAdFeaturing)
-            _MenuItem(svg: "assets/icons/ic_subscription.svg", title: "Subscriptions".tr, onTap: () => Get.to(SubscriptionsView())),
-          _MenuItem(svg: "assets/icons/ic_payment_history.svg", title: "Payment History".tr, onTap: () => Get.to(PaymentHistoryView())),
-        ]),
-        spaceH(height: 12),
-        // Account & Verification
+        // Account — Verification removed (still reachable via header
+        // button); Payment History takes its place.
         _buildSectionCard(isDark, 'Account'.tr, [
-          _MenuItem(svg: "assets/icons/ic_order.svg", title: "Verification".tr, onTap: () => Get.toNamed(Routes.VERIFICATION)),
+          _MenuItem(svg: "assets/icons/ic_payment_history.svg", title: "Payment History".tr, onTap: () => Get.to(PaymentHistoryView())),
           _MenuItem(svg: "assets/icons/ic_map_pin.svg", title: "My Address".tr, onTap: () => Get.to(MyAddressView(isFromProfile: true))),
           _MenuItem(svg: "assets/icons/ic_blocked_user.svg", title: "My Reports".tr, onTap: () => Get.toNamed(Routes.MY_REPORTS)),
         ]),
@@ -321,10 +384,10 @@ class ProfileView extends GetView<ProfileController> {
           ),
         ]),
         spaceH(height: 12),
-        // App Settings
+        // App Settings — dark mode toggle moved to AppBar; Language remains.
         _buildAppSettingsCard(context, theme),
         spaceH(height: 12),
-        // Danger zone
+        // Danger zone — Delete Account only; Logout moved to AppBar.
         _buildDangerCard(context, theme),
       ],
     );
@@ -360,7 +423,9 @@ class ProfileView extends GetView<ProfileController> {
                         ),
                         spaceW(width: 14),
                         Expanded(
-                          child: TextCustom(title: item.title, fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                          // Tireda Custom: bolder, higher-contrast label per
+                          // new profile-menu typography direction.
+                          child: TextCustom(title: item.title, fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                         ),
                         SvgPicture.asset(
                           "assets/icons/ic_arrow_right.svg",
@@ -398,6 +463,7 @@ class ProfileView extends GetView<ProfileController> {
           // Language
           InkWell(
             onTap: () => Get.to(LanguageView(isFirstTime: false)),
+            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -410,39 +476,11 @@ class ProfileView extends GetView<ProfileController> {
                   ),
                   spaceW(width: 14),
                   Expanded(
-                    child: TextCustom(title: "Language".tr, fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                    child: TextCustom(title: "Language".tr, fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                   ),
                   SvgPicture.asset("assets/icons/ic_arrow_right.svg", height: 14, colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey6 : AppThemeData.grey5, BlendMode.srcIn)),
                 ],
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 66),
-            child: Divider(height: 1, color: isDark ? AppThemeData.grey8 : AppThemeData.grey2),
-          ),
-          // Dark Mode
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-                  child: Center(child: SvgPicture.asset("assets/icons/ic_sun.svg", height: 18, colorFilter: ColorFilter.mode(AppThemeData.primary4, BlendMode.srcIn))),
-                ),
-                spaceW(width: 14),
-                Expanded(
-                  child: TextCustom(title: "Dark Mode".tr, fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                ),
-                SizedBox(
-                  height: 26,
-                  child: FittedBox(
-                    child: CupertinoSwitch(activeColor: AppThemeData.primary4, value: theme.isDarkTheme(), onChanged: (value) => theme.darkTheme = value ? 0 : 1),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -454,57 +492,27 @@ class ProfileView extends GetView<ProfileController> {
     final isDark = theme.isDarkTheme();
     return Container(
       decoration: BoxDecoration(color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite, borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => _showDeleteAccountDialog(context, controller),
-            borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: AppThemeData.danger300.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-                    child: Center(child: SvgPicture.asset("assets/icons/ic_delete.svg", height: 18, colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn))),
-                  ),
-                  spaceW(width: 14),
-                  Expanded(
-                    child: TextCustom(title: "Delete Account".tr, fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.danger300),
-                  ),
-                  SvgPicture.asset("assets/icons/ic_arrow_right.svg", height: 14, colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn)),
-                ],
+      child: InkWell(
+        onTap: () => _showDeleteAccountDialog(context, controller),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: AppThemeData.danger300.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+                child: Center(child: SvgPicture.asset("assets/icons/ic_delete.svg", height: 18, colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn))),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 66),
-            child: Divider(height: 1, color: isDark ? AppThemeData.grey8 : AppThemeData.grey2),
-          ),
-          InkWell(
-            onTap: () => _showLogoutDialog(context, controller),
-            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: AppThemeData.danger300.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-                    child: Center(child: SvgPicture.asset("assets/icons/ic_logout.svg", height: 18, colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn))),
-                  ),
-                  spaceW(width: 14),
-                  Expanded(
-                    child: TextCustom(title: "Log out".tr, fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.danger300),
-                  ),
-                  SvgPicture.asset("assets/icons/ic_arrow_right.svg", height: 14, colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn)),
-                ],
+              spaceW(width: 14),
+              Expanded(
+                child: TextCustom(title: "Delete Account".tr, fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.danger300),
               ),
-            ),
+              SvgPicture.asset("assets/icons/ic_arrow_right.svg", height: 14, colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn)),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -539,7 +547,7 @@ class ProfileView extends GetView<ProfileController> {
               await FirebaseAuth.instance.signOut();
               Constant.userModel = null;
               ShowToastDialog.closeLoader();
-              Get.delete<DashboardScreenController>(); // ← clears stale state
+              Get.delete<DashboardScreenController>();
               Get.offAll(const DashboardScreenView());
             } catch (e) {
               ShowToastDialog.closeLoader();
@@ -582,7 +590,7 @@ class ProfileView extends GetView<ProfileController> {
               await FireStoreUtils.deleteUserAccount();
               Constant.userModel = null;
               ShowToastDialog.closeLoader();
-              Get.delete<DashboardScreenController>(); // ← clears stale state
+              Get.delete<DashboardScreenController>();
               Get.offAll(const DashboardScreenView());
               ShowToastDialog.showSuccess("Account deleted successfully".tr);
             } on FirebaseAuthException catch (_) {

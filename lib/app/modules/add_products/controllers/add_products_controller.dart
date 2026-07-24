@@ -348,7 +348,12 @@ class AddProductsController extends GetxController {
   // ─── Image pickers ───────────────────────────────────────
 
   Future<void> pickMainImage({required ImageSource source}) async {
-    final XFile? image = await imagePicker.pickImage(source: source, imageQuality: 80);
+    final XFile? image = await imagePicker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
     if (image != null) mainImage.value = File(image.path);
     Get.back();
   }
@@ -369,11 +374,15 @@ class AddProductsController extends GetxController {
   }
 
   Future<void> pickOtherImages() async {
-    final List<XFile> images = await imagePicker.pickMultiImage(imageQuality: 60);
+    final List<XFile> images = await imagePicker.pickMultiImage(
+      imageQuality: 60,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
     if (images.isEmpty) return;
-    final remaining = 6 - otherImages.length;
+    final remaining = 7 - otherImages.length;
     if (remaining <= 0) {
-      ShowToastDialog.showError("Only 6 images are allowed.".tr);
+      ShowToastDialog.showError("Only 7 images are allowed.".tr);
       return;
     }
     for (var img in images.take(remaining)) {

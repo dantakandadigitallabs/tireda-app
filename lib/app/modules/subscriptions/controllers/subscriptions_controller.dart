@@ -19,6 +19,14 @@ class SubscriptionsController extends GetxController {
   Rx<UserSubscriptionModel?> activeAdListingSub = Rx<UserSubscriptionModel?>(null);
   Rx<UserSubscriptionModel?> activeFeaturedSub = Rx<UserSubscriptionModel?>(null);
 
+  // Tireda Custom: tracks whether the user has ever redeemed a free plan for
+  // each packageType — used purely for UI (greying out "Buy Again" on free
+  // packages). The actual enforcement still happens in purchasePackage() via
+  // FireStoreUtils.hasUsedFreePlan(); this is just so the button can reflect
+  // that state without the user needing to tap first and get a toast.
+  RxBool usedFreeAdListing = false.obs;
+  RxBool usedFreeFeaturedAds = false.obs;
+
   String? get currentUserId => FireStoreUtils.getCurrentUid();
 
   bool get showAdListing => !Constant.freeAdListing;
@@ -59,6 +67,9 @@ class SubscriptionsController extends GetxController {
     if (uid == null) return;
     activeAdListingSub.value = await FireStoreUtils.getActiveSubscription(uid, 'ad_listing');
     activeFeaturedSub.value = await FireStoreUtils.getActiveSubscription(uid, 'featured_ads');
+    // Tireda Custom: prefetch free-plan-used state for button greying (see field comments above).
+    usedFreeAdListing.value = await FireStoreUtils.hasUsedFreePlan(uid, 'ad_listing');
+    usedFreeFeaturedAds.value = await FireStoreUtils.hasUsedFreePlan(uid, 'featured_ads');
   }
 
   void changeTab(int index) {
@@ -70,7 +81,15 @@ class SubscriptionsController extends GetxController {
     final price = package.finalPrice ?? package.price ?? 0;
 
     if (price <= 0) {
-      // Free plan — direct purchase without payment
+      // Tireda Custom: block repeat free-plan activation — see hasUsedFreePlan().
+      final uid = currentUserId;
+      if (uid != null) {
+        final alreadyUsed = await FireStoreUtils.hasUsedFreePlan(uid, package.type ?? 'ad_listing');
+        if (alreadyUsed) {
+          ShowToastDialog.showError("You've already used your free plan for this type. Please choose a paid plan.".tr);
+          return;
+        }
+      }
       await _directFreePurchase(package);
     } else {
       // Paid plan — navigate to payment screen
@@ -89,8 +108,13 @@ class SubscriptionsController extends GetxController {
 
     ShowToastDialog.showLoader("Activating plan...");
 
-    // Cancel any existing active subscription of the same type
-    await FireStoreUtils.cancelActiveSubscriptions(uid, package.type ?? 'ad_listing');
+    // Tireda Custom: additive upgrade — merge unused allowance from any existing
+    // active subscription of this type into the new one, instead of discarding it.
+   // See FireStoreUtils.mergeOrCreateSubscription() for full rationale.
+    final carriedAllowance = await FireStoreUtils.mergeOrCreateSubscription(
+      userId: uid,
+      packageType: package.type ?? 'ad_listing',
+    );
 
     try {
       final subscriptionId = Constant.getUuid();
@@ -119,7 +143,11 @@ class SubscriptionsController extends GetxController {
         purchaseDate: Timestamp.now(),
         expiryDate: expiryDate,
         adsPosted: currentActiveAds,
-        adLimit: package.itemLimit ?? 0,
+        // Tireda Custom: add carried-forward unused allowance from the previous
+        // active subscription (0 if none existed, or if it was unlimited).
+        // If this new package itself is unlimited, isItemLimitUnlimited handles that
+        // case and adLimit becomes irrelevant/unused downstream.
+        adLimit: (package.itemLimit ?? 0) + carriedAllowance,
         isItemLimitUnlimited: package.isItemLimitUnlimited ?? false,
         listingDurationType: package.listingDurationType,
         customDuration: package.customDuration,

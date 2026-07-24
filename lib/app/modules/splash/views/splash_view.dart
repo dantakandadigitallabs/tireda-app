@@ -6,6 +6,7 @@ import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/app_logo_widget.dart';
 import '../controllers/splash_controller.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter/services.dart';
 
 
 class SplashView extends StatefulWidget {
@@ -95,15 +96,20 @@ class _SplashViewState extends State<SplashView>
   }
 
   @override
-  Widget build(BuildContext context) {
+   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      backgroundColor: AppThemeData.primary5,
-      body: Stack(
-        children: [
-
-          // ── Ambient blobs ─────────────────────────────────────────
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle(
+          statusBarColor: AppThemeData.primary5,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
+          backgroundColor: AppThemeData.primary5,
+          body: Stack(
+            children: [
+              // ── Ambient blobs ─────────────────────────────────────────
           _Blob(
             color: AppThemeData.primary4,
             size: size.width * 0.58,
@@ -298,7 +304,7 @@ class _SplashViewState extends State<SplashView>
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

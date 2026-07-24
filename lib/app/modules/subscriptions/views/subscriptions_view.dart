@@ -238,6 +238,14 @@ class _PackageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = controller.isActivePlan(package);
+    // Tireda Custom: grey out (but keep tappable) "Buy Again" for a free
+    // package the user has already redeemed — see hasUsedFreePlan() /
+    // usedFreeAdListing / usedFreeFeaturedAds. Tapping still shows the
+    // explanatory toast from purchasePackage()'s guard clause; this is
+    // purely a visual hint, not a second enforcement point.
+    final isFreePackage = (package.finalPrice ?? package.price ?? 0) <= 0;
+    final alreadyUsedFree = isFreePackage &&
+        (package.type == 'ad_listing' ? controller.usedFreeAdListing.value : controller.usedFreeFeaturedAds.value);
     final name = package.name?['en'] ?? '';
     final price = package.price ?? 0;
     final finalPrice = package.finalPrice ?? price;
@@ -331,26 +339,34 @@ class _PackageCard extends StatelessWidget {
             ),
           ],
 
-          // Buy / Active button
+          // Tireda Custom: Buy button — always active/tappable, even for the
+          // user's current plan. Subscriptions are additive/stackable
+          // (see SubscriptionsController.purchasePackage / mergeOrCreateSubscription),
+          // so re-buying the same package is a valid action (stacks more ad slots),
+          // not a no-op. Previously this rendered an inert "Current Plan" box
+          // instead of a button when isActivePlan() was true, which was correct
+          // for the old tier-replacement model but blocks legitimate re-purchases
+          // now. isActive is still used above for the card's border highlight —
+          // that's purely cosmetic and unaffected by this change.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
               width: double.infinity,
               height: 46,
-              child: isActive
-                  ? Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xff4CAF50).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xff4CAF50).withValues(alpha: 0.3)),
-                      ),
-                      child: Center(child: Text("Current Plan".tr, style: const TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Color(0xff4CAF50)))),
-                    )
-                  : ElevatedButton(
-                      onPressed: () => controller.purchasePackage(package),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppThemeData.primary4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-                      child: Text("Buy Now".tr, style: const TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)),
-                    ),
+              child: ElevatedButton(
+                onPressed: () => controller.purchasePackage(package),
+                style: ElevatedButton.styleFrom(
+                  // Tireda Custom: grey styling only — button stays tappable
+                  // so the guard-clause toast in purchasePackage() still fires.
+                  backgroundColor: alreadyUsedFree ? (isDark ? AppThemeData.grey7 : AppThemeData.grey4) : AppThemeData.primary4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text(
+                  isActive ? "Buy Again".tr : "Buy Now".tr,
+                  style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: alreadyUsedFree ? (isDark ? AppThemeData.grey4 : AppThemeData.grey6) : Colors.white),
+                ),
+              ),
             ),
           ),
         ],

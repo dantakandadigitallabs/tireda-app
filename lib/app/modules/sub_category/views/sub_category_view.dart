@@ -11,6 +11,7 @@ import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -54,7 +55,7 @@ class SubCategoryView extends StatelessWidget {
     }
 
     return Obx(
-      () => Scaffold(
+          () => Scaffold(
         backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
         appBar: UiInterface.customAppBar(context, themeChange, controller.categoryModel.value.categoryName.toString()),
         body: Column(
@@ -63,9 +64,45 @@ class SubCategoryView extends StatelessWidget {
             Expanded(
               child: controller.isLoading.value
                   ? _buildShimmer(isDark)
+                  : controller.hasError.value
+                  ? _buildErrorState(controller, isDark)
                   : controller.subCategoryList.isEmpty
                   ? _buildNoSubCategories(controller, isDark)
                   : _buildSubCategoryList(controller, isDark),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Tireda Custom: shown when the subcategory fetch genuinely fails (network/Firestore error),
+  /// so the user gets a retry option instead of being silently redirected to ads.
+  Widget _buildErrorState(SubCategoryController controller, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 40, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            spaceH(height: 12),
+            TextCustom(
+              title: "Something went wrong. Please try again.".tr,
+              fontSize: 14,
+              fontFamily: FontFamily.medium,
+              color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+              textAlign: TextAlign.center,
+            ),
+            spaceH(height: 16),
+            InkWell(
+              onTap: () => controller.retry(),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(10)),
+                child: TextCustom(title: "Retry".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.primaryWhite),
+              ),
             ),
           ],
         ),
@@ -83,66 +120,176 @@ class SubCategoryView extends StatelessWidget {
     return const Center(child: SizedBox());
   }
 
+  // Tireda Custom: local search bar, only rendered when list is long enough to need it
+  Widget _buildSearchBar(SubCategoryController controller, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        decoration: BoxDecoration(
+          color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Icon(HugeIcons.strokeRoundedSearch01, size: 20, color: AppThemeData.primary4),
+            spaceW(width: 12),
+            Expanded(
+              child: TextField(
+                controller: controller.searchTextController,
+                onChanged: controller.onSearchChanged,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontFamily: FontFamily.semiBold,
+                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                ),
+                decoration: InputDecoration(
+                  isDense: false,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  border: InputBorder.none,
+                  hintText: "Search".tr,
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    fontFamily: FontFamily.semiBold,
+                    color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                  ),
+                ),
+              ),
+            ),
+            if (controller.searchQuery.value.isNotEmpty)
+              GestureDetector(
+                onTap: () {
+                  controller.searchTextController.clear();
+                  controller.onSearchChanged('');
+                },
+                child: Icon(Icons.close, size: 18, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Tireda Custom: "View all {CategoryName}" — jumps straight to ads under this category,
+  // irrespective of which subcategory/brand they belong to.
+  Widget _buildViewAllButton(SubCategoryController controller, bool isDark) {
+    final cat = controller.categoryModel.value;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: InkWell(
+        onTap: () {
+          if (cat.id == null || cat.id!.isEmpty) return;
+          Get.to(() => const AdsListingView(), arguments: {"categoryId": cat.id, "categoryName": cat.categoryName});
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+          decoration: BoxDecoration(
+            color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppThemeData.primary4, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              Icon(HugeIcons.strokeRoundedGridView, size: 20, color: AppThemeData.primary4),
+              spaceW(width: 10),
+              Expanded(
+                child: TextCustom(
+                  title: "View all ${cat.categoryName ?? ''}".tr,
+                  fontSize: 14,
+                  fontFamily: FontFamily.semiBold,
+                  color: AppThemeData.primary4,
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 20, color: AppThemeData.primary4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Subcategories in a list view
   Widget _buildSubCategoryList(SubCategoryController controller, bool isDark) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      itemCount: controller.subCategoryList.length,
-      itemBuilder: (context, index) {
-        CategoryModel subCategory = controller.subCategoryList[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: InkWell(
-            onTap: () => _onCategoryTap(controller, subCategory),
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
-                    child: NetworkImageWidget(imageUrl: subCategory.image.toString(), fit: BoxFit.contain),
-                  ),
-                  spaceW(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        if (controller.shouldShowSearch) _buildSearchBar(controller, isDark),
+        _buildViewAllButton(controller, isDark),
+        Expanded(
+          child: controller.filteredList.isEmpty
+              ? Center(
+            child: TextCustom(
+              title: "No results found".tr,
+              fontSize: 14,
+              color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+            ),
+          )
+              : ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            itemCount: controller.filteredList.length,
+            itemBuilder: (context, index) {
+              CategoryModel subCategory = controller.filteredList[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  onTap: () => _onCategoryTap(controller, subCategory),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+                    ),
+                    child: Row(
                       children: [
-                        TextCustom(
-                          title: subCategory.categoryName.toString(),
-                          fontSize: 14,
-                          fontFamily: FontFamily.medium,
-                          color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
+                          child: NetworkImageWidget(imageUrl: subCategory.image.toString(), fit: BoxFit.contain),
                         ),
-                        if (subCategory.description != null && subCategory.description!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: TextCustom(title: subCategory.description!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                        spaceW(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextCustom(
+                                title: subCategory.categoryName.toString(),
+                                fontSize: 14,
+                                fontFamily: FontFamily.medium,
+                                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                              ),
+                              if (subCategory.description != null && subCategory.description!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: TextCustom(title: subCategory.description!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                                ),
+                            ],
                           ),
+                        ),
+                        spaceW(width: 8),
+                        Icon(Icons.chevron_right, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                       ],
                     ),
                   ),
-                  spaceW(width: 8),
-                  Icon(Icons.chevron_right, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
   /// N-level navigation: check if category has children → drill deeper, else → show ads
   Future<void> _onCategoryTap(SubCategoryController controller, CategoryModel category) async {
+    if (category.id == null || category.id!.isEmpty) {
+      ShowToastDialog.showError("This category is unavailable right now.".tr);
+      return;
+    }
     ShowToastDialog.showLoader("Loading...".tr);
     final hasChildren = await controller.hasChildren(category.id!);
     ShowToastDialog.closeLoader();

@@ -203,8 +203,12 @@ class PaymentMethodController extends GetxController {
       final subscriptionId = Constant.getUuid();
       final transactionId = Constant.getUuid();
 
-      // Cancel any existing active subscription of the same type
-      await FireStoreUtils.cancelActiveSubscriptions(uid, package.type ?? 'ad_listing');
+     // Tireda Custom: additive upgrade — see FireStoreUtils.mergeOrCreateSubscription().
+
+      final carriedAllowance = await FireStoreUtils.mergeOrCreateSubscription(
+        userId: uid,
+        packageType: package.type ?? 'ad_listing',
+      );
 
       // Count current active ads for this user
       final currentActiveAds = package.type == 'featured_ads'
@@ -232,7 +236,8 @@ class PaymentMethodController extends GetxController {
         purchaseDate: Timestamp.now(),
         expiryDate: expiryDate,
         adsPosted: currentActiveAds,
-        adLimit: package.itemLimit ?? 0,
+        // Tireda Custom: add carried-forward unused allowance — see mergeOrCreateSubscription().
+        adLimit: (package.itemLimit ?? 0) + carriedAllowance,
         isItemLimitUnlimited: package.isItemLimitUnlimited ?? false,
         listingDurationType: package.listingDurationType,
         customDuration: package.customDuration,
