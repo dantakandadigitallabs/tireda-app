@@ -27,6 +27,10 @@ class ChatRoomModel {
   int? receiverUnreadCount;
   Timestamp? createdAt;
 
+  /// Tireda Custom: true only for an in-memory room built by
+  /// getOrDraftChatRoom that hasn't been written to Firestore yet.
+  bool isDraft = false;
+
   ChatRoomModel({
     this.id,
     this.adId,
@@ -52,6 +56,7 @@ class ChatRoomModel {
     this.senderUnreadCount,
     this.receiverUnreadCount,
     this.createdAt,
+    this.isDraft = false, // Tireda Custom
   });
 
   ChatRoomModel.fromJson(Map<String, dynamic> json) {

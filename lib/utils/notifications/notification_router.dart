@@ -59,6 +59,30 @@ class NotificationRouter {
         _goToDashboardTab(3);
         break;
 
+    // ── Someone you follow posted a new ad ── open ad detail
+      case 'followed_seller_new_ad':
+        final followedAdId = data['adId'] as String?;
+        if (followedAdId != null && followedAdId.isNotEmpty) {
+          final ad = await FireStoreUtils.getAdById(followedAdId);
+          if (ad != null) {
+            goToAdDetail(ad);
+            return;
+          }
+        }
+        // Fallback: go to Home tab (0) — not the user's own ad
+        _goToDashboardTab(0);
+        break;
+
+    // ── New follower ── open the follower's seller profile
+      case 'new_follower':
+        final followerId = data['senderId'] as String?;
+        if (followerId != null && followerId.isNotEmpty) {
+          Get.toNamed(Routes.SELLER_REVIEWS, arguments: {'sellerId': followerId, 'sellerName': ''});
+          return;
+        }
+        _goToDashboardTab(0);
+        break;
+
     // ── Job application ── employer opens the applicants list for their ad
       case 'job_application':
         final adId = data['adId'] as String?;

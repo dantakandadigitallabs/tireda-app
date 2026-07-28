@@ -37,65 +37,65 @@ class SellScreenView extends GetView<SellScreenController> {
                       : controller.categoryList.isEmpty
                       ? Center(child: TextCustom(title: "No Categories Found".tr))
                       : GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: controller.categoryList.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 16, mainAxisSpacing: 12, childAspectRatio: 0.75),
-                          itemBuilder: (context, index) {
-                            CategoryModel category = controller.categoryList[index];
-                            return InkWell(
-                              onTap: () async {
-                                if (!await controller.canPostAd()) return;
-                                final subCategories = controller.getSubCategory(category.id!);
-                                if (subCategories.isEmpty) {
-                                  Get.to(
-                                    () => AddProductsView(),
-                                    arguments: {
-                                      "category": category,
-                                      "categoryPath": [category],
-                                    },
-                                  );
-                                } else {
-                                  Get.to(() => SellSubCategoryScreen(parentCategory: category, parentPath: [category]));
-                                }
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: controller.categoryList.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 16, mainAxisSpacing: 12, childAspectRatio: 0.75),
+                    itemBuilder: (context, index) {
+                      CategoryModel category = controller.categoryList[index];
+                      return InkWell(
+                        onTap: () async {
+                          if (!await controller.canPostAd()) return;
+                          final subCategories = controller.getSubCategory(category.id!);
+                          if (subCategories.isEmpty) {
+                            Get.to(
+                                  () => AddProductsView(),
+                              arguments: {
+                                "category": category,
+                                "categoryPath": [category],
                               },
-                              child: Container(
+                            );
+                          } else {
+                            Get.to(() => SellSubCategoryScreen(parentCategory: category, parentPath: [category]));
+                          }
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                height: 52,
+                                width: 52,
+                                padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+                                  color: themeChange.isDarkTheme() ? AppThemeData.grey9 : AppThemeData.grey2,
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      height: 52,
-                                      width: 52,
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: themeChange.isDarkTheme() ? AppThemeData.grey9 : AppThemeData.grey2,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
-                                    ),
-                                    spaceH(height: 8),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                                      child: TextCustom(
-                                        title: category.categoryName.toString(),
-                                        fontSize: 12,
-                                        fontFamily: FontFamily.medium,
-                                        maxLine: 2,
-                                        textAlign: TextAlign.center,
-                                        color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10,
-                                      ),
-                                    ),
-                                  ],
+                                child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
+                              ),
+                              spaceH(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: TextCustom(
+                                  title: category.categoryName.toString(),
+                                  fontSize: 12,
+                                  fontFamily: FontFamily.medium,
+                                  maxLine: 2,
+                                  textAlign: TextAlign.center,
+                                  color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10,
                                 ),
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         ),
+                      );
+                    },
+                  ),
                   spaceH(height: 28),
                 ],
               ),
@@ -147,92 +147,186 @@ class _CategoryShimmerGrid extends StatelessWidget {
   }
 }
 
-class SellSubCategoryScreen extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// SELL SUB CATEGORY SCREEN — Tireda Custom: converted to StatefulWidget to hold
+// local search state. List is already sorted alphabetically by
+// SellScreenController.getSubCategory(). Search bar only shown when the list
+// is long enough to need it (>10 items), matching the browsing subcategory UX.
+// ─────────────────────────────────────────────────────────────────────────────
+class SellSubCategoryScreen extends StatefulWidget {
   final CategoryModel parentCategory;
   final List<CategoryModel> parentPath;
 
   SellSubCategoryScreen({required this.parentCategory, required this.parentPath}) : super(key: ValueKey(parentCategory.id));
 
   @override
+  State<SellSubCategoryScreen> createState() => _SellSubCategoryScreenState();
+}
+
+class _SellSubCategoryScreenState extends State<SellSubCategoryScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _query = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
+    final isDark = themeChange.isDarkTheme();
     final controller = Get.find<SellScreenController>();
-    final subCategories = controller.getSubCategory(parentCategory.id!);
+    final allSubCategories = controller.getSubCategory(widget.parentCategory.id!);
+
+    final subCategories = _query.trim().isEmpty
+        ? allSubCategories
+        : allSubCategories.where((c) => (c.categoryName ?? '').toLowerCase().contains(_query.toLowerCase())).toList();
+
+    final shouldShowSearch = allSubCategories.length > 10;
+
     return Scaffold(
-      backgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1,
-      appBar: UiInterface.customAppBar(context, themeChange, parentCategory.categoryName.toString()),
+      backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+      appBar: UiInterface.customAppBar(context, themeChange, widget.parentCategory.categoryName.toString()),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: subCategories.length,
-            physics: NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index) {
-              CategoryModel category = subCategories[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: GestureDetector(
-                  onTap: () {
-                    final next = controller.getSubCategory(category.id!);
-                    final newPath = [...parentPath, category];
-
-                    if (next.isEmpty) {
-                      Get.to(() => AddProductsView(), arguments: {"category": category, "categoryPath": newPath});
-                    } else {
-                      Get.to(() => SellSubCategoryScreen(parentCategory: category, parentPath: newPath), preventDuplicates: false);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: themeChange.isDarkTheme() ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
-                          child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
-                        ),
-                        spaceW(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TextCustom(
-                                title: category.categoryName.toString(),
-                                fontSize: 15,
-                                fontFamily: FontFamily.medium,
-                                color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10,
-                              ),
-                              if (category.description != null && category.description!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 2),
-                                  child: TextCustom(
-                                    title: category.description!,
-                                    fontSize: 12,
-                                    color: themeChange.isDarkTheme() ? AppThemeData.grey5 : AppThemeData.grey6,
-                                    maxLine: 1,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        spaceW(width: 8),
-                        Icon(Icons.chevron_right, size: 22, color: themeChange.isDarkTheme() ? AppThemeData.grey5 : AppThemeData.grey6),
-                      ],
-                    ),
-                  ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (shouldShowSearch) ...[
+              _buildSearchBar(isDark),
+              spaceH(height: 12),
+            ],
+            Expanded(
+              child: subCategories.isEmpty
+                  ? Center(
+                child: TextCustom(
+                  title: _query.trim().isEmpty ? "No Subcategories Found".tr : "No results found".tr,
+                  color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
                 ),
-              );
-            },
-          ),
+              )
+                  : ListView.builder(
+                itemCount: subCategories.length,
+                itemBuilder: (context, index) {
+                  CategoryModel category = subCategories[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GestureDetector(
+                      onTap: () {
+                        final next = controller.getSubCategory(category.id!);
+                        final newPath = [...widget.parentPath, category];
+
+                        if (next.isEmpty) {
+                          Get.to(() => AddProductsView(), arguments: {"category": category, "categoryPath": newPath});
+                        } else {
+                          Get.to(() => SellSubCategoryScreen(parentCategory: category, parentPath: newPath), preventDuplicates: false);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
+                              child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
+                            ),
+                            spaceW(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextCustom(
+                                    title: category.categoryName.toString(),
+                                    fontSize: 15,
+                                    fontFamily: FontFamily.medium,
+                                    color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                                  ),
+                                  if (category.description != null && category.description!.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: TextCustom(
+                                        title: category.description!,
+                                        fontSize: 12,
+                                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                                        maxLine: 1,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            spaceW(width: 8),
+                            Icon(Icons.chevron_right, size: 22, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  // Tireda Custom: local search bar — same visual style as the browsing subcategory screen
+  Widget _buildSearchBar(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.search, size: 22, color: AppThemeData.primary4),
+          spaceW(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              style: TextStyle(
+                fontSize: 14,
+                fontFamily: FontFamily.semiBold,
+                color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+              ),
+              decoration: InputDecoration(
+                isDense: false,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                border: InputBorder.none,
+                hintText: "Search".tr,
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  fontFamily: FontFamily.semiBold,
+                  color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                ),
+              ),
+            ),
+          ),
+          if (_query.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                _onSearchChanged('');
+              },
+              child: Icon(Icons.close, size: 18, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+            ),
+        ],
       ),
     );
   }

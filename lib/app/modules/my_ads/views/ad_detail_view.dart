@@ -529,11 +529,29 @@ class _AdDetailBody extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
-                              child: TextCustom(
-                                title: PriceFormatter.format(ad),
-                                fontSize: 22,
-                                fontFamily: FontFamily.bold,
-                                color: AppThemeData.primary4,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Flexible(
+                                    child: TextCustom(
+                                      title: PriceFormatter.format(ad),
+                                      fontSize: 22,
+                                      fontFamily: FontFamily.bold,
+                                      color: AppThemeData.primary4,
+                                    ),
+                                  ),
+                                  // Tireda Custom: small "Negotiable" chip.
+                                  // Guarded on isJobAd/isPriceOptional too (not
+                                  // just isNegotiable) since job ads and
+                                  // price-optional ads don't show a fixed
+                                  // price for this to qualify — defensive
+                                  // against any stale/malformed data reaching
+                                  // this screen.
+                                  if (ad.isNegotiable == true && !ad.isJobAd && ad.isPriceOptional != true) ...[
+                                    spaceW(width: 8),
+                                    const _NegotiableBadge(),
+                                  ],
+                                ],
                               ),
                             ),
                             _StatusChip(ad: ad),
@@ -665,6 +683,31 @@ class _AdDetailBody extends StatelessWidget {
           ),
           _buildBottomBar(context, isDark),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEGOTIABLE BADGE
+// Tireda Custom: small chip shown beside the price when ad.isNegotiable is
+// true. Purely presentational, no state, no network calls.
+// ─────────────────────────────────────────────────────────────────────────────
+class _NegotiableBadge extends StatelessWidget {
+  const _NegotiableBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppThemeData.primary4.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppThemeData.primary4.withOpacity(0.3)),
+      ),
+      child: Text(
+        "Negotiable",
+        style: TextStyle(fontSize: 12, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
       ),
     );
   }
@@ -1026,13 +1069,13 @@ class _FieldCell extends StatelessWidget {
           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(8)),
           child: iconUrl.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: iconUrl,
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => const SizedBox.shrink(),
-                  errorWidget: (_, __, ___) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
-                )
+            imageUrl: iconUrl,
+            width: 32,
+            height: 32,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => const SizedBox.shrink(),
+            errorWidget: (_, __, ___) => Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5),
+          )
               : Center(child: Icon(_fallbackIcon(name), size: 16, color: AppThemeData.grey5)),
         ),
         spaceW(width: 10),

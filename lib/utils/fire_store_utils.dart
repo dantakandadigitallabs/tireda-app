@@ -1277,6 +1277,68 @@ class FireStoreUtils {
 
   /// Stream of chat rooms for the current user.
   ///
+  ///
+  /// Returns an existing chat room (i.e. one that already has a real message),
+  /// otherwise builds an in-memory draft with a pre-generated Firestore ID —
+  /// WITHOUT writing anything. Use this just to open the chat screen.
+  static Future<ChatRoomModel> getOrDraftChatRoom({required AdModel ad, required UserModel currentUser}) async {
+    final existing = await findChatRoom(adId: ad.id!, senderId: currentUser.id!, receiverId: ad.sellerId!);
+    if (existing != null) return existing;
+
+    final docRef = fireStore.collection(CollectionName.chatRooms).doc();
+    return ChatRoomModel(
+      id: docRef.id,
+      adId: ad.id,
+      adTitle: ad.title,
+      adImage: ad.mainImage,
+      adPrice: ad.price,
+      isJobCategory: ad.isJobCategory,
+      minSalary: ad.minSalary,
+      maxSalary: ad.maxSalary,
+      adCategory: ad.leafCategoryName,
+      adCurrencySymbol: ad.currency?.symbol,
+      adCurrencySymbolAtRight: ad.currency?.symbolAtRight,
+      adCurrencyDecimalDigits: ad.currency?.decimalDigits,
+      senderId: currentUser.id,
+      senderName: currentUser.fullNameString(),
+      senderProfile: currentUser.profilePic,
+      receiverId: ad.sellerId,
+      receiverName: ad.sellerName,
+      receiverProfile: ad.sellerProfile,
+      lastMessage: '',
+      lastMessageType: 'text',
+      lastMessageTime: Timestamp.now(),
+      senderUnreadCount: 0,
+      receiverUnreadCount: 0,
+      createdAt: Timestamp.now(),
+      isDraft: true, // Tireda Custom
+    );
+  }
+
+  /// Writes the chat room doc only if it doesn't already exist.
+  /// Call this right before the FIRST real message/offer is sent.
+  static Future<void> ensureChatRoomPersisted(ChatRoomModel chatRoom) async {
+    try {
+      final docRef = fireStore.collection(CollectionName.chatRooms).doc(chatRoom.id);
+      final doc = await docRef.get();
+      if (!doc.exists) {
+        await docRef.set(chatRoom.toJson());
+      }
+    } catch (e) {
+      developer.log('ensureChatRoomPersisted Error: $e');
+    }
+  }
+
+  /// Writes a draft chat room to Firestore for the first time.
+  /// Unconditional set — no get() first, since a get() on a nonexistent
+  /// doc is denied by the security rules (resource == null) and throws.
+  static Future<void> persistDraftChatRoom(ChatRoomModel chatRoom) async {
+    try {
+      await fireStore.collection(CollectionName.chatRooms).doc(chatRoom.id).set(chatRoom.toJson());
+    } catch (e) {
+      developer.log('persistDraftChatRoom Error: $e');
+    }
+  }
   /// Optimizations:
   /// - Uses `includeMetadataChanges: true` to deliver cached data instantly on
   ///   app launch, then seamlessly merge server updates.

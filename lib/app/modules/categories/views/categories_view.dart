@@ -37,65 +37,90 @@ class CategoriesView extends GetView<CategoriesController> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   child: controller.isLoading.value
-                ? _buildShimmer(isDark)
-                : controller.categoryList.isEmpty
-                    ? Center(child: TextCustom(title: "No Categories Found"))
-                    : GridView.builder(
-                        itemCount: controller.categoryList.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 0.78,
-                        ),
-                        itemBuilder: (context, index) {
-                          CategoryModel category = controller.categoryList[index];
-                          return InkWell(
-                            onTap: () => Get.to(() => const SubCategoryView(), arguments: {"category": category}),
+                      ? _buildShimmer(isDark)
+                      : controller.categoryList.isEmpty
+                      ? _buildEmptyState(controller, isDark)
+                      : GridView.builder(
+                    itemCount: controller.categoryList.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 0.78,
+                    ),
+                    itemBuilder: (context, index) {
+                      CategoryModel category = controller.categoryList[index];
+                      return InkWell(
+                        onTap: () => Get.to(() => const SubCategoryView(), arguments: {"category": category}),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
                             borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+                            border: Border.all(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, width: 0.5),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                height: 52,
+                                width: 52,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    height: 52,
-                                    width: 52,
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
-                                  ),
-                                  spaceH(height: 8),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                                    child: TextCustom(
-                                      title: category.categoryName.toString(),
-                                      fontSize: 12,
-                                      fontFamily: FontFamily.medium,
-                                      maxLine: 2,
-                                      textAlign: TextAlign.center,
-                                      color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                                    ),
-                                  ),
-                                ],
+                              spaceH(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: TextCustom(
+                                  title: category.categoryName.toString(),
+                                  fontSize: 12,
+                                  fontFamily: FontFamily.medium,
+                                  maxLine: 2,
+                                  textAlign: TextAlign.center,
+                                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  // Tireda Custom: same "No Categories Found" state, now with a tappable retry
+  // since an empty list here could be a transient fetch failure, not just a
+  // genuinely empty catalog (FireStoreUtils.getParentCategory swallows errors
+  // internally, so the two cases can't be told apart at this layer).
+  Widget _buildEmptyState(CategoriesController controller, bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextCustom(title: "No Categories Found", color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+          spaceH(height: 12),
+          InkWell(
+            onTap: () => controller.retry(),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(10)),
+              child: TextCustom(title: "Retry".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.primaryWhite),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

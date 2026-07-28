@@ -28,7 +28,10 @@ class ChatsController extends GetxController {
 
   /// User's live/active ads, sorted by most recent chat activity first
   List<AdModel> get liveAds {
-    final activeAds = myAds.where((ad) => ad.status == 'active' && ad.isActive == true).toList();
+    final activeAds = myAds
+        .where((ad) => ad.status == 'active' && ad.isActive == true)
+        .where((ad) => chatsForAd(ad.id ?? '').isNotEmpty)
+        .toList();
     _sortAdsByChat(activeAds);
     return activeAds;
   }

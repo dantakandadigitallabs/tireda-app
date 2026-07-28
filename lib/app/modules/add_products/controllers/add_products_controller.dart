@@ -12,6 +12,7 @@ import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/custom_field_model.dart';
 import 'package:eSellify/app/models/location_lat_lng.dart';
 import 'package:eSellify/app/models/positions_model.dart';
+import 'package:eSellify/app/models/user_subscription_model.dart';
 import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
@@ -73,13 +74,51 @@ class AddProductsController extends GetxController {
   // ─── Submit state ────────────────────────────────────────
   RxBool isSubmitting = false.obs;
 
+  // ─── Featured Ads (Boost Your Ad) ────────────────────────
+  // Tireda Custom: "Boost Your Ad" card support (Create/Edit Ad screen).
+  // wantsFeatured is the toggle's current value. featuredSubscription holds
+  // the user's active 'featured_ads' subscription (null if none / on error /
+  // when freeAdFeaturing admin override is on). isCheckingFeaturedSub drives
+  // the card's loading skeleton while the subscription lookup is in flight.
+  RxBool wantsFeatured = false.obs;
+  Rx<UserSubscriptionModel?> featuredSubscription = Rx<UserSubscriptionModel?>(null);
+  RxBool isCheckingFeaturedSub = true.obs;
+
+  // ─── Price Negotiable ─────────────────────────────────────
+  // Tireda Custom: "Price Negotiable" toggle. Purely a boolean flag saved
+  // alongside the ad — no extra Firestore reads/writes beyond the normal
+  // saveAd/updateAd call. Hidden in the UI (and force-false at save time) for
+  // job categories and price-optional categories, since those categories
+  // don't carry a fixed price for this to modify.
+  RxBool isNegotiable = false.obs;
+
   // ─── Lifecycle ───────────────────────────────────────────
   @override
   void onInit() {
-    getArguments();
-    loadCurrencies();
-    _prefillPhone();
+    // Tireda Custom (Bug 1 fix): onInit can't itself be async, so the previous
+    // version fired getArguments() and loadCurrencies() unawaited and in
+    // parallel. loadCurrencies() read isEditing.value to decide which currency
+    // to select, but nothing guaranteed getArguments() had already flipped
+    // isEditing to true by the time it ran — a real race that could silently
+    // select the wrong currency on the edit flow.
+    //
+    // Fix: delegate to a private async _init() that awaits getArguments() and
+    // _fetchCurrencyList() together via Future.wait (same two Firestore calls,
+    // same concurrency, no added reads/load-time cost — see chat), then only
+    // decides the selected currency once both are guaranteed to have finished
+    // and isEditing is settled.
+    _init();
     super.onInit();
+  }
+
+  Future<void> _init() async {
+    _prefillPhone();
+    await Future.wait([
+      getArguments(),
+      _fetchCurrencyList(),
+      _checkFeaturedSubscription(),
+    ]);
+    _resolveSelectedCurrency();
   }
 
   void _prefillPhone() {
@@ -89,124 +128,200 @@ class AddProductsController extends GetxController {
     }
   }
 
-  Future<void> getArguments() async {
-    dynamic arguments = Get.arguments;
-    if (arguments == null) return;
-
-    // ─── Edit mode ──────────────────────────────────────────
-    if (arguments['isEdit'] == true && arguments['ad'] != null) {
-      isEditing.value = true;
-      final AdModel ad = arguments['ad'];
-      editingAd.value = ad;
-
-      // Prefill form fields
-      adTitleController.text = ad.title ?? '';
-      adDescriptionController.text = ad.description ?? '';
-      priceController.text = ad.price != null ? ad.price.toString() : '';
-      minSalaryController.text = ad.minSalary != null ? ad.minSalary.toString() : '';
-      maxSalaryController.text = ad.maxSalary != null ? ad.maxSalary.toString() : '';
-      mobileController.text = ad.phoneNumber ?? '';
-      countryCode.value = ad.countryCode ?? Constant.countryCode;
-      locationController.text = ad.address ?? '';
-      selectedLatitude.value = ad.location?.latitude;
-      selectedLongitude.value = ad.location?.longitude;
-
-      // Images
-      existingMainImageUrl.value = ad.mainImage ?? '';
-      if (ad.otherImages != null && ad.otherImages!.isNotEmpty) {
-        otherImages.value = List<String>.from(ad.otherImages!);
+  // Tireda Custom: Boost Your Ad — checks whether the user has an active
+  // 'featured_ads' subscription so the toggle can be gated correctly.
+  // Fail-safe: FireStoreUtils.getActiveSubscription() never throws internally
+  // (it logs and returns null on error), but this is still wrapped defensively
+  // in case uid is null or something upstream changes. Any failure here just
+  // leaves featuredSubscription null, which means the toggle-on path will
+  // correctly fall through to the "no active plan" branch instead of crashing
+  // or silently allowing featuring.
+  Future<void> _checkFeaturedSubscription() async {
+    isCheckingFeaturedSub.value = true;
+    try {
+      if (Constant.freeAdFeaturing) {
+        // Free featuring enabled admin-side — no subscription needed, toggle
+        // will always be allowed. Leave featuredSubscription null; it's not
+        // consulted when freeAdFeaturing is true (see onToggleFeatured /
+        // _applyFeaturedToggle).
+        return;
       }
-
-      // Currency
-      if (ad.currency != null) {
-        selectedCurrency.value = ad.currency;
+      final uid = FireStoreUtils.getCurrentUid();
+      if (uid == null) {
+        featuredSubscription.value = null;
+        return;
       }
+      featuredSubscription.value = await FireStoreUtils.getActiveSubscription(uid, 'featured_ads');
+    } catch (e) {
+      log('_checkFeaturedSubscription error: $e');
+      featuredSubscription.value = null;
+    } finally {
+      isCheckingFeaturedSub.value = false;
+    }
+  }
 
-      // Category path (rebuild from stored paths)
-      if (ad.categoryPath != null && ad.categoryNamePath != null) {
-        final List<CategoryModel> rebuiltPath = [];
-        for (int i = 0; i < ad.categoryPath!.length; i++) {
-          rebuiltPath.add(CategoryModel(id: ad.categoryPath![i], categoryName: i < ad.categoryNamePath!.length ? ad.categoryNamePath![i] : ''));
-        }
-        categoryPath.value = rebuiltPath;
-        if (rebuiltPath.isNotEmpty) {
-          categoryModel.value = rebuiltPath.last;
-        }
-      }
-
-      // Load custom fields for the leaf category
-      if (ad.categoryPath != null && ad.categoryPath!.isNotEmpty) {
-        final leafId = ad.categoryPath!.last;
-        final parentId = ad.categoryPath!.length >= 2 ? ad.categoryPath![ad.categoryPath!.length - 2] : '';
-        await loadCustomFields(leafId, parentId);
-      }
-
-      // Restore custom field values from stored list
-      if (ad.customFields != null) {
-        for (var fieldMap in ad.customFields!) {
-          final name = fieldMap['name']?.toString() ?? '';
-          final value = fieldMap['value']?.toString() ?? '';
-          if (value.isEmpty) continue;
-
-          for (var field in customFields) {
-            if (field.name == name && field.id != null) {
-              switch (field.type) {
-                case "Radio":
-                  if (field.options != null && field.options!.contains(value)) {
-                    selectedRadioValues[field.id!] = value;
-                  }
-                  break;
-                case "Text Input":
-                case "Number Input":
-                  textControllers[field.id!] = TextEditingController(text: value);
-                  break;
-                case "Dropdown":
-                  if (field.options != null && field.options!.contains(value)) {
-                    selectedDropdownValues[field.id!] = value;
-                  }
-                  break;
-                case "Checkboxes":
-                  selectedCheckboxValues[field.id!] = value.split(', ').where((s) => s.isNotEmpty).toList();
-                  break;
-              }
-              break;
-            }
-          }
-        }
-      }
+  // Tireda Custom: Boost Your Ad toggle handler. Turning ON requires either
+  // freeAdFeaturing (admin override) or an active 'featured_ads' subscription.
+  // Turning OFF is always allowed with no checks and no network calls.
+  void onToggleFeatured(bool value) {
+    if (!value) {
+      wantsFeatured.value = false;
       return;
     }
 
-    // ─── Add mode (existing flow) ───────────────────────────
-    categoryModel.value = arguments['category'];
+    final hasActivePlan = Constant.freeAdFeaturing || (featuredSubscription.value?.isActive ?? false);
 
-    final List<CategoryModel>? path = arguments['categoryPath'];
-    if (path != null && path.isNotEmpty) {
-      categoryPath.value = path;
-    } else {
-      categoryPath.value = [categoryModel.value];
+    if (!hasActivePlan) {
+      wantsFeatured.value = false; // keep toggle off
+      ShowToastDialog.showWarning("You need to subscribe to a featured ad listing.".tr);
+      Get.to(() => const SubscriptionsView());
+      return;
     }
 
-    await loadCustomFields(categoryModel.value.id.toString(), categoryModel.value.parentCategoryId.toString());
+    wantsFeatured.value = true;
   }
 
-  Future<void> loadCurrencies() async {
+  Future<void> getArguments() async {
+    // Tireda Custom (Bug 2 fix): the whole method previously ran unawaited
+    // inside onInit, so any thrown error (bad arguments shape, a null
+    // 'category' in add mode, a loadCustomFields() failure) became an
+    // unhandled async exception with no user-facing feedback and left the
+    // screen half-initialized. Now that _init() awaits this method, wrap the
+    // body in try/catch so any failure surfaces a toast instead of crashing
+    // silently.
+    try {
+      dynamic arguments = Get.arguments;
+      if (arguments == null) return;
+
+      // ─── Edit mode ──────────────────────────────────────────
+      if (arguments is Map && arguments['isEdit'] == true && arguments['ad'] != null) {
+        isEditing.value = true;
+        final AdModel ad = arguments['ad'];
+        editingAd.value = ad;
+
+        // Prefill form fields
+        adTitleController.text = ad.title ?? '';
+        adDescriptionController.text = ad.description ?? '';
+        priceController.text = ad.price != null ? ad.price.toString() : '';
+        minSalaryController.text = ad.minSalary != null ? ad.minSalary.toString() : '';
+        maxSalaryController.text = ad.maxSalary != null ? ad.maxSalary.toString() : '';
+        mobileController.text = ad.phoneNumber ?? '';
+        countryCode.value = ad.countryCode ?? Constant.countryCode;
+        locationController.text = ad.address ?? '';
+        selectedLatitude.value = ad.location?.latitude;
+        selectedLongitude.value = ad.location?.longitude;
+
+        // Tireda Custom: prefill Boost toggle from existing ad's featured state
+        wantsFeatured.value = ad.isFeatured ?? false;
+
+        // Tireda Custom: prefill Negotiable toggle from existing ad
+        isNegotiable.value = ad.isNegotiable ?? false;
+
+        // Images
+        existingMainImageUrl.value = ad.mainImage ?? '';
+        if (ad.otherImages != null && ad.otherImages!.isNotEmpty) {
+          otherImages.value = List<String>.from(ad.otherImages!);
+        }
+
+        // Currency
+        if (ad.currency != null) {
+          selectedCurrency.value = ad.currency;
+        }
+
+        // Category path (rebuild from stored paths)
+        if (ad.categoryPath != null && ad.categoryNamePath != null) {
+          final List<CategoryModel> rebuiltPath = [];
+          for (int i = 0; i < ad.categoryPath!.length; i++) {
+            rebuiltPath.add(CategoryModel(id: ad.categoryPath![i], categoryName: i < ad.categoryNamePath!.length ? ad.categoryNamePath![i] : ''));
+          }
+          categoryPath.value = rebuiltPath;
+          if (rebuiltPath.isNotEmpty) {
+            categoryModel.value = rebuiltPath.last;
+          }
+        }
+
+        // Load custom fields for the leaf category
+        if (ad.categoryPath != null && ad.categoryPath!.isNotEmpty) {
+          final leafId = ad.categoryPath!.last;
+          final parentId = ad.categoryPath!.length >= 2 ? ad.categoryPath![ad.categoryPath!.length - 2] : '';
+          await loadCustomFields(leafId, parentId);
+        }
+
+        // Restore custom field values from stored list
+        if (ad.customFields != null) {
+          for (var fieldMap in ad.customFields!) {
+            final name = fieldMap['name']?.toString() ?? '';
+            final value = fieldMap['value']?.toString() ?? '';
+            if (value.isEmpty) continue;
+
+            for (var field in customFields) {
+              if (field.name == name && field.id != null) {
+                switch (field.type) {
+                  case "Radio":
+                    if (field.options != null && field.options!.contains(value)) {
+                      selectedRadioValues[field.id!] = value;
+                    }
+                    break;
+                  case "Text Input":
+                  case "Number Input":
+                    textControllers[field.id!] = TextEditingController(text: value);
+                    break;
+                  case "Dropdown":
+                    if (field.options != null && field.options!.contains(value)) {
+                      selectedDropdownValues[field.id!] = value;
+                    }
+                    break;
+                  case "Checkboxes":
+                    selectedCheckboxValues[field.id!] = value.split(', ').where((s) => s.isNotEmpty).toList();
+                    break;
+                }
+                break;
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      // ─── Add mode (existing flow) ───────────────────────────
+      // Tireda Custom (Bug 3 fix): arguments['category'] was assigned straight
+      // into a non-nullable Rx<CategoryModel> with no null check. If a caller
+      // ever navigated here without a category (or with a malformed arguments
+      // map), this threw "Null is not a subtype of CategoryModel" with no
+      // recovery. Guard it and bail out with a toast instead.
+      final category = arguments is Map ? arguments['category'] : null;
+      if (category == null || category is! CategoryModel) {
+        ShowToastDialog.showError("Something went wrong loading this category. Please go back and try again.".tr);
+        return;
+      }
+      categoryModel.value = category;
+
+      final List<CategoryModel>? path = arguments['categoryPath'];
+      if (path != null && path.isNotEmpty) {
+        categoryPath.value = path;
+      } else {
+        categoryPath.value = [categoryModel.value];
+      }
+
+      await loadCustomFields(categoryModel.value.id.toString(), categoryModel.value.parentCategoryId.toString());
+    } catch (e) {
+      // Tireda Custom (Bug 2 fix): surface any unexpected failure in argument
+      // handling / initial custom-field load instead of letting it die as an
+      // unhandled exception.
+      log('getArguments error: $e');
+      ShowToastDialog.showError("Something went wrong loading this screen. Please go back and try again.".tr);
+    }
+  }
+
+  // Tireda Custom (Bug 1 fix): split out of the old loadCurrencies() — this
+  // half only fetches and stores the currency list. It makes no decision
+  // about which currency to select, so it no longer needs to know whether
+  // isEditing has been set yet. Same single Firestore call as before.
+  Future<void> _fetchCurrencyList() async {
     isCurrencyLoading.value = true;
     try {
       final list = await FireStoreUtils().getAllCurrencies();
       currencyList.value = list;
-
-      if (isEditing.value && editingAd.value?.currency != null) {
-        // Match existing ad's currency in loaded list so dropdown works
-        final adCurrencyId = editingAd.value!.currency!.id;
-        final match = list.firstWhereOrNull((c) => c.id == adCurrencyId);
-        selectedCurrency.value = match ?? editingAd.value!.currency;
-      } else {
-        // Use default currency from settings, fallback to first in list
-        final defaultId = Constant.currencyModel?.id;
-        final match = defaultId != null ? list.firstWhereOrNull((c) => c.id == defaultId) : null;
-        selectedCurrency.value = match ?? (list.isNotEmpty ? list.first : null);
-      }
     } catch (e) {
       log('Error loading currencies: $e');
     } finally {
@@ -214,9 +329,38 @@ class AddProductsController extends GetxController {
     }
   }
 
+  // Tireda Custom (Bug 1 fix): split out of the old loadCurrencies() — this
+  // half is pure in-memory decision logic (no Firestore calls), so it's safe
+  // to run only once both getArguments() and _fetchCurrencyList() have
+  // finished. This is what removes the race: isEditing.value and
+  // editingAd.value are now guaranteed final by the time this runs.
+  void _resolveSelectedCurrency() {
+    if (isEditing.value && editingAd.value?.currency != null) {
+      // Match existing ad's currency in loaded list so dropdown works
+      final adCurrencyId = editingAd.value!.currency!.id;
+      final match = currencyList.firstWhereOrNull((c) => c.id == adCurrencyId);
+      selectedCurrency.value = match ?? editingAd.value!.currency;
+    } else {
+      // Use default currency from settings, fallback to first in list
+      final defaultId = Constant.currencyModel?.id;
+      final match = defaultId != null ? currencyList.firstWhereOrNull((c) => c.id == defaultId) : null;
+      selectedCurrency.value = match ?? (currencyList.isNotEmpty ? currencyList.first : null);
+    }
+  }
+
   Future<void> loadCustomFields(String categoryId, String parentId) async {
-    final data = await FireStoreUtils.getCustomFields(categoryId: categoryId, parentCategoryId: parentId);
-    customFields.value = data;
+    // Tireda Custom (Bug 4 fix): FireStoreUtils.getCustomFields() has no
+    // try/catch of its own (unlike its sibling category methods), and this
+    // call previously ran unguarded inside the unawaited getArguments(),
+    // meaning any Firestore failure here (bad permissions, network drop)
+    // became a silent unhandled exception. Now caught locally so a failure
+    // just leaves customFields empty instead of crashing the init sequence.
+    try {
+      final data = await FireStoreUtils.getCustomFields(categoryId: categoryId, parentCategoryId: parentId);
+      customFields.value = data;
+    } catch (e) {
+      log('loadCustomFields error: $e');
+    }
   }
 
   // Called from the view after geocoding resolves
@@ -459,27 +603,41 @@ class AddProductsController extends GetxController {
       }
 
       // Apply suggestions to custom fields by matching field name
+      // Tireda Custom (Bug 5 fix): this switch previously matched lowercase
+      // strings ('text', 'number', 'radio', 'dropdown', 'checkbox') against
+      // field.type, but every field is actually stored/typed as "Text Input",
+      // "Number Input", "Radio", "Dropdown", "Checkboxes", "File Input" (see
+      // _validateStep2 and the view's own switch statements for the real
+      // values). None of these cases ever matched, so AI suggestions never
+      // populated a single custom field — silently. Fixed to use the correct
+      // type strings, and cleaned up the accidental TextEditingController
+      // leak that existed in the old "text"/"number" branch (it created and
+      // discarded one controller before creating a second to actually store).
       result.customFieldValues.forEach((name, value) {
         final field = customFields.firstWhereOrNull((f) => (f.name ?? '').toLowerCase().trim() == name.toLowerCase().trim());
         if (field == null || field.id == null) return;
         switch (field.type) {
-          case 'text':
-          case 'number':
-            (textControllers[field.id!] ?? TextEditingController()).text = value;
-            textControllers[field.id!] = textControllers[field.id!] ?? TextEditingController(text: value);
+          case 'Text Input':
+          case 'Number Input':
+            final existing = textControllers[field.id!];
+            if (existing != null) {
+              existing.text = value;
+            } else {
+              textControllers[field.id!] = TextEditingController(text: value);
+            }
             break;
-          case 'radio':
-          case 'dropdown':
+          case 'Radio':
+          case 'Dropdown':
             final match = (field.options ?? []).firstWhereOrNull((o) => o.toLowerCase() == value.toLowerCase());
             if (match != null) {
-              if (field.type == 'radio') {
+              if (field.type == 'Radio') {
                 selectedRadioValues[field.id!] = match;
               } else {
                 selectedDropdownValues[field.id!] = match;
               }
             }
             break;
-          case 'checkbox':
+          case 'Checkboxes':
             final picks = value.split(RegExp(r'[,;|]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
             final matched = (field.options ?? []).where((o) => picks.any((p) => p.toLowerCase() == o.toLowerCase())).toList();
             if (matched.isNotEmpty) selectedCheckboxValues[field.id!] = matched;
@@ -625,6 +783,81 @@ class AddProductsController extends GetxController {
     }
   }
 
+  // Tireda Custom: Boost Your Ad — applies the toggle's decision after the ad
+  // doc has already been successfully saved/updated. This NEVER blocks or
+  // rolls back ad creation/update: the ad itself has already saved
+  // successfully by the time this runs, so any failure here (network glitch,
+  // limit reached, expired plan) only produces a secondary warning toast,
+  // never an error that implies the ad post itself failed.
+  //
+  // On create: previousFeatured is always false (a brand-new ad can't already
+  // be featured), so this only ever runs the "turning ON" branch, and only if
+  // the user toggled it on.
+  // On edit: compares against the ad's featured state before this edit so we
+  // skip the whole method (and its Firestore calls) when the toggle wasn't
+  // touched at all.
+  // Tireda Custom (bug fix): this used to call ShowToastDialog.showWarning()
+  // directly from inside here, and submitAd() would then immediately fire its
+  // own showSuccess() toast right after with zero delay. Back-to-back toast
+  // calls meant the success toast visually replaced the warning before most
+  // users could read it (e.g. "featured limit reached" warning would flash
+  // and vanish, leaving only "Ad posted successfully!"). Fixed by having this
+  // method return the warning message (or null) instead of toasting itself —
+  // submitAd() now decides ordering/timing so both messages are readable.
+  Future<String?> _applyFeaturedToggle({
+    required String adId,
+    required bool editing,
+    required bool previousFeatured,
+  }) async {
+    final wantsFeaturedNow = wantsFeatured.value;
+
+    // No change requested on edit — skip entirely, no extra Firestore call.
+    if (editing && wantsFeaturedNow == previousFeatured) return null;
+
+    final uid = FireStoreUtils.getCurrentUid();
+    if (uid == null) return null;
+
+    try {
+      // ── Turning OFF ──────────────────────────────────────
+      if (!wantsFeaturedNow) {
+        if (editing && previousFeatured) {
+          await FireStoreUtils.removeAdFeatured(adId);
+        }
+        return null;
+      }
+
+      // ── Turning ON ───────────────────────────────────────
+      if (Constant.freeAdFeaturing) {
+        final ok = await FireStoreUtils.markAdAsFeatured(adId, null);
+        if (!ok) return "Ad saved, but couldn't be featured. Please try again from the ad detail page.".tr;
+        return null;
+      }
+
+      final activeSub = await FireStoreUtils.getActiveSubscription(uid, 'featured_ads');
+      if (activeSub == null || !activeSub.isActive) {
+        return "Ad saved, but your Featured Ads plan is no longer active.".tr;
+      }
+
+      if (activeSub.isItemLimitUnlimited != true) {
+        final featuredCount = await FireStoreUtils.countUserFeaturedAds(uid);
+        if (featuredCount >= (activeSub.adLimit ?? 0)) {
+          return "Ad saved, but your featured ad limit ($featuredCount/${activeSub.adLimit}) has been reached.".tr;
+        }
+      }
+
+      final ok = await FireStoreUtils.markAdAsFeatured(adId, activeSub.expiryDate);
+      if (ok) {
+        await FireStoreUtils.syncFeaturedAdsPosted(activeSub.id!, uid);
+        return null;
+      } else {
+        return "Ad saved, but couldn't be featured. Please try again from the ad detail page.".tr;
+      }
+    } catch (e) {
+      log('_applyFeaturedToggle error: $e');
+      return "Ad saved, but couldn't be featured. Please try again from the ad detail page.".tr;
+    }
+  }
+
   Future<void> submitAd() async {
     if (!_validateStep2()) return;
 
@@ -726,6 +959,12 @@ class AddProductsController extends GetxController {
       final double? minSalary = isJobCategory ? double.tryParse(minSalaryController.text.replaceAll(',', '').trim()) : null;
       final double? maxSalary = isJobCategory ? double.tryParse(maxSalaryController.text.replaceAll(',', '').trim()) : null;
 
+      // Tireda Custom: Negotiable only applies to normal fixed-price ads.
+      // Force false for job categories and price-optional categories even if
+      // isNegotiable.value was somehow left true from a prior category
+      // switch, so stale state can never persist into Firestore.
+      final bool isNegotiableValue = (isJobCategory || isPriceOptional) ? false : isNegotiable.value;
+
       GeoFirePoint geoPoint = Geoflutterfire().point(latitude: selectedLatitude.value ?? 0.0, longitude: selectedLongitude.value ?? 0.0);
 
       final AdModel ad = AdModel(
@@ -736,6 +975,7 @@ class AddProductsController extends GetxController {
         price: isJobCategory ? null : (isPriceOptional ? null : double.tryParse(priceText)),
         isPriceOptional: isPriceOptional,
         isJobCategory: isJobCategory,
+        isNegotiable: isNegotiableValue,
         minSalary: minSalary,
         maxSalary: maxSalary,
         currency: selectedCurrency.value,
@@ -778,6 +1018,16 @@ class AddProductsController extends GetxController {
       ShowToastDialog.closeLoader();
 
       if (success) {
+        // Tireda Custom: Boost Your Ad — apply after successful save/update.
+        // Never blocks or reverses the ad-posted success flow below; any
+        // featuring failure only produces a returned warning message, shown
+        // further down instead of toasting immediately here.
+        final featureWarning = await _applyFeaturedToggle(
+          adId: adId,
+          editing: editing,
+          previousFeatured: editing ? (editingAd.value?.isFeatured ?? false) : false,
+        );
+
         // Sync ads posted count on subscription (new ads only)
         if (!editing && !Constant.freeAdListing) {
           final uid = FireStoreUtils.getCurrentUid();
@@ -795,6 +1045,16 @@ class AddProductsController extends GetxController {
             adId: ad.id ?? '',
             adTitle: ad.title ?? '',
           );
+        }
+
+        // Tireda Custom (bug fix): if featuring produced a warning, show it
+        // first and give it a couple seconds on screen before the success
+        // toast (and navigation) fires. Previously these fired back-to-back
+        // with no gap, so the warning was visually replaced by the success
+        // toast before it could be read.
+        if (featureWarning != null) {
+          ShowToastDialog.showWarning(featureWarning);
+          await Future.delayed(const Duration(seconds: 2));
         }
 
         if (editing) {

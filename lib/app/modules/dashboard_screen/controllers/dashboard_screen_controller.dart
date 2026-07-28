@@ -1,4 +1,4 @@
-import 'dart:async'; // Add this
+import 'dart:async';
 
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/user_subscription_model.dart';
@@ -29,8 +29,9 @@ class DashboardScreenController extends GetxController {
   RxString userEmail = "".obs;
   RxString profileImage = "".obs;
 
-  // ── NEW: Chat Notification State ──
+  // ── Chat Notification State ──
   RxBool hasUnreadMessages = false.obs;
+  RxInt unreadMessageCount = 0.obs; // Tireda Custom: exposes actual count for the nav badge
   StreamSubscription? _chatSubscription;
 
   @override
@@ -53,7 +54,7 @@ class DashboardScreenController extends GetxController {
     isLoading.value = false;
   }
 
-  // ── NEW: Background Chat Stream ──
+  // ── Background Chat Stream ──
   void _listenForUnreadChats() {
     final uid = FireStoreUtils.getCurrentUid();
     if (uid == null) return;
@@ -64,6 +65,7 @@ class DashboardScreenController extends GetxController {
         totalUnread += room.myUnreadCount(uid);
       }
       hasUnreadMessages.value = totalUnread > 0;
+      unreadMessageCount.value = totalUnread; // Tireda Custom
     });
   }
 
@@ -92,7 +94,6 @@ class DashboardScreenController extends GetxController {
       return;
     }
 
-    // ... [Your existing Sell Tap Logic remains unchanged] ...
     if (Constant.freeAdListing) {
       selectedIndex.value = 2;
       return;
@@ -148,7 +149,6 @@ class DashboardScreenController extends GetxController {
   }
 
   void _showSubscriptionDialog({
-    // ... [Your existing dialog logic remains unchanged] ...
     required IconData icon,
     required Color iconColor,
     required String title,

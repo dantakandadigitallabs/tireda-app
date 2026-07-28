@@ -48,14 +48,16 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
       child: GetX<DashboardScreenController>(
         init: DashboardScreenController(),
         builder: (controller) {
+          final barBg = isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite;
           return Scaffold(
             backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
             body: controller.isLoading.value ? Constant.loader(context: context) : controller.pageList[controller.selectedIndex.value],
-            // Tireda custom: Upgraded to Material 3 NavigationBar with HugeIcons opacity trick, top line indicator, and engineered Sell button
+            // Tireda custom: Upgraded to Material 3 NavigationBar — soft pill
+            // selection indicator (top-line removed), flat full-opacity icons,
+            // semibold/bold label weights, and a slightly elevated Sell FAB.
             bottomNavigationBar: Obx(
                   () => Container(
                 decoration: BoxDecoration(
-                  // Tireda custom: Replaced shadow with subtle hairline top border for cleaner elevation
                   border: Border(
                     top: BorderSide(
                       color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
@@ -64,31 +66,30 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
                   ),
                 ),
                 child: Theme(
-                  // Tireda custom: Override NavigationBarTheme for custom label styling per selection state
                   data: Theme.of(context).copyWith(
                     navigationBarTheme: NavigationBarTheme.of(context).copyWith(
+                      // Tireda custom: selected label bold, unselected semibold
+                      // (dropped plain regular weight for unselected).
                       labelTextStyle: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.selected)) {
                           return TextStyle(
                             fontSize: 12,
-                            fontFamily: FontFamily.medium,
+                            fontFamily: FontFamily.bold,
                             color: AppThemeData.primary4,
                           );
                         }
                         return TextStyle(
                           fontSize: 12,
-                          fontFamily: FontFamily.regular,
+                          fontFamily: FontFamily.semiBold,
                           color: isDark ? AppThemeData.grey6 : AppThemeData.grey5,
                         );
                       }),
                     ),
                   ),
                   child: NavigationBar(
-                    // Tireda custom: M3 NavigationBar replaces BottomNavigationBar
                     elevation: 0,
                     height: 64,
-                    backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                    // Tireda custom: Transparent indicator to disable default M3 pill, using custom top line instead
+                    backgroundColor: barBg,
                     indicatorColor: Colors.transparent,
                     selectedIndex: controller.selectedIndex.value,
                     onDestinationSelected: (int index) {
@@ -96,48 +97,39 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
                     },
                     labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                     destinations: [
-                      // Tireda custom: Home tab with HugeIcons strokeRounded, opacity trick, and top line indicator
                       NavigationDestination(
                         icon: _buildNavIcon(
                           icon: HugeIcons.strokeRoundedHome03,
                           isSelected: controller.selectedIndex.value == 0,
-                          indicatorColor: AppThemeData.primary4,
                           isDark: isDark,
                         ),
                         label: 'Home'.tr,
                       ),
-                      // Tireda custom: Chat tab with HugeIcons strokeRounded, opacity trick, top line indicator, and notification badge
                       NavigationDestination(
                         icon: _buildNavIcon(
                           icon: HugeIcons.strokeRoundedMessage02,
                           isSelected: controller.selectedIndex.value == 1,
-                          indicatorColor: AppThemeData.primary4,
                           isDark: isDark,
-                          badge: controller.hasUnreadMessages.value,
+                          unreadCount: controller.unreadMessageCount.value,
                         ),
                         label: 'Chat'.tr,
                       ),
-                      // Tireda custom: Sell tab with engineered raised circle button, amber shadow, and white icon
                       NavigationDestination(
-                        icon: _buildSellButton(),
+                        icon: _buildSellButton(barBg),
                         label: 'Sell'.tr,
                       ),
-                      // Tireda custom: Ads tab with HugeIcons strokeRounded, opacity trick, and top line indicator
                       NavigationDestination(
                         icon: _buildNavIcon(
                           icon: HugeIcons.strokeRoundedTag02,
                           isSelected: controller.selectedIndex.value == 3,
-                          indicatorColor: AppThemeData.primary4,
                           isDark: isDark,
                         ),
                         label: 'Ads'.tr,
                       ),
-                      // Tireda custom: Profile tab with HugeIcons strokeRounded, opacity trick, and top line indicator
                       NavigationDestination(
                         icon: _buildNavIcon(
                           icon: HugeIcons.strokeRoundedUserCircle02,
                           isSelected: controller.selectedIndex.value == 4,
-                          indicatorColor: AppThemeData.primary4,
                           isDark: isDark,
                         ),
                         label: 'Profile'.tr,
@@ -153,72 +145,70 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
     );
   }
 
-  // Tireda custom: Helper to build navigation icon with top line indicator and opacity trick
+  // Tireda custom: nav icon — soft pill background behind selected icon
+  // (animated), flat full-opacity color instead of the old opacity-fade
+  // trick, and an optional capped numeric unread badge.
   Widget _buildNavIcon({
     required IconData icon,
     required bool isSelected,
-    required Color indicatorColor,
     required bool isDark,
-    bool badge = false,
+    int unreadCount = 0,
   }) {
-    Widget iconWidget = Opacity(
-      opacity: isSelected ? 1.0 : 0.6,
-      child: Icon(
-        icon,
-        color: isSelected ? indicatorColor : (isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-        size: 24,
-      ),
+    final selectedColor = AppThemeData.primary4;
+    final unselectedColor = isDark ? AppThemeData.grey6 : AppThemeData.grey5;
+
+    Widget iconWidget = Icon(
+      icon,
+      color: isSelected ? selectedColor : unselectedColor,
+      size: 22,
     );
 
-    if (badge) {
+    if (unreadCount > 0) {
       iconWidget = Badge(
-        smallSize: 10,
+        label: Text(unreadCount > 9 ? '9+' : '$unreadCount'),
         child: iconWidget,
       );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Tireda custom: Animated top line indicator, visible only when selected
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          height: isSelected ? 2 : 0,
-          width: 20,
-          margin: const EdgeInsets.only(bottom: 2),
-          decoration: BoxDecoration(
-            color: indicatorColor,
-            borderRadius: BorderRadius.circular(1),
-          ),
-        ),
-        iconWidget,
-      ],
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: isSelected ? selectedColor.withValues(alpha: 0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: iconWidget,
     );
   }
 
-  // Tireda custom: Engineered Sell button with raised circle, amber shadow, and white icon
-  Widget _buildSellButton() {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppThemeData.secondary4,
-        // Tireda custom: Soft amber shadow for tactile elevation, making Sell button pop
-        boxShadow: [
-          BoxShadow(
-            color: AppThemeData.secondary4.withOpacity(0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: const Icon(
-        HugeIcons.strokeRoundedAdd01,
-        color: Colors.white,
-        size: 24,
+  // Tireda custom: Sell button raised slightly above the bar line with a
+  // ring matching the bar background, so it visually "pierces" through
+  // instead of just floating disconnected above it. Amber shadow retained.
+  Widget _buildSellButton(Color barBg) {
+    return Transform.translate(
+      offset: const Offset(0, -8),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppThemeData.secondary4,
+          border: Border.all(color: barBg, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: AppThemeData.secondary4.withOpacity(0.35),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: const Icon(
+          HugeIcons.strokeRoundedAdd01,
+          color: Colors.white,
+          size: 24,
+        ),
       ),
     );
   }

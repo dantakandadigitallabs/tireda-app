@@ -25,9 +25,12 @@ class SellScreenController extends GetxController {
   }
 
   List<CategoryModel> getSubCategory(String parentId) {
-    return allCategories.where((e) {
+    final list = allCategories.where((e) {
       return (e.parentCategoryId ?? "").toString().trim() == parentId.toString().trim();
     }).toList();
+    // Tireda Custom: alphabetical sort, case-insensitive
+    list.sort((a, b) => (a.categoryName ?? '').toLowerCase().compareTo((b.categoryName ?? '').toLowerCase()));
+    return list;
   }
 
   /// Check if user can post an ad (subscription validation)

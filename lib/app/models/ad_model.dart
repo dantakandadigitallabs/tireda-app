@@ -13,6 +13,11 @@ class AdModel {
   String? slug;
   double? price;
   bool? isPriceOptional;
+  // Tireda Custom: "Price Negotiable" flag for normal fixed-price ads.
+  // Only meaningful when isJobCategory != true and isPriceOptional != true —
+  // AddProductsController force-sets this false at save time for those
+  // categories, but it's still nullable/defaulted here defensively.
+  bool? isNegotiable;
   // ─── Job category fields ─────────────────────────────────
   // For ads posted under a Job Category, price is replaced by a salary range.
   bool? isJobCategory;
@@ -98,6 +103,7 @@ class AdModel {
     this.slug,
     this.price,
     this.isPriceOptional,
+    this.isNegotiable,
     this.isJobCategory,
     this.minSalary,
     this.maxSalary,
@@ -139,11 +145,12 @@ class AdModel {
     slug = json['slug'];
     price = json['price'] != null ? (json['price'] as num).toDouble() : null;
     isPriceOptional = json['isPriceOptional'];
+    isNegotiable = json['isNegotiable'] ?? false;
     isJobCategory = json['isJobCategory'] ?? false;
     minSalary =
-        json['minSalary'] != null ? (json['minSalary'] as num).toDouble() : null;
+    json['minSalary'] != null ? (json['minSalary'] as num).toDouble() : null;
     maxSalary =
-        json['maxSalary'] != null ? (json['maxSalary'] as num).toDouble() : null;
+    json['maxSalary'] != null ? (json['maxSalary'] as num).toDouble() : null;
     currency = json['currency'] != null
         ? CurrencyModel.fromJson(json['currency'])
         : null;
@@ -172,7 +179,7 @@ class AdModel {
         : [];
     customFields = json['customFields'] != null
         ? List<Map<String, dynamic>>.from(
-            (json['customFields'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
+        (json['customFields'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
         : [];
     views = json['views'] != null ? (json['views'] as num).toInt() : 0;
     likes = json['likes'] != null ? (json['likes'] as num).toInt() : 0;
@@ -200,6 +207,7 @@ class AdModel {
       'slug': slug,
       'price': price,
       'isPriceOptional': isPriceOptional,
+      'isNegotiable': isNegotiable ?? false,
       'isJobCategory': isJobCategory ?? false,
       'minSalary': minSalary,
       'maxSalary': maxSalary,

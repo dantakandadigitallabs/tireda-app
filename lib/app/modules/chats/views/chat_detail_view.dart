@@ -6,6 +6,7 @@ import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/app/models/chat_message_model.dart';
 import 'package:eSellify/app/models/chat_room_model.dart';
 import 'package:eSellify/app/modules/chats/controllers/chat_detail_controller.dart';
+import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
@@ -46,21 +47,33 @@ class ChatDetailView extends StatelessWidget {
               child: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
             ),
             const SizedBox(width: 12),
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-              backgroundImage: otherProfile.isNotEmpty ? CachedNetworkImageProvider(otherProfile) : null,
-              child: otherProfile.isEmpty
-                  ? Text(otherName.isNotEmpty ? otherName[0].toUpperCase() : '?', style: TextStyle(fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7))
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Tireda Custom: tap seller name/avatar to open their seller profile
+            InkWell(
+              onTap: () => Get.toNamed(
+                Routes.SELLER_REVIEWS,
+                arguments: {'sellerId': chatRoom.otherUserId(controller.currentUserId), 'sellerName': otherName},
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextCustom(title: otherName, fontSize: 15, fontFamily: FontFamily.medium, maxLine: 1),
-                  TextCustom(title: chatRoom.adTitle ?? '', fontSize: 12, color: AppThemeData.grey5, maxLine: 1),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
+                    backgroundImage: otherProfile.isNotEmpty ? CachedNetworkImageProvider(otherProfile) : null,
+                    child: otherProfile.isEmpty
+                        ? Text(otherName.isNotEmpty ? otherName[0].toUpperCase() : '?', style: TextStyle(fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7))
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextCustom(title: otherName, fontSize: 15, fontFamily: FontFamily.medium, maxLine: 1),
+                        TextCustom(title: chatRoom.adTitle ?? '', fontSize: 12, color: AppThemeData.grey5, maxLine: 1),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

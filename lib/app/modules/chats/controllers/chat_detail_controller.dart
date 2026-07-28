@@ -27,14 +27,45 @@ class ChatDetailController extends GetxController {
 
   bool _initialized = false;
 
+  // Tireda Custom: tracks whether chatRoom actually exists in Firestore yet.
+  // Chat rooms are now created lazily (see getOrDraftChatRoom) — a room
+  // opened from the ad detail page's "Chat"/"Offer" buttons may just be an
+  // in-memory draft until the first real message is sent.
+  bool _isPersisted = false;
+
   /// Called from the view after chatRoom is set
   void initChat() {
     if (_initialized) return;
     _initialized = true;
-    _listenToMessages();
+
+    // Tireda Custom: a draft room has nothing in Firestore yet — starting
+    // the message listener or marking-as-read on it would hit a get() on a
+    // nonexistent parent doc, which the security rules deny (resource ==
+    // null), leaving the screen stuck on the shimmer. Only listen once the
+    // room is confirmed to actually exist.
+    _isPersisted = !chatRoom.isDraft;
+
+    if (_isPersisted) {
+      _listenToMessages();
+      FireStoreUtils.markMessagesAsRead(chatRoom.id!, currentUserId);
+    } else {
+      // Nothing to load yet — draft room has no messages in Firestore.
+      isLoading.value = false;
+    }
+
     _checkBlockedStatus();
     _checkAdStatus();
-    FireStoreUtils.markMessagesAsRead(chatRoom.id!, currentUserId);
+  }
+
+  /// Tireda Custom: persists the draft chat room to Firestore exactly once
+  /// (right before the first real message/offer/media is sent), then starts
+  /// the message listener for the first time. No-op if already persisted.
+  Future<void> _persistIfNeeded() async {
+    if (_isPersisted) return;
+    await FireStoreUtils.persistDraftChatRoom(chatRoom);
+    chatRoom.isDraft = false;
+    _isPersisted = true;
+    _listenToMessages();
   }
 
   /// Check if the ad is sold out
@@ -88,6 +119,11 @@ class ChatDetailController extends GetxController {
     final text = messageController.text.trim();
     if (text.isEmpty) return;
 
+    // Tireda Custom: chat rooms are created lazily — the room is only a
+    // draft (in-memory, not yet in Firestore) until the first real message
+    // is sent. Persist it now, right before the actual send.
+    await _persistIfNeeded();
+
     final otherUserId = chatRoom.otherUserId(currentUserId);
     final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
     if (otherBlocked.contains(currentUserId)) {
@@ -124,6 +160,10 @@ class ChatDetailController extends GetxController {
       ShowToastDialog.showError("This ad has been sold out. You can no longer send offers.".tr);
       return;
     }
+
+    // Tireda Custom: persist the draft chat room now that a real offer is
+    // actually being sent.
+    await _persistIfNeeded();
 
     final otherUserId = chatRoom.otherUserId(currentUserId);
     final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
@@ -191,6 +231,10 @@ class ChatDetailController extends GetxController {
       final XFile? picked = await picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 2));
       if (picked == null) return;
 
+      // Tireda Custom: persist the draft chat room now that real media is
+      // actually being sent.
+      await _persistIfNeeded();
+
       final otherUserId = chatRoom.otherUserId(currentUserId);
       final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
       if (otherBlocked.contains(currentUserId)) {
@@ -226,6 +270,10 @@ class ChatDetailController extends GetxController {
   }
 
   Future<void> _uploadAndSendImages(List<XFile> files) async {
+    // Tireda Custom: persist the draft chat room now that real media is
+    // actually being sent.
+    await _persistIfNeeded();
+
     final otherUserId = chatRoom.otherUserId(currentUserId);
     final otherBlocked = await FireStoreUtils.getBlockedUsers(otherUserId);
     if (otherBlocked.contains(currentUserId)) {

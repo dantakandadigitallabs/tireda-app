@@ -7,6 +7,7 @@ import 'package:eSellify/app/dependency/dotted_border/dotted_border.dart';
 import 'package:eSellify/app/models/category_model.dart';
 import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/custom_field_model.dart';
+import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/thousands_formatter.dart';
@@ -84,9 +85,31 @@ class AddProductsView extends GetView<AddProductsController> {
                             // OpenAI. Disabled-look until a main photo is added so the
                             // user discovers the feature even before uploading.
                             Obx(() {
-                              if (!controller.isAiEnabled) return const SizedBox.shrink();
-                              final ready = controller.canUseAi;
+                              // Tireda Custom (bug fix): the AI button crashed
+                              // intermittently — specifically during network
+                              // hitches / Firestore reconnect bursts — with GetX's
+                              // "improper use of GetX" error. Root cause: this Obx
+                              // used to read controller.isEditing.value (via
+                              // isAiEnabled) and then EARLY-RETURN before ever
+                              // reading controller.mainImage.value / isAiGenerating.value
+                              // on some builds but not others. GetX's Obx tracks
+                              // exactly which Rx values were read during each build
+                              // to know what to subscribe to; a tracked-dependency
+                              // set that changes between builds — especially while a
+                              // burst of rapid Rx notifications is in flight (e.g. a
+                              // Firestore reconnect storm) — trips this exact guard.
+                              //
+                              // Fix: read every Rx this widget depends on
+                              // UNCONDITIONALLY, in the same order, on every single
+                              // build, before any branching/early-return. Visual
+                              // behavior is unchanged — only the read order was
+                              // restructured for a stable dependency set.
+                              final aiEnabled = controller.isAiEnabled; // reads isEditing.value
+                              final ready = controller.canUseAi; // reads mainImage.value
                               final busy = controller.isAiGenerating.value;
+
+                              if (!aiEnabled) return const SizedBox.shrink();
+
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 14),
                                 child: GestureDetector(
@@ -148,17 +171,29 @@ class AddProductsView extends GetView<AddProductsController> {
                             if (controller.isCurrencyLoading.value) {
                               return _PriceLoadingSkeleton(isDark: isDark);
                             }
-                            return TextFieldWidget(
-                              title: "Price *",
-                              hintText: "0",
-                              controller: controller.priceController,
-                              onPress: () {},
-                              textInputType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), // Added comma here
-                                ThousandsFormatter(), // Added your formatter here
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextFieldWidget(
+                                  title: "Price *",
+                                  hintText: "0",
+                                  controller: controller.priceController,
+                                  onPress: () {},
+                                  textInputType: const TextInputType.numberWithOptions(decimal: true),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), // Added comma here
+                                    ThousandsFormatter(), // Added your formatter here
+                                  ],
+                                  prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
+                                ),
+                                spaceH(height: 12),
+                                // Tireda Custom: Price Negotiable toggle. Lives
+                                // inside the same conditional block as Price
+                                // itself, so it's automatically hidden for job
+                                // categories and price-optional categories
+                                // without needing a separate visibility check.
+                                _NegotiableToggle(controller: controller, isDark: isDark),
                               ],
-                              prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
                             );
                           }),
                         );
@@ -488,7 +523,7 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEP 2 — Custom Fields + Submit
+// STEP 2 — Custom Fields + Boost + Submit
 // ─────────────────────────────────────────────────────────────────────────────
 class AddProductsViewStep2 extends GetView<AddProductsController> {
   const AddProductsViewStep2({super.key});
@@ -554,6 +589,13 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
                 ),
               ),
 
+              // ── Boost Your Ad Card ────────────────────────────────────
+              // Tireda Custom: sits in the fixed (non-scrolling) area so it's
+              // always visible regardless of whether the category has custom
+              // fields, matching the reference "Create Ad" design where the
+              // Boost card sits directly above the primary action button.
+              _BoostAdCard(controller: controller, isDark: isDark),
+
               // ── Post Ad Button ────────────────────────────────────────
               Obx(
                     () => Row(
@@ -579,6 +621,121 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOST YOUR AD CARD
+// Tireda Custom: mirrors the "Boost Your Ad" reference design. Reads
+// controller.isCheckingFeaturedSub for the loading state, controller.wantsFeatured
+// for the toggle value, and calls controller.onToggleFeatured() on change — all
+// gating/network logic lives in the controller so this widget stays purely
+// presentational and null/error-safe by construction (it never touches
+// Firestore or subscription fields directly).
+// ─────────────────────────────────────────────────────────────────────────────
+class _BoostAdCard extends StatelessWidget {
+  final AddProductsController controller;
+  final bool isDark;
+
+  const _BoostAdCard({required this.controller, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Obx(() {
+        if (controller.isCheckingFeaturedSub.value) {
+          return _BoostCardSkeleton(isDark: isDark);
+        }
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? AppThemeData.primary4.withOpacity(0.08) : AppThemeData.primary1,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppThemeData.primary4.withOpacity(0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.bolt_rounded, size: 20, color: AppThemeData.primary4),
+                  spaceW(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextCustom(
+                          title: "Boost Your Ad",
+                          fontSize: 15,
+                          fontFamily: FontFamily.bold,
+                          color: AppThemeData.primary4,
+                        ),
+                        spaceH(height: 4),
+                        TextCustom(
+                          title: "Feature your ad for better visibility and more views",
+                          fontSize: 12,
+                          color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
+                          maxLine: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+                  spaceW(width: 8),
+                  Obx(
+                        () => Switch(
+                      value: controller.wantsFeatured.value,
+                      activeThumbColor: AppThemeData.primaryWhite,
+                      activeTrackColor: AppThemeData.primary4,
+                      onChanged: controller.onToggleFeatured,
+                    ),
+                  ),
+                ],
+              ),
+              spaceH(height: 10),
+              GestureDetector(
+                onTap: () => Get.to(() => const SubscriptionsView()),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lock_outline_rounded, size: 13, color: AppThemeData.primaryWhite),
+                      spaceW(width: 6),
+                      TextCustom(title: "Paid Plans", fontSize: 12, fontFamily: FontFamily.semiBold, color: AppThemeData.primaryWhite),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _BoostCardSkeleton extends StatelessWidget {
+  final bool isDark;
+
+  const _BoostCardSkeleton({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 92,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
     );
   }
 }
@@ -784,6 +941,52 @@ class _SalaryLoadingSkeleton extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRICE NEGOTIABLE TOGGLE
+// Tireda Custom: small checkbox row shown directly below the Price field.
+// Purely presentational — reads/writes controller.isNegotiable, no network
+// calls, no separate visibility logic (it's hidden together with Price by
+// its placement in the caller).
+// ─────────────────────────────────────────────────────────────────────────────
+class _NegotiableToggle extends StatelessWidget {
+  final AddProductsController controller;
+  final bool isDark;
+
+  const _NegotiableToggle({required this.controller, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final value = controller.isNegotiable.value;
+      return GestureDetector(
+        onTap: () => controller.isNegotiable.value = !value,
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: value ? AppThemeData.primary4 : Colors.transparent,
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: value ? AppThemeData.primary4 : (isDark ? AppThemeData.grey6 : AppThemeData.grey5), width: 1.5),
+              ),
+              child: value ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            ),
+            spaceW(width: 10),
+            TextCustom(
+              title: "Price is negotiable",
+              fontSize: 13,
+              fontFamily: FontFamily.medium,
+              color: isDark ? AppThemeData.grey2 : AppThemeData.grey8,
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 

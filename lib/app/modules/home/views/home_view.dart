@@ -992,7 +992,7 @@ class HomeView extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(HugeIcons.strokeRoundedSearch01, size: 22, color: AppThemeData.primary4),
+                  Icon(HugeIcons.strokeRoundedSearch01, size: 18, color: AppThemeData.primary4),
                   spaceW(width: 12),
                   TextCustom(title: "Search ads, categories...".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 ],

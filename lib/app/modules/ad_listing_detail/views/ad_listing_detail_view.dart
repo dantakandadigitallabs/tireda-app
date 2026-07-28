@@ -189,8 +189,29 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
                               ),
                             spaceH(height: 8),
 
-                            // Price
-                            TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                            // Price + Negotiable Badge
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
+                                // Tireda Custom: small "Negotiable" badge, same
+                                // shape/padding as the "Promoted" badge above
+                                // but with primary4 background and no icon.
+                                // Guarded on isJobAd/isPriceOptional too, not
+                                // just isNegotiable, since job ads and
+                                // price-optional ads don't carry a fixed price
+                                // for this to qualify — defensive against any
+                                // stale/malformed data reaching this screen.
+                                if (ad.isNegotiable == true && !ad.isJobAd && ad.isPriceOptional != true) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(color: AppThemeData.primary4, borderRadius: BorderRadius.circular(4)),
+                                    child: Text("Negotiable", style: TextStyle(fontSize: 10, fontFamily: FontFamily.bold, color: Colors.white)),
+                                  ),
+                                ],
+                              ],
+                            ),
 
                             spaceH(height: 12),
                             // Tireda Custom: compact "Chat with the seller" skeleton card.
@@ -486,15 +507,14 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
     );
   }
 
-  // Tireda Custom: navigate directly to the Add Products page — no need to
-  // route through Dashboard's tab-switch logic, since Add Products is a
- // fully self-contained page with its own controller/binding.
+  // Tireda Custom: navigate to the category-picker (Sell) screen — Add Products
+// requires a category argument that only gets set once one is chosen there.
   Future<void> _goToPostAd() async {
     if (FireStoreUtils.getCurrentUid() == null) {
       Get.toNamed(Routes.LOGIN_SCREEN);
       return;
     }
-    Get.toNamed(Routes.ADD_PRODUCTS);
+    Get.toNamed(Routes.SELL_SCREEN);
   }
 
   // ─── Make an Offer Bottom Sheet (moderated sizing) ────────────────────────────
@@ -1135,8 +1155,8 @@ class _AdListingDetailViewState extends State<AdListingDetailView> {
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _goToPostAd,
-        icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Colors.white),
-        label: Text("Post ad like this", style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white)),
+        icon: const Icon(Icons.add_circle_outline_rounded, size: 18, color: Colors.white),
+        label: Text("Post ad like this", style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: Colors.white)),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppThemeData.primary4,
           padding: const EdgeInsets.symmetric(vertical: 10),

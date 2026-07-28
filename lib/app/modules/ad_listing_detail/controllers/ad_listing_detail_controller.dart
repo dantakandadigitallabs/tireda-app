@@ -175,7 +175,7 @@ class AdListingDetailController extends ChangeNotifier {
     }
 
     ShowToastDialog.showLoader("Opening chat...".tr);
-    final chatRoom = await FireStoreUtils.getOrCreateChatRoom(ad: ad, currentUser: Constant.userModel!);
+    final chatRoom = await FireStoreUtils.getOrDraftChatRoom(ad: ad, currentUser: Constant.userModel!);
     ShowToastDialog.closeLoader();
 
     Get.to(() => ChatDetailView(chatRoom: chatRoom));
@@ -211,7 +211,8 @@ class AdListingDetailController extends ChangeNotifier {
     }
 
     ShowToastDialog.showLoader("Sending offer...".tr);
-    final chatRoom = await FireStoreUtils.getOrCreateChatRoom(ad: ad, currentUser: Constant.userModel!);
+    final chatRoom = await FireStoreUtils.getOrDraftChatRoom(ad: ad, currentUser: Constant.userModel!);
+    await FireStoreUtils.persistDraftChatRoom(chatRoom);
 
     final msgId = Constant.getUuid();
     final message = ChatMessageModel(
