@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "928414054579-4qj6oca4j3scpbcghvcsln9hra2nhecu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tireda.app",
+            "certificate_hash": "c957b54d761fd2d4b960a6b02cab93d8184aa90e"
+          }
+        },
+        {
+          "client_id": "928414054579-98n60fv962cr4a4bem1lh8n5st4mbbk1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tireda.app",
+            "certificate_hash": "5c0c361122dfd920743cf5b608b9624bfd2c0659"
+          }
+        },
+        {
           "client_id": "928414054579-rslglpnutscsmtf098bsbmdbhojtf1tl.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

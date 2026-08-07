@@ -19,7 +19,6 @@ class GlobalController extends GetxController {
   @override
   Future<void> onInit() async {
     await getSettingData();
-    notificationInit();
     await getCurrentCurrency();
     _runExpiryChecks();
     super.onInit();
@@ -93,7 +92,7 @@ class GlobalController extends GetxController {
 
   Future<void> notificationInit() async {
     try {
-      await notificationService.initInfo();
+      await notificationService.requestPermissionAndInit();
       String token = await NotificationService.getToken();
 
       final currentUser = FirebaseAuth.instance.currentUser;

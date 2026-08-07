@@ -7,6 +7,7 @@ import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/models/chat_message_model.dart';
 import 'package:eSellify/app/models/chat_room_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
+import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -205,6 +206,9 @@ class ChatDetailController extends GetxController {
   // ─── Media (Image / Video) ─────────────────────────────────────────────────
   Future<void> pickAndSendCamera() async {
     try {
+      final granted = await PermissionService.requestCamera();
+      if (!granted) return;
+
       final picker = ImagePicker();
       final XFile? picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 70, maxWidth: 1200);
       if (picked == null) return;
@@ -216,6 +220,9 @@ class ChatDetailController extends GetxController {
 
   Future<void> pickAndSendMultipleImages() async {
     try {
+      final granted = await PermissionService.requestPhotos();
+      if (!granted) return;
+
       final picker = ImagePicker();
       final List<XFile> picked = await picker.pickMultiImage(imageQuality: 70, maxWidth: 1200);
       if (picked.isEmpty) return;
@@ -227,6 +234,9 @@ class ChatDetailController extends GetxController {
 
   Future<void> pickAndSendVideo() async {
     try {
+      final granted = await PermissionService.requestPhotos();
+      if (!granted) return;
+
       final picker = ImagePicker();
       final XFile? picked = await picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 2));
       if (picked == null) return;

@@ -45,7 +45,7 @@ void main() async {
 
   configLoading();
   Constant.getAddress();
-  NotificationService().initInfo();
+  NotificationService().initFirebaseCore();
   runApp(const MyApp());
   // Tireda Custom: moved AdService.init() to after runApp() and made it
 // fire-and-forget (was previously awaited mid-startup, blocking first frame

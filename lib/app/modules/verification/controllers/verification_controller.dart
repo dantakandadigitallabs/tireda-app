@@ -12,6 +12,7 @@ import 'package:eSellify/app/models/verification_document_model.dart';
 import 'package:eSellify/app/models/verification_request_model.dart';
 import 'package:eSellify/app/models/user_model.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
+import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:eSellify/utils/notifications/send_notification.dart';
 
 class VerificationController extends GetxController {
@@ -112,6 +113,9 @@ class VerificationController extends GetxController {
 
   Future<void> pickFrontImage(String documentId) async {
     try {
+      final granted = await PermissionService.requestPhotos();
+      if (!granted) return;
+
       final XFile? image = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
       if (image != null) {
         frontImages[documentId] = image.path;
@@ -123,6 +127,9 @@ class VerificationController extends GetxController {
 
   Future<void> pickBackImage(String documentId) async {
     try {
+      final granted = await PermissionService.requestPhotos();
+      if (!granted) return;
+
       final XFile? image = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
       if (image != null) {
         backImages[documentId] = image.path;

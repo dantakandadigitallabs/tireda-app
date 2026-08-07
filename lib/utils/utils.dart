@@ -2,6 +2,7 @@
 
 import 'dart:developer' as developer;
 
+import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 
@@ -15,16 +16,9 @@ class Utils {
         serviceEnabled = await Geolocator.isLocationServiceEnabled();
       }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw 'Location permissions are denied';
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw 'Location permissions are permanently denied, we cannot request permissions.';
+      final granted = await PermissionService.requestLocation();
+      if (!granted) {
+        throw 'Location permissions are denied';
       }
 
       return await Geolocator.getCurrentPosition();

@@ -17,6 +17,7 @@ import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart
 import 'package:eSellify/app/routes/app_pages.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/openai_service.dart';
+import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -492,6 +493,15 @@ class AddProductsController extends GetxController {
   // ─── Image pickers ───────────────────────────────────────
 
   Future<void> pickMainImage({required ImageSource source}) async {
+    final bool granted = source == ImageSource.camera
+        ? await PermissionService.requestCamera()
+        : await PermissionService.requestPhotos();
+
+    if (!granted) {
+      Get.back();
+      return;
+    }
+
     final XFile? image = await imagePicker.pickImage(
       source: source,
       imageQuality: 80,
@@ -513,11 +523,17 @@ class AddProductsController extends GetxController {
   }
 
   Future<void> pickFileForField(String fieldId) async {
+    final granted = await PermissionService.requestPhotos();
+    if (!granted) return;
+
     final XFile? image = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (image != null) selectedFileValues[fieldId] = File(image.path);
   }
 
   Future<void> pickOtherImages() async {
+    final granted = await PermissionService.requestPhotos();
+    if (!granted) return;
+
     final List<XFile> images = await imagePicker.pickMultiImage(
       imageQuality: 60,
       maxWidth: 1600,

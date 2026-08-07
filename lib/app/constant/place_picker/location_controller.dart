@@ -4,6 +4,7 @@ import 'dart:developer';
 
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/place_picker/selected_location_model.dart';
+import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
 import 'package:get/get.dart';
@@ -35,6 +36,12 @@ class LocationController extends GetxController {
   }
 
   Future<void> getCurrentLocation() async {
+    final granted = await PermissionService.requestLocation();
+    if (!granted) {
+      address.value = "Location permission denied. Move the map to select a location.".tr;
+      return;
+    }
+
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );

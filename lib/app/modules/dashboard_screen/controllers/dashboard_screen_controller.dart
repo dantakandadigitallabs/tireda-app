@@ -9,6 +9,7 @@ import 'package:eSellify/app/modules/profile/views/profile_view.dart';
 import 'package:eSellify/app/modules/sell_screen/views/sell_screen_view.dart';
 import 'package:eSellify/app/modules/subscriptions/views/subscriptions_view.dart';
 import 'package:eSellify/app/routes/app_pages.dart';
+import 'package:eSellify/app/constant/global_controller.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
@@ -39,6 +40,13 @@ class DashboardScreenController extends GetxController {
     super.onInit();
     getUserData();
     _listenForUnreadChats(); // Start listening on launch
+
+    // Tireda Custom: notification permission is requested here (after the
+    // Dashboard has actually rendered) instead of at app launch, so the user
+    // sees the app first and gets a contextual rationale before the OS prompt.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<GlobalController>().notificationInit();
+    });
   }
 
   void getUserData() {

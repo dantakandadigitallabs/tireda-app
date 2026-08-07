@@ -7,6 +7,7 @@ import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/osm_place_picker/location_suggestion_model.dart';
 import 'package:eSellify/app/constant/osm_place_picker/osm_selected_location_model.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
+import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -109,6 +110,12 @@ class OsmLocationPickerController extends GetxController {
   Future<void> getCurrentLocation() async {
     isLoading.value = true;
     try {
+      final granted = await PermissionService.requestLocation();
+      if (!granted) {
+        address.value = "Location permission denied. Search or move the map to select a location.".tr;
+        return;
+      }
+
       await getPackageInfo();
       Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.high));
 

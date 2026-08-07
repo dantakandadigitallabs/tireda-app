@@ -4,7 +4,9 @@ import 'package:eSellify/utils/notifications/notification_router.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessageBackgroundHandle(RemoteMessage message) async {
@@ -20,10 +22,23 @@ class NotificationService {
 
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  Future<void> initInfo() async {
+  /// Non-prompting Firebase Messaging setup. Safe to call at app launch,
+  /// before the user has seen any UI — does not trigger the OS permission dialog.
+  Future<void> initFirebaseCore() async {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
+    FirebaseMessaging.onBackgroundMessage(firebaseMessageBackgroundHandle);
+  }
+
+  /// Requests notification permission with an in-app rationale shown first.
+  /// Tireda Custom: moved out of app-launch (main.dart) to right after the
+  /// Dashboard renders, so the user sees the app before being asked — avoids
+  /// Play Store's "permission requested without context" flag.
+  Future<void> requestPermissionAndInit() async {
     final messaging = FirebaseMessaging.instance;
 
-    await messaging.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
+    final shouldProceed = await _showNotificationRationale();
+    if (!shouldProceed) return;
 
     var request = await messaging.requestPermission(
       alert: true,
@@ -82,9 +97,6 @@ class NotificationService {
       await androidPlugin?.createNotificationChannel(orderChannel);
       await androidPlugin?.createNotificationChannel(defaultChannel);
 
-      // Background handler
-      FirebaseMessaging.onBackgroundMessage(firebaseMessageBackgroundHandle);
-
       // ✅ FIX: Wait for APNS token (iOS only)
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
         String? apnsToken;
@@ -121,6 +133,29 @@ class NotificationService {
 
       setupInteractedMessage();
     }
+  }
+
+  Future<bool> _showNotificationRationale() async {
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Stay Updated'),
+        content: const Text(
+          'Tireda would like to send you notifications for new messages, offers, and updates on your ads.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Not Now'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+    return result ?? false;
   }
 
   Future<void> setupInteractedMessage() async {
