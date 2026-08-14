@@ -28,8 +28,11 @@ class SellScreenController extends GetxController {
     final list = allCategories.where((e) {
       return (e.parentCategoryId ?? "").toString().trim() == parentId.toString().trim();
     }).toList();
-    // Tireda Custom: alphabetical sort, case-insensitive
-    list.sort((a, b) => (a.categoryName ?? '').toLowerCase().compareTo((b.categoryName ?? '').toLowerCase()));
+    // Tireda Custom: alphabetical sort, case-insensitive.
+    // Tireda Custom Merge (eSellify 1.5) fix: sort by the locale-resolved
+    // display name so ordering matches what SellSubCategoryScreen shows and
+    // searches against (same fix applied to SubCategoryController).
+    list.sort((a, b) => a.categoryNameFor(Get.locale?.languageCode).toLowerCase().compareTo(b.categoryNameFor(Get.locale?.languageCode).toLowerCase()));
     return list;
   }
 
@@ -40,7 +43,8 @@ class SellScreenController extends GetxController {
 
     final uid = FireStoreUtils.getCurrentUid();
     if (uid == null) {
-      ShowToastDialog.showError("Please login to post an ad");
+      // Tireda Custom Merge (eSellify 1.5): localized toast.
+      ShowToastDialog.showError("Please login to post an ad".tr);
       return false;
     }
 
@@ -49,7 +53,8 @@ class SellScreenController extends GetxController {
 
     if (activeSub == null) {
       // No active subscription — redirect to purchase
-      ShowToastDialog.showWarning("You need a subscription to post ads");
+      // Tireda Custom Merge (eSellify 1.5): localized toast.
+      ShowToastDialog.showWarning("You need a subscription to post ads".tr);
       Get.to(() => const SubscriptionsView());
       return false;
     }
@@ -58,7 +63,11 @@ class SellScreenController extends GetxController {
     if (activeSub.isItemLimitUnlimited != true) {
       final activeAdCount = await FireStoreUtils.countUserActiveAds(uid);
       if (activeAdCount >= (activeSub.adLimit ?? 0)) {
-        ShowToastDialog.showError("You have $activeAdCount active ads (limit: ${activeSub.adLimit}). Please upgrade your plan.");
+        // Tireda Custom Merge (eSellify 1.5): localization key with params
+        // instead of a hardcoded interpolated string. Requires
+        // "active_ads_limit_message" to exist in the translation files with
+        // {count} and {limit} placeholders — confirm before shipping.
+        ShowToastDialog.showError("active_ads_limit_message".trParams({"count": "$activeAdCount", "limit": "${activeSub.adLimit}"}));
         Get.to(() => const SubscriptionsView());
         return false;
       }

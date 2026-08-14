@@ -45,13 +45,13 @@ class MyReportsController extends GetxController {
   /// Navigate to the reported ad's detail screen
   Future<void> openReportedAd(String? adId) async {
     if (adId == null) return;
-    ShowToastDialog.showLoader("Loading ad...");
+    ShowToastDialog.showLoader("Loading ad...".tr);
     final ad = await FireStoreUtils.getAdById(adId);
     ShowToastDialog.closeLoader();
     if (ad != null) {
       goToAdDetail(ad);
     } else {
-      ShowToastDialog.showError("This ad is no longer available");
+      ShowToastDialog.showError("This ad is no longer available".tr);
     }
   }
 }

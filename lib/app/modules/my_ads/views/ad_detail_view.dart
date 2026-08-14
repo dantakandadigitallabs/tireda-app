@@ -14,8 +14,6 @@ import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/expandable_text.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/image_preview_dialog.dart';
-import 'package:eSellify/widgets/watermarked_image.dart';
 import 'package:eSellify/widgets/map_view_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
@@ -72,17 +70,18 @@ class _AdDetailBody extends StatelessWidget {
                   Container(
                     width: 64,
                     height: 64,
-                    decoration: BoxDecoration(color: AppThemeData.danger50, shape: BoxShape.circle), // Removed const
-                    child: Icon(Icons.delete_outline_rounded, color: AppThemeData.danger300, size: 32), // Removed const
+                    decoration: BoxDecoration(color: AppThemeData.danger50, shape: BoxShape.circle),
+                    child: Icon(Icons.delete_outline_rounded, color: AppThemeData.danger300, size: 32),
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    "Delete Ad?",
+                    "Delete Ad?".tr,
                     style: TextStyle(fontSize: 20, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                   ),
                   const SizedBox(height: 10),
+                  // Tireda Custom Merge (eSellify 1.5): localized title.
                   Text(
-                    "This will permanently delete your ad\n\"${ad.title ?? 'Untitled'}\"\nThis action cannot be undone.",
+                    "${'This will permanently delete your ad'.tr}\n\"${ad.titleFor(Get.locale?.languageCode).isNotEmpty ? ad.titleFor(Get.locale?.languageCode) : 'Untitled'.tr}\"\n${'This action cannot be undone.'.tr}",
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, height: 1.5),
                   ),
@@ -100,7 +99,7 @@ class _AdDetailBody extends StatelessWidget {
                             ),
                             child: Center(
                               child: Text(
-                                "Cancel",
+                                "Cancel".tr,
                                 style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
                               ),
                             ),
@@ -114,10 +113,10 @@ class _AdDetailBody extends StatelessWidget {
                           child: Container(
                             height: 48,
                             decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppThemeData.danger300),
-                            child: Center( // Removed const
+                            child: Center(
                               child: Text(
-                                "Delete",
-                                style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white), // Removed const from Text
+                                "Delete".tr,
+                                style: const TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white),
                               ),
                             ),
                           ),
@@ -158,11 +157,11 @@ class _AdDetailBody extends StatelessWidget {
         backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          "Close Position?",
+          "Close Position?".tr,
           style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
         ),
         content: Text(
-          "This job will no longer accept applications and will be removed from active listings.",
+          "This job will no longer accept applications and will be removed from active listings.".tr,
           style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
         ),
         actions: [
@@ -180,14 +179,14 @@ class _AdDetailBody extends StatelessWidget {
 
     if (confirm != true) return;
 
-    ShowToastDialog.showLoader("Closing position...");
+    ShowToastDialog.showLoader("Closing position...".tr);
     final ok = await FireStoreUtils.updateAdStatus(ad.id!, 'sold', false);
     ShowToastDialog.closeLoader();
     if (ok) {
-      ShowToastDialog.showSuccess("Position closed");
+      ShowToastDialog.showSuccess("Position closed".tr);
       Get.back(result: true);
     } else {
-      ShowToastDialog.showError("Failed to close position. Please try again.");
+      ShowToastDialog.showError("Failed to close position. Please try again.".tr);
     }
   }
 
@@ -202,7 +201,6 @@ class _AdDetailBody extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Ad icon
           Container(
             height: 48,
             width: 48,
@@ -211,22 +209,21 @@ class _AdDetailBody extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                "AD",
-                style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: Color(0xffFF6B35)),
+                "AD".tr,
+                style: const TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: Color(0xffFF6B35)),
               ),
             ),
           ),
           spaceW(width: 16),
-          // Text + button
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Promote your ad, attract\nmore clients and sell faster",
-                  style: TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: Color(0xff37474F), height: 1.4),
+                Text(
+                  "Promote your ad, attract\nmore clients and sell faster".tr,
+                  style: const TextStyle(fontSize: 13, fontFamily: FontFamily.medium, color: Color(0xff37474F), height: 1.4),
                 ),
                 spaceH(height: 10),
                 GestureDetector(
@@ -238,9 +235,9 @@ class _AdDetailBody extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [BoxShadow(color: const Color(0xff00BCD4).withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
                     ),
-                    child: const Text(
-                      "Create Promoted Ad",
-                      style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
+                    child: Text(
+                      "Create Promoted Ad".tr,
+                      style: const TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
                   ),
                 ),
@@ -255,7 +252,6 @@ class _AdDetailBody extends StatelessWidget {
   Widget _buildBottomBar(BuildContext context, bool isDark) {
     final status = (ad.status ?? '').toLowerCase();
 
-    // Reusable Delete Button
     final Widget deleteButton = Expanded(
       child: GestureDetector(
         onTap: () => _deleteAd(context),
@@ -265,9 +261,9 @@ class _AdDetailBody extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppThemeData.danger300, width: 1.5),
           ),
-          child: Center( // Removed const
+          child: Center(
             child: Text(
-              "Delete",
+              "Delete".tr,
               style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.danger300),
             ),
           ),
@@ -284,9 +280,9 @@ class _AdDetailBody extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppThemeData.primary4, width: 1.5),
           ),
-          child: Center( // Removed const
+          child: Center(
             child: Text(
-              "Edit",
+              "Edit".tr,
               style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
             ),
           ),
@@ -294,16 +290,21 @@ class _AdDetailBody extends StatelessWidget {
       ),
     );
 
+    // Tireda Custom Merge (eSellify 1.5 bug fix): this was hardcoded to
+    // _markAsSold and the "Sold Out" label regardless of ad type, even
+    // though _closeJobPosition() existed unused. Now branches on
+    // ad.isJobAd, matching 1.5's logic — job ads close the position
+    // instead of opening the buyer-selection flow.
     final Widget soldOutButton = Expanded(
       child: GestureDetector(
-        onTap: _markAsSold,
+        onTap: ad.isJobAd ? () => _closeJobPosition(context) : _markAsSold,
         child: Container(
           height: 48,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: const Color(0xff4CAF50)),
-          child: Center( // Removed const
+          child: Center(
             child: Text(
-              "Sold Out",
-              style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
+              ad.isJobAd ? "Close Position".tr : "Sold Out".tr,
+              style: const TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
             ),
           ),
         ),
@@ -404,21 +405,21 @@ class _AdDetailBody extends StatelessWidget {
   String _getStatusLabel(String status) {
     switch (status.toLowerCase()) {
       case 'active':
-        return 'Approved';
+        return 'Approved'.tr;
       case 'pending':
-        return 'Under Review';
+        return 'Under Review'.tr;
       case 'sold':
-        return ad.isJobAd ? 'Closed' : 'Sold Out';
+        return ad.isJobAd ? 'Closed'.tr : 'Sold Out'.tr;
       case 'expired':
-        return 'Expired';
+        return 'Expired'.tr;
       case 'inactive':
-        return 'Inactive';
+        return 'Inactive'.tr;
       case 'soft_rejected':
-        return 'Soft Rejected';
+        return 'Soft Rejected'.tr;
       case 'permanent_rejected':
-        return 'Permanent Rejected';
+        return 'Permanent Rejected'.tr;
       case 'resubmitted':
-        return 'Resubmitted';
+        return 'Resubmitted'.tr;
       default:
         return status;
     }
@@ -428,7 +429,6 @@ class _AdDetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     final isDark = themeChange.isDarkTheme();
-    final images = _images;
     final hasLocation = (ad.location?.latitude != null) && (ad.location?.longitude != null);
     final hasCustomFields = (ad.customFields?.isNotEmpty ?? false) && ad.customFields!.any((f) => (f['value']?.toString().trim() ?? '').isNotEmpty);
     final hasDescription = (ad.description?.isNotEmpty ?? false);
@@ -446,7 +446,7 @@ class _AdDetailBody extends StatelessWidget {
               const SizedBox(width: 16),
               Icon(Icons.arrow_back, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, size: 22),
               const SizedBox(width: 4),
-              TextCustom(title: "My Ads", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+              TextCustom(title: "My Ads".tr, fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
             ],
           ),
         ),
@@ -480,15 +480,14 @@ class _AdDetailBody extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Views + Likes indicators
                         Row(
                           children: [
                             Expanded(
-                              child: _StatPill(icon: Icons.remove_red_eye_outlined, label: "Views : ${ad.views ?? 0}", isDark: isDark),
+                              child: _StatPill(icon: Icons.remove_red_eye_outlined, label: "${'Views'.tr} : ${ad.views ?? 0}", isDark: isDark),
                             ),
                             spaceW(width: 12),
                             Expanded(
-                              child: _StatPill(icon: Icons.favorite_border_rounded, label: "Likes : ${ad.likes ?? 0}", isDark: isDark),
+                              child: _StatPill(icon: Icons.favorite_border_rounded, label: "${'Likes'.tr} : ${ad.likes ?? 0}", isDark: isDark),
                             ),
                           ],
                         ),
@@ -505,10 +504,10 @@ class _AdDetailBody extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.flag_outlined, size: 16, color: AppThemeData.danger300), // Removed const
+                                Icon(Icons.flag_outlined, size: 16, color: AppThemeData.danger300),
                                 spaceW(width: 8),
                                 TextCustom(
-                                  title: "${controller.reportCount.value} ${controller.reportCount.value == 1 ? 'report' : 'reports'} on this ad",
+                                  title: "${controller.reportCount.value} ${controller.reportCount.value == 1 ? 'report'.tr : 'reports'.tr} ${'on this ad'.tr}",
                                   fontSize: 12,
                                   fontFamily: FontFamily.medium,
                                   color: AppThemeData.danger300,
@@ -520,11 +519,16 @@ class _AdDetailBody extends StatelessWidget {
                         ),
                         spaceH(height: 16),
 
-                        // Title
-                        TextCustom(title: ad.title ?? 'Untitled', fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                        // Tireda Custom Merge (eSellify 1.5): localized title.
+                        TextCustom(title: ad.titleFor(Get.locale?.languageCode).isNotEmpty ? ad.titleFor(Get.locale?.languageCode) : 'Untitled'.tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                         spaceH(height: 8),
 
-                        // Synchronized Brand Price + Status Chip Layout
+                        // Tireda Custom: PriceFormatter + Negotiable badge —
+                        // correctly handles isNegotiable (a Tireda-only
+                        // field eSellify 1.5 doesn't have). This is the
+                        // canonical price display for this screen; do not
+                        // replace with controller.formatPrice(), which does
+                        // not check isNegotiable.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -540,13 +544,6 @@ class _AdDetailBody extends StatelessWidget {
                                       color: AppThemeData.primary4,
                                     ),
                                   ),
-                                  // Tireda Custom: small "Negotiable" chip.
-                                  // Guarded on isJobAd/isPriceOptional too (not
-                                  // just isNegotiable) since job ads and
-                                  // price-optional ads don't show a fixed
-                                  // price for this to qualify — defensive
-                                  // against any stale/malformed data reaching
-                                  // this screen.
                                   if (ad.isNegotiable == true && !ad.isJobAd && ad.isPriceOptional != true) ...[
                                     spaceW(width: 8),
                                     const _NegotiableBadge(),
@@ -559,7 +556,32 @@ class _AdDetailBody extends StatelessWidget {
                         ),
                         spaceH(height: 12),
 
-                        // Rejection Reason Area
+                        // Tireda Custom Merge (eSellify 1.5): View Applicants
+                        // button for Job ads — was missing in Tireda's merge.
+                        if (ad.isJobAd) ...[
+                          GestureDetector(
+                            onTap: () => Get.toNamed(Routes.JOB_APPLICANTS, arguments: {'adId': ad.id, 'adTitle': ad.title}),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppThemeData.primary4.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppThemeData.primary4, width: 1.2),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.people_alt_outlined, size: 18, color: AppThemeData.primary4),
+                                  spaceW(width: 8),
+                                  TextCustom(title: "View Applicants".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
+                                ],
+                              ),
+                            ),
+                          ),
+                          spaceH(height: 12),
+                        ],
+
                         if ((ad.status == 'soft_rejected' || ad.status == 'permanent_rejected') && ad.rejectionReason != null && ad.rejectionReason!.isNotEmpty)
                           Container(
                             width: double.infinity,
@@ -573,13 +595,13 @@ class _AdDetailBody extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.info_outline, size: 18, color: AppThemeData.danger300), // Removed const
+                                Icon(Icons.info_outline, size: 18, color: AppThemeData.danger300),
                                 spaceW(width: 8),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      TextCustom(title: "Rejection Reason", fontSize: 12, fontFamily: FontFamily.bold, color: AppThemeData.danger300), // Removed const
+                                      TextCustom(title: "Rejection Reason".tr, fontSize: 12, fontFamily: FontFamily.bold, color: AppThemeData.danger300),
                                       spaceH(height: 2),
                                       TextCustom(title: ad.rejectionReason!, fontSize: 13, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 5),
                                     ],
@@ -589,12 +611,11 @@ class _AdDetailBody extends StatelessWidget {
                             ),
                           ),
 
-                        // Location details row
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            Icon(Icons.location_on_outlined, size: 16, color: AppThemeData.primary4), // Removed const
+                            Icon(Icons.location_on_outlined, size: 16, color: AppThemeData.primary4),
                             spaceW(width: 4),
                             Expanded(
                               child: TextCustom(title: ad.address.toString(), fontSize: 14, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 3),
@@ -603,23 +624,23 @@ class _AdDetailBody extends StatelessWidget {
                           ],
                         ),
 
-                        // Custom Fields Section
                         if (hasCustomFields) ...[_Divider(isDark: isDark), _CustomFieldsSection(customFields: ad.customFields!, isDark: isDark)],
 
-                        // Description Section
+                        // Tireda Custom Merge (eSellify 1.5): localized
+                        // description via ExpandableText, replacing the
+                        // previous flat maxLine:100 TextCustom.
                         if (hasDescription) ...[
                           _Divider(isDark: isDark),
                           TextCustom(
-                            title: "Description",
+                            title: "Description".tr,
                             fontSize: 14,
                             fontFamily: FontFamily.medium,
                             color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                           ),
                           spaceH(height: 6),
-                          TextCustom(title: ad.description!, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, maxLine: 100),
+                          ExpandableText(text: ad.descriptionFor(Get.locale?.languageCode), color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, fontSize: 13),
                         ],
 
-                        // Full Map Block
                         if (hasLocation) ...[
                           _Divider(isDark: isDark),
                           GestureDetector(
@@ -641,13 +662,13 @@ class _AdDetailBody extends StatelessWidget {
                                   children: [
                                     Expanded(
                                       child: TextCustom(
-                                        title: "Location",
+                                        title: "Location".tr,
                                         fontSize: 15,
                                         fontFamily: FontFamily.bold,
                                         color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                                       ),
                                     ),
-                                    Icon(Icons.open_in_new, size: 16, color: AppThemeData.primary4), // Removed const
+                                    Icon(Icons.open_in_new, size: 16, color: AppThemeData.primary4),
                                   ],
                                 ),
                                 if (ad.address != null && ad.address!.isNotEmpty) ...[
@@ -655,7 +676,7 @@ class _AdDetailBody extends StatelessWidget {
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(Icons.location_on, size: 16, color: AppThemeData.primary4), // Removed const
+                                      Icon(Icons.location_on, size: 16, color: AppThemeData.primary4),
                                       spaceW(width: 6),
                                       Expanded(
                                         child: TextCustom(title: ad.address!, fontSize: 13, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7, maxLine: 3),
@@ -706,7 +727,7 @@ class _NegotiableBadge extends StatelessWidget {
         border: Border.all(color: AppThemeData.primary4.withOpacity(0.3)),
       ),
       child: Text(
-        "Negotiable",
+        "Negotiable".tr,
         style: TextStyle(fontSize: 12, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
       ),
     );
@@ -715,6 +736,8 @@ class _NegotiableBadge extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IMAGE GALLERY (With Ported Fullscreen Tap-To-Zoom Support)
+// Tireda Custom: custom fullscreen zoom viewer kept as-is (no watermark) —
+// deliberate choice over 1.5's ImagePreviewDialog+WatermarkedImage.
 // ─────────────────────────────────────────────────────────────────────────────
 class _ImageGallery extends StatelessWidget {
   final List<String> images;
@@ -959,25 +982,25 @@ class _StatusChip extends StatelessWidget {
     switch ((status ?? '').toLowerCase()) {
       case 'active':
       case 'approved':
-        return 'Approved';
+        return 'Approved'.tr;
       case 'pending':
       case 'under_review':
-        return 'Under Review';
+        return 'Under Review'.tr;
       case 'sold':
       case 'sold_out':
-        return 'Sold Out';
+        return ad.isJobAd ? 'Closed'.tr : 'Sold Out'.tr;
       case 'expired':
-        return 'Expired';
+        return 'Expired'.tr;
       case 'inactive':
-        return 'Inactive';
+        return 'Inactive'.tr;
       case 'soft_rejected':
-        return 'Soft Rejected';
+        return 'Soft Rejected'.tr;
       case 'permanent_rejected':
-        return 'Permanent Rejected';
+        return 'Permanent Rejected'.tr;
       case 'resubmitted':
-        return 'Resubmitted';
+        return 'Resubmitted'.tr;
       default:
-        return isActive == true ? 'Approved' : 'Inactive';
+        return isActive == true ? 'Approved'.tr : 'Inactive'.tr;
     }
   }
 }
@@ -1015,7 +1038,6 @@ class _CustomFieldsSection extends StatelessWidget {
     final items = customFields.where((f) => (f['value']?.toString().trim() ?? '').isNotEmpty).toList();
     if (items.isEmpty) return const SizedBox.shrink();
 
-    // Build rows of 2
     final List<Widget> rows = [];
     for (int i = 0; i < items.length; i += 2) {
       rows.add(
@@ -1117,33 +1139,6 @@ class _FieldCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INLINE MAP
-// ─────────────────────────────────────────────────────────────────────────────
-class _InlineMap extends StatelessWidget {
-  final double latitude;
-  final double longitude;
-
-  const _InlineMap({required this.latitude, required this.longitude});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final uri = Uri.parse('https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude&zoom=15');
-        if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
-      },
-      child: MapViewWidget(
-        latitude: latitude,
-        longitude: longitude,
-        height: 80,
-        width: 130,
-        borderRadius: 10,
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // WHO BOUGHT?
 // ─────────────────────────────────────────────────────────────────────────────
 class WhoBoughtScreen extends StatelessWidget {
@@ -1166,7 +1161,7 @@ class WhoBoughtScreen extends StatelessWidget {
           onPressed: () => Get.back(),
           icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
         ),
-        title: TextCustom(title: "Who bought?", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+        title: TextCustom(title: "Who bought?".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
       ),
       body: Column(
         children: [
@@ -1186,12 +1181,13 @@ class WhoBoughtScreen extends StatelessWidget {
                     height: 56,
                     width: 56,
                     color: isDark ? AppThemeData.grey8 : AppThemeData.grey3,
-                    child: Icon(Icons.image, color: AppThemeData.grey5), // Removed const
+                    child: Icon(Icons.image, color: AppThemeData.grey5),
                   ),
                 ),
                 spaceW(width: 12),
+                // Tireda Custom Merge (eSellify 1.5): localized title.
                 Expanded(
-                  child: TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
+                  child: TextCustom(title: ad.titleFor(Get.locale?.languageCode), fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
                 ),
                 TextCustom(title: PriceFormatter.format(ad), fontSize: 14, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ],
@@ -1222,7 +1218,7 @@ class WhoBoughtScreen extends StatelessWidget {
                           ),
                           child: Center(
                             child: TextCustom(
-                              title: "None of above",
+                              title: "None of above".tr,
                               fontSize: 14,
                               fontFamily: FontFamily.semiBold,
                               color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey3 : AppThemeData.grey8),
@@ -1250,7 +1246,7 @@ class WhoBoughtScreen extends StatelessWidget {
                               radius: 24,
                               backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.primary4.withValues(alpha: 0.15),
                               backgroundImage: buyerProfile.isNotEmpty ? CachedNetworkImageProvider(buyerProfile) : null,
-                              child: buyerProfile.isEmpty ? Icon(Icons.person, size: 24, color: isDark ? AppThemeData.grey5 : AppThemeData.primary4) : null, // Removed const
+                              child: buyerProfile.isEmpty ? Icon(Icons.person, size: 24, color: isDark ? AppThemeData.grey5 : AppThemeData.primary4) : null,
                             ),
                             spaceW(width: 14),
                             Expanded(
@@ -1295,9 +1291,9 @@ class WhoBoughtScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      "Mark As Sold Out",
-                      style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                    child: Text(
+                      "Mark As Sold Out".tr,
+                      style: const TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
                   ),
                 );

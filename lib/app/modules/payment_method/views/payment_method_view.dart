@@ -1,5 +1,4 @@
 import 'package:eSellify/app/constant/constants.dart';
-import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
@@ -11,7 +10,6 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:hugeicons/hugeicons.dart';
-
 import '../controllers/payment_method_controller.dart';
 
 class PaymentMethodView extends GetView<PaymentMethodController> {
@@ -26,7 +24,14 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
       init: PaymentMethodController(),
       builder: (controller) {
         final pkg = controller.package;
-        final packageName = pkg.name?.values.firstOrNull ?? 'Package';
+        // Tireda Custom Merge (eSellify 1.5): localize the package name via
+        // the model's helper — falls back through
+        // `map[code] → default → en → first non-empty` so the header
+        // always matches the app's selected language.
+        final packageName = () {
+          final n = pkg.nameFor(Get.locale?.languageCode);
+          return n.isNotEmpty ? n : 'Package'.tr;
+        }();
         final originalPrice = pkg.price ?? 0;
         final finalPrice = pkg.finalPrice ?? originalPrice;
         final hasDiscount = (pkg.discountPercentage ?? 0) > 0;
@@ -34,7 +39,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
 
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "Payment", isBack: true),
+          appBar: UiInterface.customAppBar(context, themeChange, "Payment".tr, isBack: true),
           body: Column(
             children: [
               Expanded(
@@ -76,7 +81,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                       ),
                                       spaceH(height: 4),
                                       Text(
-                                        pkg.type == 'featured_ads' ? 'Featured Ads Package' : 'Ad Listing Package',
+                                        pkg.type == 'featured_ads' ? 'Featured Ads Package'.tr : 'Ad Listing Package'.tr,
                                         style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8)),
                                       ),
                                     ],
@@ -104,7 +109,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
                                     child: Text(
-                                      '${pkg.discountPercentage!.toInt()}% OFF',
+                                      '${pkg.discountPercentage!.toInt()}% ${'OFF'.tr}',
                                       style: const TextStyle(fontSize: 11, fontFamily: FontFamily.bold, color: Colors.white),
                                     ),
                                   ),
@@ -114,6 +119,9 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                             spaceH(height: 8),
                             Row(
                               children: [
+                                // Tireda Custom: HugeIcons — 1.5 base reverted
+                                // these to plain Material Icons; not taken,
+                                // conflicts with the app-wide HugeIcons standard.
                                 HugeIcon(
                                   icon: HugeIcons.strokeRoundedTime02,
                                   color: Colors.white.withValues(alpha: 0.8),
@@ -121,7 +129,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                 ),
                                 spaceW(width: 6),
                                 Text(
-                                  pkg.isUnlimited == true ? 'Unlimited Duration' : '${pkg.packageDuration ?? 0} Days',
+                                  pkg.isUnlimited == true ? 'Unlimited Duration'.tr : '${pkg.packageDuration ?? 0} ${'Days'.tr}',
                                   style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8)),
                                 ),
                                 spaceW(width: 16),
@@ -132,7 +140,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                 ),
                                 spaceW(width: 6),
                                 Text(
-                                  pkg.isItemLimitUnlimited == true ? 'Unlimited Ads' : '${pkg.itemLimit ?? 0} Ads',
+                                  pkg.isItemLimitUnlimited == true ? 'Unlimited Ads'.tr : '${pkg.itemLimit ?? 0} ${'Ads'.tr}',
                                   style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8)),
                                 ),
                               ],
@@ -143,7 +151,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                       spaceH(height: 24),
 
                       // Payment methods
-                      TextCustom(title: "Select Payment Method", fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                      TextCustom(title: "Select Payment Method".tr, fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                       spaceH(height: 12),
 
                       if (controller.activeGateways.isEmpty)
@@ -159,7 +167,7 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                 size: 48.0,
                               ),
                               spaceH(height: 12),
-                              TextCustom(title: "No payment methods available", fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                              TextCustom(title: "No payment methods available".tr, fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             ],
                           ),
                         )
@@ -208,20 +216,18 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                                         ),
                                       ),
                                     ),
-
                                     spaceW(width: 14),
-
+                                    // Gateway name — pulled from the
+                                    // admin's Payment Methods settings.
                                     Expanded(
-                                      child: Text(
-                                        gateway['name'] ?? gateway['key'].toString().capitalizeFirst ?? 'Payment Method',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontFamily: FontFamily.medium,
-                                          color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                                        ),
+                                      child: TextCustom(
+                                        title: (gateway['name'] ?? gateway['key'].toString().capitalizeFirst ?? 'Payment Method'.tr).toString(),
+                                        fontSize: 15,
+                                        fontFamily: FontFamily.semiBold,
+                                        color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
+                                        maxLine: 1,
                                       ),
                                     ),
-
                                     // Radio
                                     Container(
                                       height: 22,
@@ -269,14 +275,14 @@ class PaymentMethodView extends GetView<PaymentMethodController> {
                       children: [
                         const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                         spaceW(width: 12),
-                        const Text(
-                          "Processing...",
-                          style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                        Text(
+                          "Processing...".tr,
+                          style: const TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
                         ),
                       ],
                     )
                         : Text(
-                      "Pay $currencySymbol${finalPrice.toStringAsFixed(2)}",
+                      "${'Pay'.tr} $currencySymbol${finalPrice.toStringAsFixed(2)}",
                       style: const TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
                     ),
                   ),

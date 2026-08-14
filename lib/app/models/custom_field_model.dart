@@ -33,9 +33,24 @@ class CustomFieldModel {
     this.categoryPaths,
   });
 
+  /// Optional per-language name map (see [nameFor]).
+  /// Only populated when the admin wrote translations.
+  Map<String, String>? nameTranslations;
+
   CustomFieldModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
-    name = json['name'];
+    final rawName = json['name'];
+    if (rawName is Map) {
+      nameTranslations = <String, String>{};
+      Map<String, dynamic>.from(rawName).forEach((k, v) {
+        if (v is String) nameTranslations![k] = v;
+      });
+      name = (nameTranslations!['default'] ?? '').isNotEmpty
+          ? nameTranslations!['default']
+          : (nameTranslations!['en'] ?? '');
+    } else {
+      name = rawName is String ? rawName : null;
+    }
     type = json['type'];
     required = json['required'] ?? false;
     active = json['active'] ?? false;
@@ -51,7 +66,9 @@ class CustomFieldModel {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
-    data['name'] = name;
+    data['name'] = (nameTranslations != null && nameTranslations!.isNotEmpty)
+        ? nameTranslations
+        : name;
     data['type'] = type;
     data['required'] = required;
     data['active'] = active;
@@ -63,5 +80,14 @@ class CustomFieldModel {
     data['createdAt'] = createdAt;
     data['updatedAt'] = updatedAt;
     return data;
+  }
+
+  /// Localised field name — requested code → `default` → `en` → flat.
+  String nameFor(String? code) {
+    final map = nameTranslations;
+    if (map != null && code != null && (map[code] ?? '').isNotEmpty) return map[code]!;
+    if (map != null && (map['default'] ?? '').isNotEmpty) return map['default']!;
+    if (map != null && (map['en'] ?? '').isNotEmpty) return map['en']!;
+    return name ?? '';
   }
 }

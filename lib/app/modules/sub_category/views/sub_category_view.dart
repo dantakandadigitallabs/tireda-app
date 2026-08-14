@@ -8,7 +8,10 @@ import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/network_image_widget.dart';
+// Tireda Custom Merge (eSellify 1.5): replaces NetworkImageWidget — confirm
+// this file exists in Tireda's widgets/ dir before building; if not, pull
+// it in from the 1.5 tree alongside this file.
+import 'package:eSellify/widgets/category_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -57,7 +60,8 @@ class SubCategoryView extends StatelessWidget {
     return Obx(
           () => Scaffold(
         backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-        appBar: UiInterface.customAppBar(context, themeChange, controller.categoryModel.value.categoryName.toString()),
+        // Tireda Custom Merge (eSellify 1.5): localized category name.
+        appBar: UiInterface.customAppBar(context, themeChange, controller.categoryModel.value.categoryNameFor(Get.locale?.languageCode)),
         body: Column(
           children: [
             const Center(child: AdBannerWidget()),
@@ -173,8 +177,10 @@ class SubCategoryView extends StatelessWidget {
 
   // Tireda Custom: "View all {CategoryName}" — jumps straight to ads under this category,
   // irrespective of which subcategory/brand they belong to.
+  // Tireda Custom Merge (eSellify 1.5): localized category name in label.
   Widget _buildViewAllButton(SubCategoryController controller, bool isDark) {
     final cat = controller.categoryModel.value;
+    final name = cat.categoryNameFor(Get.locale?.languageCode);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: InkWell(
@@ -196,7 +202,7 @@ class SubCategoryView extends StatelessWidget {
               spaceW(width: 10),
               Expanded(
                 child: TextCustom(
-                  title: "View all ${cat.categoryName ?? ''}".tr,
+                  title: "View all $name".tr,
                   fontSize: 14,
                   fontFamily: FontFamily.semiBold,
                   color: AppThemeData.primary4,
@@ -249,15 +255,18 @@ class SubCategoryView extends StatelessWidget {
                           height: 48,
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
-                          child: NetworkImageWidget(imageUrl: subCategory.image.toString(), fit: BoxFit.contain),
+                          // Tireda Custom Merge (eSellify 1.5): CategoryImageWidget
+                          // replaces NetworkImageWidget (adds fallback icon).
+                          child: CategoryImageWidget(imageUrl: subCategory.image.toString(), isDark: isDark, radius: 6, fallbackIconSize: 20),
                         ),
                         spaceW(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Tireda Custom Merge (eSellify 1.5): localized name.
                               TextCustom(
-                                title: subCategory.categoryName.toString(),
+                                title: subCategory.categoryNameFor(Get.locale?.languageCode),
                                 fontSize: 14,
                                 fontFamily: FontFamily.medium,
                                 color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
@@ -265,7 +274,8 @@ class SubCategoryView extends StatelessWidget {
                               if (subCategory.description != null && subCategory.description!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 2),
-                                  child: TextCustom(title: subCategory.description!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                                  // Tireda Custom Merge (eSellify 1.5): localized description.
+                                  child: TextCustom(title: subCategory.descriptionFor(Get.locale?.languageCode), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
                                 ),
                             ],
                           ),
@@ -286,6 +296,10 @@ class SubCategoryView extends StatelessWidget {
 
   /// N-level navigation: check if category has children → drill deeper, else → show ads
   Future<void> _onCategoryTap(SubCategoryController controller, CategoryModel category) async {
+    // Tireda Custom: guard against a null/empty id before hitting Firestore
+    // (1.5 base dropped this and calls category.id! directly — kept here
+    // since AdModel-adjacent category docs can arrive without an id in
+    // some edge flows).
     if (category.id == null || category.id!.isEmpty) {
       ShowToastDialog.showError("This category is unavailable right now.".tr);
       return;

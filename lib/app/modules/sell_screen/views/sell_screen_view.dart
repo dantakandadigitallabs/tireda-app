@@ -6,7 +6,7 @@ import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/network_image_widget.dart';
+import 'package:eSellify/widgets/category_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 
@@ -26,7 +26,7 @@ class SellScreenView extends GetView<SellScreenController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "What are you offering ?", isBack: false),
+          appBar: UiInterface.customAppBar(context, themeChange, "What are you offering ?".tr, isBack: false),
           body: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: SingleChildScrollView(
@@ -76,13 +76,15 @@ class SellScreenView extends GetView<SellScreenController> {
                                   color: themeChange.isDarkTheme() ? AppThemeData.grey9 : AppThemeData.grey2,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
+                                // Tireda Custom Merge (eSellify 1.5): CategoryImageWidget replaces NetworkImageWidget.
+                                child: CategoryImageWidget(imageUrl: category.image.toString(), isDark: themeChange.isDarkTheme(), radius: 6, fallbackIconSize: 20),
                               ),
                               spaceH(height: 8),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 6),
                                 child: TextCustom(
-                                  title: category.categoryName.toString(),
+                                  // Tireda Custom Merge (eSellify 1.5): localized name.
+                                  title: category.categoryNameFor(Get.locale?.languageCode),
                                   fontSize: 12,
                                   fontFamily: FontFamily.medium,
                                   maxLine: 2,
@@ -149,9 +151,11 @@ class _CategoryShimmerGrid extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SELL SUB CATEGORY SCREEN — Tireda Custom: converted to StatefulWidget to hold
-// local search state. List is already sorted alphabetically by
-// SellScreenController.getSubCategory(). Search bar only shown when the list
-// is long enough to need it (>10 items), matching the browsing subcategory UX.
+// local search state (eSellify 1.5 reverted this to a plain StatelessWidget
+// with no search — intentionally NOT taken). List is already sorted
+// alphabetically (locale-aware) by SellScreenController.getSubCategory().
+// Search bar only shown when the list is long enough to need it (>10 items),
+// matching the browsing subcategory UX.
 // ─────────────────────────────────────────────────────────────────────────────
 class SellSubCategoryScreen extends StatefulWidget {
   final CategoryModel parentCategory;
@@ -184,15 +188,18 @@ class _SellSubCategoryScreenState extends State<SellSubCategoryScreen> {
     final controller = Get.find<SellScreenController>();
     final allSubCategories = controller.getSubCategory(widget.parentCategory.id!);
 
+    // Tireda Custom Merge (eSellify 1.5): filter on the locale-resolved
+    // display name, matching what's actually shown in the list below.
     final subCategories = _query.trim().isEmpty
         ? allSubCategories
-        : allSubCategories.where((c) => (c.categoryName ?? '').toLowerCase().contains(_query.toLowerCase())).toList();
+        : allSubCategories.where((c) => c.categoryNameFor(Get.locale?.languageCode).toLowerCase().contains(_query.toLowerCase())).toList();
 
     final shouldShowSearch = allSubCategories.length > 10;
 
     return Scaffold(
       backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-      appBar: UiInterface.customAppBar(context, themeChange, widget.parentCategory.categoryName.toString()),
+      // Tireda Custom Merge (eSellify 1.5): localized name.
+      appBar: UiInterface.customAppBar(context, themeChange, widget.parentCategory.categoryNameFor(Get.locale?.languageCode)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -241,7 +248,8 @@ class _SellSubCategoryScreenState extends State<SellSubCategoryScreen> {
                               height: 48,
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2, borderRadius: BorderRadius.circular(10)),
-                              child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
+                              // Tireda Custom Merge (eSellify 1.5): CategoryImageWidget replaces NetworkImageWidget.
+                              child: CategoryImageWidget(imageUrl: category.image.toString(), isDark: isDark, radius: 6, fallbackIconSize: 20),
                             ),
                             spaceW(width: 14),
                             Expanded(
@@ -249,7 +257,8 @@ class _SellSubCategoryScreenState extends State<SellSubCategoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   TextCustom(
-                                    title: category.categoryName.toString(),
+                                    // Tireda Custom Merge (eSellify 1.5): localized name.
+                                    title: category.categoryNameFor(Get.locale?.languageCode),
                                     fontSize: 15,
                                     fontFamily: FontFamily.medium,
                                     color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
@@ -258,7 +267,8 @@ class _SellSubCategoryScreenState extends State<SellSubCategoryScreen> {
                                     Padding(
                                       padding: const EdgeInsets.only(top: 2),
                                       child: TextCustom(
-                                        title: category.description!,
+                                        // Tireda Custom Merge (eSellify 1.5): localized description.
+                                        title: category.descriptionFor(Get.locale?.languageCode),
                                         fontSize: 12,
                                         color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
                                         maxLine: 1,

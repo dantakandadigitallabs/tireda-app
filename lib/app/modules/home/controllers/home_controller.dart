@@ -44,6 +44,12 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     getData();
+    // Tireda Custom: notification stream subscription moved out of getData()
+    // and into onInit() so it only ever subscribes once. Previously it was
+    // inside getData(), which is also called by pull-to-refresh — meaning
+    // every refresh cancelled and recreated the Firestore stream for no
+    // reason (the badge doesn't need "refreshing", it's already live).
+    _listenToUnreadNotifications();
     super.onInit();
   }
 
@@ -60,12 +66,12 @@ class HomeController extends GetxController {
     loadFeatureSections();
     loadBanners();
     loadAllAdsPreview();
-    _listenToUnreadNotifications();
   }
 
   /// Listens to the notifications stream and updates [hasUnreadNotifications]
   /// reactively. Uses the same stream as NotificationsController so no
   /// extra Firestore reads are introduced beyond what already exists.
+  /// Tireda Custom: called once from onInit only — see note above.
   void _listenToUnreadNotifications() {
     final uid = FireStoreUtils.getCurrentUid();
     if (uid == null) return;

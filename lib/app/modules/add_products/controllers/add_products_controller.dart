@@ -7,6 +7,7 @@ import 'package:eSellify/app/constant/show_toast.dart';
 import 'package:eSellify/app/dependency/geoflutterfire/src/geoflutterfire.dart';
 import 'package:eSellify/app/dependency/geoflutterfire/src/models/point.dart';
 import 'package:eSellify/app/models/ad_model.dart';
+import 'package:eSellify/app/services/localization_service.dart';
 import 'package:eSellify/app/models/category_model.dart';
 import 'package:eSellify/app/models/currency_model.dart';
 import 'package:eSellify/app/models/custom_field_model.dart';
@@ -21,12 +22,66 @@ import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AddProductsController extends GetxController {
   // ─── Step 1 fields ───────────────────────────────────────
   final TextEditingController adTitleController = TextEditingController();
   final TextEditingController adDescriptionController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
+
+  // ─── Multi-language: per-code controllers for title/description ─────
+  /// One controller per supported language code. The `Default` tab uses
+  /// [adTitleController] / [adDescriptionController]; each language tab
+  /// pulls its own controller from these maps (created lazily). At save
+  /// time blank tabs are dropped so we never persist empty translations.
+  final RxMap<String, TextEditingController> titleByLanguage =
+      <String, TextEditingController>{}.obs;
+  final RxMap<String, TextEditingController> descriptionByLanguage =
+      <String, TextEditingController>{}.obs;
+
+  /// Tracks the active language tab (0 = Default, 1..N = language codes
+  /// from `LocalizationService.locales`).
+  final RxInt selectedLanguageIndex = 0.obs;
+
+  /// Admin-configured active languages only — drives both the language tabs
+  /// and the AI translation request.
+  List<String> get supportedLanguageCodes => LocalizationService.activeLanguageCodes.toList();
+
+  /// Ensure a controller exists for each supported code, seeded from
+  /// [seedTitle] / [seedDescription] maps when present (edit mode).
+  void _rebuildLanguageControllers({
+    Map<String, String>? seedTitle,
+    Map<String, String>? seedDescription,
+  }) {
+    for (final code in supportedLanguageCodes) {
+      final t = titleByLanguage.putIfAbsent(code, TextEditingController.new);
+      final d = descriptionByLanguage.putIfAbsent(code, TextEditingController.new);
+      if (seedTitle != null) t.text = seedTitle[code] ?? '';
+      if (seedDescription != null) d.text = seedDescription[code] ?? '';
+    }
+  }
+
+  /// Collapses the Default controller + every language tab into the
+  /// `{ default: ..., en: ..., hi: ..., ... }` map stored on Firestore.
+  /// Rows left blank are omitted; if the Default is blank we borrow the
+  /// first non-empty translation so search / previews always have a value.
+  Map<String, String> _collectTranslations(
+      TextEditingController defaultCtrl,
+      Map<String, TextEditingController> perLang,
+      ) {
+    final out = <String, String>{};
+    for (final entry in perLang.entries) {
+      final t = entry.value.text.trim();
+      if (t.isNotEmpty) out[entry.key] = t;
+    }
+    var def = defaultCtrl.text.trim();
+    if (def.isEmpty) {
+      def = out.values.firstWhere((s) => s.isNotEmpty, orElse: () => '');
+    }
+    if (def.isNotEmpty) out['default'] = def;
+    return out;
+  }
 
   // Job Category salary range (used instead of price when isJobCategory == true)
   final TextEditingController minSalaryController = TextEditingController();
@@ -67,6 +122,14 @@ class AddProductsController extends GetxController {
   // File Input: fieldId → picked File
   RxMap<String, File?> selectedFileValues = <String, File?>{}.obs;
 
+  // File Input: fieldId → original file name (keeps the extension for upload).
+  final Map<String, String> fieldFileNames = {};
+
+  /// File Input: fieldId → URL already stored on the ad being edited. Used so
+  /// an edit that doesn't re-pick the file keeps the previous upload.
+  /// Observable so the picker UI can show/remove the existing file reactively.
+  final RxMap<String, String> existingFieldFileUrls = <String, String>{}.obs;
+
   // ─── Edit mode ───────────────────────────────────────────
   RxBool isEditing = false.obs;
   Rx<AdModel?> editingAd = Rx<AdModel?>(null);
@@ -96,18 +159,31 @@ class AddProductsController extends GetxController {
   // ─── Lifecycle ───────────────────────────────────────────
   @override
   void onInit() {
-    // Tireda Custom (Bug 1 fix): onInit can't itself be async, so the previous
-    // version fired getArguments() and loadCurrencies() unawaited and in
-    // parallel. loadCurrencies() read isEditing.value to decide which currency
-    // to select, but nothing guaranteed getArguments() had already flipped
-    // isEditing to true by the time it ran — a real race that could silently
-    // select the wrong currency on the edit flow.
+    // Multi-language: pre-create per-language controllers before argument
+    // prefill so edit-mode has somewhere to put the loaded translations.
+    // Active codes load async — recreate per-language controllers (keeping
+    // edit-mode seeds) once they arrive so the tabs have backing controllers.
+    LocalizationService.ensureActiveCodesLoaded();
+    ever(LocalizationService.activeLanguageCodes, (_) {
+      _rebuildLanguageControllers(
+        seedTitle: editingAd.value?.titleTranslations,
+        seedDescription: editingAd.value?.descriptionTranslations,
+      );
+    });
+    _rebuildLanguageControllers();
+
+    // Tireda Custom (Bug 1 fix): onInit can't itself be async, so a previous
+    // version fired getArguments() and currency loading unawaited and in
+    // parallel. loadCurrencies() read isEditing.value to decide which
+    // currency to select, but nothing guaranteed getArguments() had already
+    // flipped isEditing to true by the time it ran — a real race that could
+    // silently select the wrong currency on the edit flow.
     //
-    // Fix: delegate to a private async _init() that awaits getArguments() and
-    // _fetchCurrencyList() together via Future.wait (same two Firestore calls,
-    // same concurrency, no added reads/load-time cost — see chat), then only
-    // decides the selected currency once both are guaranteed to have finished
-    // and isEditing is settled.
+    // Fix: delegate to a private async _init() that awaits getArguments(),
+    // _fetchCurrencyList() and _checkFeaturedSubscription() together via
+    // Future.wait (same Firestore calls, same concurrency, no added
+    // load-time cost), then only decides the selected currency once both
+    // are guaranteed to have finished and isEditing is settled.
     _init();
     super.onInit();
   }
@@ -200,9 +276,15 @@ class AddProductsController extends GetxController {
         final AdModel ad = arguments['ad'];
         editingAd.value = ad;
 
-        // Prefill form fields
+        // Prefill form fields — hydrate the Default tab from the model's
+        // flat field, then push every stored per-language translation into
+        // its matching tab controller so users can edit each one.
         adTitleController.text = ad.title ?? '';
         adDescriptionController.text = ad.description ?? '';
+        _rebuildLanguageControllers(
+          seedTitle: ad.titleTranslations,
+          seedDescription: ad.descriptionTranslations,
+        );
         priceController.text = ad.price != null ? ad.price.toString() : '';
         minSalaryController.text = ad.minSalary != null ? ad.minSalary.toString() : '';
         maxSalaryController.text = ad.maxSalary != null ? ad.maxSalary.toString() : '';
@@ -245,6 +327,18 @@ class AddProductsController extends GetxController {
         if (ad.categoryPath != null && ad.categoryPath!.isNotEmpty) {
           final leafId = ad.categoryPath!.last;
           final parentId = ad.categoryPath!.length >= 2 ? ad.categoryPath![ad.categoryPath!.length - 2] : '';
+
+          // The rebuilt path above only carries id + name; flags like
+          // isJobCategory / priceOptional live on the category DOCUMENT.
+          // Fetch the real leaf doc (mirroring the admin edit flow) so
+          // editing a job ad shows the salary range instead of the price
+          // field.
+          final fullLeaf = await FireStoreUtils.getCategoryById(leafId);
+          if (fullLeaf != null) {
+            categoryModel.value = fullLeaf;
+            if (categoryPath.isNotEmpty) categoryPath[categoryPath.length - 1] = fullLeaf;
+          }
+
           await loadCustomFields(leafId, parentId);
         }
 
@@ -275,6 +369,12 @@ class AddProductsController extends GetxController {
                   case "Checkboxes":
                     selectedCheckboxValues[field.id!] = value.split(', ').where((s) => s.isNotEmpty).toList();
                     break;
+                  case "File Input":
+                  // Keep the already-uploaded URL so editing without
+                  // re-picking neither drops the file nor forces a
+                  // re-upload.
+                    existingFieldFileUrls[field.id!] = value;
+                    break;
                 }
                 break;
               }
@@ -285,11 +385,12 @@ class AddProductsController extends GetxController {
       }
 
       // ─── Add mode (existing flow) ───────────────────────────
-      // Tireda Custom (Bug 3 fix): arguments['category'] was assigned straight
-      // into a non-nullable Rx<CategoryModel> with no null check. If a caller
-      // ever navigated here without a category (or with a malformed arguments
-      // map), this threw "Null is not a subtype of CategoryModel" with no
-      // recovery. Guard it and bail out with a toast instead.
+      // Tireda Custom (Bug 3 fix): arguments['category'] was assigned
+      // straight into a non-nullable Rx<CategoryModel> with no null check.
+      // If a caller ever navigated here without a category (or with a
+      // malformed arguments map), this threw "Null is not a subtype of
+      // CategoryModel" with no recovery. Guard it and bail out with a toast
+      // instead.
       final category = arguments is Map ? arguments['category'] : null;
       if (category == null || category is! CategoryModel) {
         ShowToastDialog.showError("Something went wrong loading this category. Please go back and try again.".tr);
@@ -306,9 +407,9 @@ class AddProductsController extends GetxController {
 
       await loadCustomFields(categoryModel.value.id.toString(), categoryModel.value.parentCategoryId.toString());
     } catch (e) {
-      // Tireda Custom (Bug 2 fix): surface any unexpected failure in argument
-      // handling / initial custom-field load instead of letting it die as an
-      // unhandled exception.
+      // Tireda Custom (Bug 2 fix): surface any unexpected failure in
+      // argument handling / initial custom-field load instead of letting it
+      // die as an unhandled exception.
       log('getArguments error: $e');
       ShowToastDialog.showError("Something went wrong loading this screen. Please go back and try again.".tr);
     }
@@ -374,11 +475,18 @@ class AddProductsController extends GetxController {
   // ─── Validation ──────────────────────────────────────────
 
   bool validateStep1() {
+    // Only the Default tab's title/description are compulsory; the
+    // per-language (English / Hindi / …) tabs are optional. If a required
+    // Default field is empty, jump back to the Default tab so the user sees
+    // which field to fill (they may have the error fire while standing on a
+    // language tab).
     if (adTitleController.text.trim().isEmpty) {
+      selectedLanguageIndex.value = 0;
       ShowToastDialog.showError("Ad title is required.".tr);
       return false;
     }
     if (adDescriptionController.text.trim().isEmpty) {
+      selectedLanguageIndex.value = 0;
       ShowToastDialog.showError("Ad description is required.".tr);
       return false;
     }
@@ -480,7 +588,9 @@ class AddProductsController extends GetxController {
           }
           break;
         case "File Input":
-          if (selectedFileValues[id] == null) {
+        // Valid when either a new file was picked or (editing) the ad
+        // already carries an uploaded file for this field.
+          if (selectedFileValues[id] == null && (existingFieldFileUrls[id] ?? '').isEmpty) {
             ShowToastDialog.showError("please_upload_file_for".trParams({"field": name}));
             return false;
           }
@@ -493,6 +603,10 @@ class AddProductsController extends GetxController {
   // ─── Image pickers ───────────────────────────────────────
 
   Future<void> pickMainImage({required ImageSource source}) async {
+    // Tireda Custom: Play Store runtime permission gate (PermissionService)
+    // kept ahead of eSellify 1.5's Constant.validatePickedImage() check —
+    // both are applied so the picker is neither blocked by a missing
+    // permission prompt nor by an invalid/corrupt picked file.
     final bool granted = source == ImageSource.camera
         ? await PermissionService.requestCamera()
         : await PermissionService.requestPhotos();
@@ -502,11 +616,13 @@ class AddProductsController extends GetxController {
       return;
     }
 
-    final XFile? image = await imagePicker.pickImage(
-      source: source,
-      imageQuality: 80,
-      maxWidth: 1600,
-      maxHeight: 1600,
+    final XFile? image = Constant.validatePickedImage(
+      await imagePicker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      ),
     );
     if (image != null) mainImage.value = File(image.path);
     Get.back();
@@ -523,21 +639,51 @@ class AddProductsController extends GetxController {
   }
 
   Future<void> pickFileForField(String fieldId) async {
-    final granted = await PermissionService.requestPhotos();
-    if (!granted) return;
+    // Job categories: the file is a resume — PDF ONLY. Other categories keep
+    // PNG / JPG / PDF. The original name is kept so the extension is
+    // preserved on upload.
+    final isJob = categoryModel.value.isJobCategory == true;
+    final allowed = isJob ? const ['pdf'] : const ['png', 'jpg', 'jpeg', 'pdf'];
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: allowed,
+    );
+    final path = result?.files.single.path;
+    if (path != null) {
+      final name = result!.files.single.name;
+      // The file dialog can bypass the extension filter — enforce it here.
+      final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+      if (!allowed.contains(ext)) {
+        ShowToastDialog.showError(isJob ? "Only PDF files are allowed for resume upload.".tr : "Only PNG, JPG and PDF files are allowed.".tr);
+        return;
+      }
+      selectedFileValues[fieldId] = File(path);
+      fieldFileNames[fieldId] = name;
+    }
+  }
 
-    final XFile? image = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (image != null) selectedFileValues[fieldId] = File(image.path);
+  /// Storage object name for a custom-field file, preserving the original
+  /// extension (falls back to no extension when unknown).
+  String _fieldObjectName(String fieldId) {
+    final name = fieldFileNames[fieldId] ?? '';
+    final dot = name.lastIndexOf('.');
+    final ext = (dot >= 0 && dot < name.length - 1) ? name.substring(dot + 1).toLowerCase() : '';
+    return ext.isEmpty ? 'field_$fieldId' : 'field_$fieldId.$ext';
   }
 
   Future<void> pickOtherImages() async {
+    // Tireda Custom: Play Store runtime permission gate kept ahead of the
+    // 1.5 validatePickedImages() check. Limit intentionally kept at 7
+    // (Tireda's existing convention) rather than 1.5's updated 6.
     final granted = await PermissionService.requestPhotos();
     if (!granted) return;
 
-    final List<XFile> images = await imagePicker.pickMultiImage(
-      imageQuality: 60,
-      maxWidth: 1600,
-      maxHeight: 1600,
+    final List<XFile> images = Constant.validatePickedImages(
+      await imagePicker.pickMultiImage(
+        imageQuality: 60,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      ),
     );
     if (images.isEmpty) return;
     final remaining = 7 - otherImages.length;
@@ -592,6 +738,7 @@ class AddProductsController extends GetxController {
         category: categoryModel.value,
         customFields: customFields,
         availableCategories: candidates,
+        translationLanguages: supportedLanguageCodes,
       );
 
       ShowToastDialog.closeLoader();
@@ -601,34 +748,49 @@ class AddProductsController extends GetxController {
       }
 
       // ── Switch category if AI picked a different one ─────────────
+      // Job categories are exempt in BOTH directions: a job posting's photo
+      // (e.g. a hiring banner) says nothing about the right category, and
+      // re-classifying away from a job category silently swaps the salary
+      // range for a plain price field.
       bool switched = false;
+      final isJob = categoryModel.value.isJobCategory == true;
       final pickedCategory = _resolveCategory(result, allCategories);
       log(
         'AI categoryId=${result.suggestedCategoryId} suggestedName=${result.suggestedCategoryName} '
             'resolved=${pickedCategory?.categoryName} (id=${pickedCategory?.id})',
       );
-      if (pickedCategory != null && pickedCategory.id != categoryModel.value.id) {
+      if (!isJob && pickedCategory != null && pickedCategory.isJobCategory != true && pickedCategory.id != categoryModel.value.id) {
         await _switchCategory(pickedCategory, allCategories);
         switched = true;
       }
 
       if (result.title?.isNotEmpty == true) adTitleController.text = result.title!;
       if (result.description?.isNotEmpty == true) adDescriptionController.text = result.description!;
-      if (result.suggestedPrice != null && priceController.text.isEmpty) {
+      // Job ads use a salary range, not a price — never let the AI fill it.
+      if (categoryModel.value.isJobCategory != true && result.suggestedPrice != null && priceController.text.isEmpty) {
         priceController.text = result.suggestedPrice!.toStringAsFixed(0);
       }
 
-      // Apply suggestions to custom fields by matching field name
-      // Tireda Custom (Bug 5 fix): this switch previously matched lowercase
-      // strings ('text', 'number', 'radio', 'dropdown', 'checkbox') against
-      // field.type, but every field is actually stored/typed as "Text Input",
-      // "Number Input", "Radio", "Dropdown", "Checkboxes", "File Input" (see
-      // _validateStep2 and the view's own switch statements for the real
-      // values). None of these cases ever matched, so AI suggestions never
-      // populated a single custom field — silently. Fixed to use the correct
-      // type strings, and cleaned up the accidental TextEditingController
-      // leak that existed in the old "text"/"number" branch (it created and
-      // discarded one controller before creating a second to actually store).
+      // Fill every language tab with the AI's translations so the seller
+      // doesn't have to translate manually. Only tabs whose language the AI
+      // returned are touched.
+      result.titleTranslations.forEach((code, text) {
+        final c = titleByLanguage[code];
+        if (c != null && text.trim().isNotEmpty) c.text = text.trim();
+      });
+      result.descriptionTranslations.forEach((code, text) {
+        final c = descriptionByLanguage[code];
+        if (c != null && text.trim().isNotEmpty) c.text = text.trim();
+      });
+
+      // Apply suggestions to custom fields by matching field name.
+      // Tireda Custom (Bug 5 fix): use the real stored type strings ("Text
+      // Input", "Number Input", "Radio", "Dropdown", "Checkboxes") rather
+      // than lowercase 'text'/'number'/'radio'/'dropdown'/'checkbox', which
+      // never match field.type and silently drop every AI suggestion. Also
+      // avoids the TextEditingController leak the old lowercase branch had
+      // (it created and discarded one controller before creating a second
+      // to actually store).
       result.customFieldValues.forEach((name, value) {
         final field = customFields.firstWhereOrNull((f) => (f.name ?? '').toLowerCase().trim() == name.toLowerCase().trim());
         if (field == null || field.id == null) return;
@@ -761,6 +923,7 @@ class AddProductsController extends GetxController {
     selectedDropdownValues.clear();
     selectedCheckboxValues.clear();
     selectedFileValues.clear();
+    existingFieldFileUrls.clear();
     for (final tc in textControllers.values) {
       tc.dispose();
     }
@@ -952,7 +1115,10 @@ class AddProductsController extends GetxController {
           case "File Input":
             final file = selectedFileValues[id];
             if (file != null) {
-              value = await Constant.uploadImageToFireStorage(file, 'ads/$adId', 'field_$id');
+              value = await Constant.uploadImageToFireStorage(file, 'ads/$adId', _fieldObjectName(id));
+            } else {
+              // Edit without re-picking → keep the URL already on the ad.
+              value = existingFieldFileUrls[id] ?? '';
             }
             break;
         }
@@ -960,8 +1126,14 @@ class AddProductsController extends GetxController {
         customFieldsList.add({'name': field.name ?? id, 'icon': field.image ?? '', 'value': value});
       }
 
-      // 4. Build slug from title
-      final String slug = adTitleController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+      // 4. Build a slug from the title that is unique across all ads. When
+      //    editing, the ad's own id is excluded so an unchanged title keeps
+      //    its existing slug instead of being bumped to "-2".
+      final String slug = await FireStoreUtils.getUniqueAdSlug(
+        adTitleController.text.trim(),
+        excludeAdId: editing ? adId : null,
+        existingSlug: editing ? editingAd.value?.slug : null,
+      );
 
       // 6. Build N-level category path arrays
       final List<String> catIdPath = categoryPath.map((c) => c.id ?? '').toList();
@@ -983,10 +1155,19 @@ class AddProductsController extends GetxController {
 
       GeoFirePoint geoPoint = Geoflutterfire().point(latitude: selectedLatitude.value ?? 0.0, longitude: selectedLongitude.value ?? 0.0);
 
+      // Multi-language maps — persisted alongside the flat title /
+      // description so all reader code (search / cards / detail) keeps
+      // working while localized lookups (`titleFor(code)`) get real
+      // per-language values.
+      final titleMap = _collectTranslations(adTitleController, titleByLanguage);
+      final descriptionMap = _collectTranslations(adDescriptionController, descriptionByLanguage);
+
       final AdModel ad = AdModel(
         id: adId,
         title: adTitleController.text.trim(),
         description: adDescriptionController.text.trim(),
+        titleTranslations: titleMap.isEmpty ? null : titleMap,
+        descriptionTranslations: descriptionMap.isEmpty ? null : descriptionMap,
         slug: slug,
         price: isJobCategory ? null : (isPriceOptional ? null : double.tryParse(priceText)),
         isPriceOptional: isPriceOptional,
@@ -1098,6 +1279,14 @@ class AddProductsController extends GetxController {
   void onClose() {
     adTitleController.dispose();
     adDescriptionController.dispose();
+    for (final c in titleByLanguage.values) {
+      c.dispose();
+    }
+    titleByLanguage.clear();
+    for (final c in descriptionByLanguage.values) {
+      c.dispose();
+    }
+    descriptionByLanguage.clear();
     priceController.dispose();
     minSalaryController.dispose();
     maxSalaryController.dispose();
@@ -1108,6 +1297,7 @@ class AddProductsController extends GetxController {
     }
     selectedCheckboxValues.clear();
     selectedFileValues.clear();
+    existingFieldFileUrls.clear();
     super.onClose();
   }
 }

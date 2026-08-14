@@ -74,32 +74,40 @@ class SafetyTipsBottomSheet {
                     color: isDark ? AppThemeData.primaryWhite : AppThemeData.primaryBlack,
                   ),
                   const SizedBox(height: 18),
-                  // Tips list
-                  ...Constant.safetyTips.map(
-                    (tip) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.check, color: AppThemeData.success300, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            // Use raw Text — TextCustom hard-codes ellipsis
-                            // overflow and would truncate long tips.
-                            child: Text(
-                              tip,
-                              style: TextStyle(
-                                fontSize: 14,
-                                height: 1.4,
-                                fontFamily: FontFamily.regular,
-                                color: isDark ? AppThemeData.grey3 : AppThemeData.grey8,
-                              ),
+                  // Tips list — resolve each raw entry to the app's
+                  // currently selected language at render time so the
+                  // sheet honors mid-session language changes.
+                  ...() {
+                    final code = Get.locale?.languageCode;
+                    return Constant.safetyTips
+                        .map((raw) => Constant.safetyTipFor(raw, code))
+                        .where((s) => s.isNotEmpty)
+                        .map(
+                          (tip) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.check, color: AppThemeData.success300, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  // Use raw Text — TextCustom hard-codes ellipsis
+                                  // overflow and would truncate long tips.
+                                  child: Text(
+                                    tip,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      fontFamily: FontFamily.regular,
+                                      color: isDark ? AppThemeData.grey3 : AppThemeData.grey8,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        );
+                  }(),
                   const SizedBox(height: 20),
                   // Continue button
                   SizedBox(

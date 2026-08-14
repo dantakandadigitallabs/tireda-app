@@ -111,12 +111,18 @@ class VerificationController extends GetxController {
     }
   }
 
+  // Tireda Custom: explicit photo-permission gate (Play Store privacy
+  // compliance) preserved ahead of the picker call. 1.5 base dropped this
+  // and relied on image_picker's implicit permission handling — not taken.
+  // Tireda Custom Merge (eSellify 1.5): Constant.validatePickedImage layered
+  // on top of the picker result (unrelated to permissions — validates the
+  // picked file itself, e.g. size/format).
   Future<void> pickFrontImage(String documentId) async {
     try {
       final granted = await PermissionService.requestPhotos();
       if (!granted) return;
 
-      final XFile? image = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final XFile? image = Constant.validatePickedImage(await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80));
       if (image != null) {
         frontImages[documentId] = image.path;
       }
@@ -130,7 +136,7 @@ class VerificationController extends GetxController {
       final granted = await PermissionService.requestPhotos();
       if (!granted) return;
 
-      final XFile? image = await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final XFile? image = Constant.validatePickedImage(await imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80));
       if (image != null) {
         backImages[documentId] = image.path;
       }

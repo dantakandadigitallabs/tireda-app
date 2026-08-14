@@ -84,7 +84,7 @@ class OnboardingScreenView extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
                     child: RoundShapeButton(
-                      title: "Next",
+                      title: "Next".tr,
                       buttonColor: AppThemeData.primary4,
                       buttonTextColor: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
                       onTap: () {
@@ -100,7 +100,7 @@ class OnboardingScreenView extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
                     child: RoundShapeButton(
-                      title: "Get Started",
+                      title: "Get Started".tr,
                       buttonColor: AppThemeData.primary4,
                       buttonTextColor: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
                       onTap: () {

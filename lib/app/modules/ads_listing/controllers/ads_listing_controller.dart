@@ -60,8 +60,12 @@ class AdsListingController extends GetxController {
   final TextEditingController minPriceController = TextEditingController();
   final TextEditingController maxPriceController = TextEditingController();
 
-  // Dynamic custom field filters — { fieldName: selectedValue }
-  RxMap<String, String> activeCustomFilters = <String, String>{}.obs;
+  // Dynamic custom field filters — { fieldName: selectedValues }.
+  // Tireda Custom: upgraded from single-select (String) to multi-select
+  // (Set<String>) per field — e.g. Color = Red OR Blue — while keeping
+  // fields scoped to the exact chosen subcategory (see
+  // loadCategoryCustomFields below), not aggregated across descendants.
+  RxMap<String, Set<String>> activeCustomFilters = <String, Set<String>>{}.obs;
 
   // Dynamic custom fields for the selected filter subcategory
   RxList<CustomFieldModel> categoryCustomFields = <CustomFieldModel>[].obs;
@@ -267,6 +271,63 @@ class AdsListingController extends GetxController {
     }
   }
 
+  /// Tireda Custom: loads custom fields aggregated across [parentCategoryId]
+  /// AND every one of its already-loaded subcategories (see
+  /// [filterSubCategories], populated by [loadSubCategories] before this is
+  /// called), so picking "All in Cars" still surfaces filters like
+  /// "Condition" without the user drilling into one exact subcategory.
+  /// Fields are deduped by id since sibling subcategories can share a field.
+  /// Complements — does not replace — [loadCategoryCustomFields], which
+  /// stays exact-subcategory-scoped when a specific subcategory is chosen.
+  Future<void> loadAggregatedCustomFieldsForParent(String parentCategoryId) async {
+    if (parentCategoryId.isEmpty) {
+      categoryCustomFields.clear();
+      activeCustomFilters.clear();
+      return;
+    }
+    isLoadingCustomFields.value = true;
+    try {
+      final ids = <String>{
+        parentCategoryId,
+        ...filterSubCategories.map((c) => c.id ?? '').where((id) => id.isNotEmpty),
+      };
+      final fields = await FireStoreUtils.getCustomFieldsForCategories(ids.toList());
+      final seen = <String>{};
+      final deduped = <CustomFieldModel>[];
+      for (final f in fields) {
+        final id = f.id;
+        if (id != null && !seen.add(id)) continue;
+        deduped.add(f);
+      }
+      categoryCustomFields.assignAll(deduped);
+      activeCustomFilters.clear();
+    } catch (e) {
+      log('Error loading aggregated custom fields: $e');
+      categoryCustomFields.clear();
+    } finally {
+      isLoadingCustomFields.value = false;
+    }
+  }
+
+  /// Toggles a single option for a filterable custom field. Tireda Custom:
+  /// multi-select — an already-selected option is removed, otherwise added,
+  /// so the field acts as an OR filter across its selected options (e.g.
+  /// Color = Red OR Blue). An emptied set is dropped from the map entirely
+  /// so hasActiveFilter / query building don't carry stale empty entries.
+  void toggleCustomFilterValue(String fieldName, String option) {
+    final current = Set<String>.from(activeCustomFilters[fieldName] ?? <String>{});
+    if (current.contains(option)) {
+      current.remove(option);
+    } else {
+      current.add(option);
+    }
+    if (current.isEmpty) {
+      activeCustomFilters.remove(fieldName);
+    } else {
+      activeCustomFilters[fieldName] = current;
+    }
+  }
+
   Future<void> _fetchAds() async {
     isLoading.value = true;
     try {
@@ -283,8 +344,8 @@ class AdsListingController extends GetxController {
         postedSinceCutoff: _postedSinceCutoff,
         verifiedOnly: filterVerifiedOnly.value ? true : null,
         featuredOnly: filterFeaturedOnly.value ? true : null,
-        customFilters: activeCustomFilters.isNotEmpty
-            ? Map<String, String>.from(activeCustomFilters)
+        customFieldFilters: activeCustomFilters.isNotEmpty
+            ? Map<String, Set<String>>.from(activeCustomFilters)
             : null,
       );
       allAds.value = result.items;
@@ -316,8 +377,8 @@ class AdsListingController extends GetxController {
         postedSinceCutoff: _postedSinceCutoff,
         verifiedOnly: filterVerifiedOnly.value ? true : null,
         featuredOnly: filterFeaturedOnly.value ? true : null,
-        customFilters: activeCustomFilters.isNotEmpty
-            ? Map<String, String>.from(activeCustomFilters)
+        customFieldFilters: activeCustomFilters.isNotEmpty
+            ? Map<String, Set<String>>.from(activeCustomFilters)
             : null,
       );
 
@@ -412,7 +473,7 @@ class AdsListingController extends GetxController {
           filterPostedSince.value != 'all' ||
           filterVerifiedOnly.value ||
           filterFeaturedOnly.value ||
-          activeCustomFilters.isNotEmpty;
+          activeCustomFilters.values.any((s) => s.isNotEmpty);
 
   @override
   void onClose() {

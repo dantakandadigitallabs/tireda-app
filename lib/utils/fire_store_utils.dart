@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:developer';
+import 'dart:math' show Random;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:eSellify/app/models/ad_model.dart';
 import 'package:eSellify/utils/distance_utils.dart';
 import 'package:eSellify/app/models/ad_report_model.dart';
@@ -33,7 +35,16 @@ import '../app/models/verification_document_model.dart';
 import 'notifications/send_notification.dart';
 
 class FireStoreUtils {
-  static final FirebaseFirestore fireStore = FirebaseFirestore.instance;
+  /// The single Firestore instance the whole app uses. Resolved lazily from
+/// [Constant.useStagingDb]:
+///   • `false` → project's `(default)` database (FirebaseFirestore.instance)
+///   • `true`  → the named `staging` database (FirebaseFirestore.instanceFor)
+///
+/// Flip the flag once in constants.dart to switch environments — no
+/// per-call plumbing required.
+static final FirebaseFirestore fireStore = Constant.useStagingDb
+    ? FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: Constant.stagingDbId)
+    : FirebaseFirestore.instance;
 
   static String? getCurrentUid() {
     if (FirebaseAuth.instance.currentUser == null) {
@@ -169,22 +180,35 @@ class FireStoreUtils {
     });
   }
 
-  Future<void> loadSafetyTips() async {
-    try {
-      final snap = await fireStore.collection(CollectionName.safetyTips).orderBy('sortOrder').get();
-      Constant.safetyTips = snap.docs.where((d) => (d.data()['active'] ?? true) == true).map((d) => (d.data()['tip'] ?? '').toString()).where((t) => t.isNotEmpty).toList();
-    } catch (e) {
-      developer.log('loadSafetyTips Error: $e');
-    }
+Future<void> loadSafetyTips() async {
+  try {
+    final snap = await fireStore.collection(CollectionName.safetyTips).orderBy('sortOrder').get();
+    // Store the raw `tip` field verbatim — either a flat String (legacy)
+    // or `Map<code, String>` (multi-language admin) — so the bottom sheet
+    // can pick the localized string at render time via
+    // [Constant.safetyTipFor]. This is what makes tips refresh when the
+    // user changes their app language mid-session.
+    Constant.safetyTips = snap.docs
+        .where((d) => (d.data()['active'] ?? true) == true)
+        .map((d) => d.data()['tip'])
+        .where((raw) {
+      if (raw is String) return raw.isNotEmpty;
+      if (raw is Map) return raw.isNotEmpty;
+      return false;
+    })
+        .toList();
+  } catch (e) {
+    developer.log('loadSafetyTips Error: $e');
   }
+}
 
-  static Stream<AdvertisementConfigModel?> advertisementConfigStream() {
-    return FirebaseFirestore.instance
-        .collection(CollectionName.settings)
-        .doc("advertisement_config")
-        .snapshots()
-        .map((snap) => snap.exists && snap.data() != null ? AdvertisementConfigModel.fromJson(snap.data()!) : null);
-  }
+static Stream<AdvertisementConfigModel?> advertisementConfigStream() {
+  return fireStore
+      .collection(CollectionName.settings)
+      .doc("advertisement_config")
+      .snapshots()
+      .map((snap) => snap.exists && snap.data() != null ? AdvertisementConfigModel.fromJson(snap.data()!) : null);
+}
 
   Future<CurrencyModel?> getCurrency() async {
     try {
@@ -436,33 +460,36 @@ class FireStoreUtils {
     }
   }
 
+  static bool isCategoryVisible(Map<String, dynamic> data) => data['active'] != false;
+
   static Future<List<CategoryModel>> getAllCategory() async {
     final snapshot = await fireStore.collection(CollectionName.category).get();
 
-    return snapshot.docs.map((doc) => CategoryModel.fromJson(doc.data())).toList();
+     return snapshot.docs.where((doc) => isCategoryVisible(doc.data())).map((doc) => CategoryModel.fromJson(doc.data())).toList();
   }
 
   static Future<List<CategoryModel>> getParentCategory() async {
     // Tireda Custom: added try/catch — this was the only Firestore method with
     // no error handling; an unhandled exception here (e.g. brief network drop)
     // left Home's categoryList permanently empty with no recovery. Also runs
-    // both queries in parallel instead of sequentially.
+     // both queries in parallel instead of sequentially.
     try {
       final results = await Future.wait([
         fireStore.collection(CollectionName.category).where('parentCategoryId', isEqualTo: '').get(),
         fireStore.collection(CollectionName.category).where('parentCategoryId', isNull: true).get(),
       ]);
 
-      final list = <CategoryModel>[];
+     final list = <CategoryModel>[];
       for (var doc in [...results[0].docs, ...results[1].docs]) {
+       if (!isCategoryVisible(doc.data())) continue;
         list.add(CategoryModel.fromJson(doc.data()));
-      }
-      return list;
-    } catch (e) {
-      developer.log('getParentCategory Error: $e');
-      return [];
     }
+    return list;
+  } catch (e) {
+    developer.log('getParentCategory Error: $e');
+    return [];
   }
+}
   static Future<List<CategoryModel>> getSubCategories(String parentId) async {
     try {
       final snapshot = await fireStore
@@ -671,8 +698,93 @@ class FireStoreUtils {
 
     return snapshot.docs.map((doc) => CustomFieldModel.fromJson(doc.data())).where((f) => f.active == true).toList();
   }
+/// Fetches active custom fields linked to ANY category id in
+/// [categoryIds]. Used by the ads-listing filter so selecting a parent
+/// category surfaces the custom fields of the parent AND all its
+/// descendant subcategories (N levels deep). `arrayContainsAny` is capped
+/// at 30 values by Firestore, so we chunk the ids into batches of 30 and
+/// merge/dedupe the results by field id.
+  static Future<List<CustomFieldModel>> getCustomFieldsForCategories(List<String> categoryIds) async {
+   final ids = categoryIds.where((c) => c.isNotEmpty).toSet().toList();
+       if (ids.isEmpty) return const [];
+       final Map<String, CustomFieldModel> byId = {};
+            for (var i = 0; i < ids.length; i += 30) {
+       final chunk = ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30);
+       final snapshot = await fireStore.collection(CollectionName.customFields).where('selectedCategories', arrayContainsAny: chunk).get();
+        for (final doc in snapshot.docs) {
+       final f = CustomFieldModel.fromJson(doc.data());
+         if (f.active == true && f.id != null) byId[f.id!] = f;
+    }
+  }
+  return byId.values.toList();
+}
 
   // AD METHODS ==========
+
+static final Random _slugRandom = Random();
+static const String _slugAlphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+static String _randomSlugSuffix(int length) {
+  final buf = StringBuffer();
+  for (var i = 0; i < length; i++) {
+    buf.write(_slugAlphabet[_slugRandom.nextInt(_slugAlphabet.length)]);
+  }
+  return buf.toString();
+}
+
+/// Builds a slug of the form `<title-slug>-<4 random chars>`, for example
+/// `iphone-15-pro-uu23`. The 4-char `[a-z0-9]` suffix makes every ad's
+/// slug distinct even when titles repeat. The candidate is checked
+/// against the `ads` collection and the suffix regenerated on the rare
+/// clash, so the result is genuinely unique — not merely probable.
+///
+/// On edit, pass the ad's [existingSlug]: it is returned unchanged when
+/// the title's base is the same, so the shareable URL stays stable across
+/// edits. [excludeAdId] guards the uniqueness check against the ad's own
+/// document.
+static Future<String> getUniqueAdSlug(String title, {String? excludeAdId, String? existingSlug}) async {
+  var base = title.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+  if (base.isEmpty) base = 'ad';
+
+  const maxBaseLength = 60;
+  if (base.length > maxBaseLength) {
+    var cut = base.substring(0, maxBaseLength);
+    final lastDash = cut.lastIndexOf('-');
+    if (lastDash >= 20) cut = cut.substring(0, lastDash);
+    base = cut.replaceAll(RegExp(r'-+$'), '');
+    if (base.isEmpty) base = 'ad';
+  }
+
+  if (existingSlug != null && existingSlug.isNotEmpty) {
+    final cut = existingSlug.lastIndexOf('-');
+    final existingBase = cut > 0 ? existingSlug.substring(0, cut) : existingSlug;
+    if (existingBase == base) return existingSlug;
+  }
+
+  Future<bool> isTaken(String candidate) async {
+    final snap = await fireStore.collection(CollectionName.ads).where('slug', isEqualTo: candidate).limit(2).get();
+    return snap.docs.any((d) => d.id != excludeAdId);
+  }
+
+  for (var attempt = 0; attempt < 20; attempt++) {
+    final candidate = '$base-${_randomSlugSuffix(4)}';
+    if (!await isTaken(candidate)) return candidate;
+  }
+  return '$base-${_randomSlugSuffix(8)}';
+}
+
+/// Look up an ad by its unique [slug] (the value used in shareable
+/// `/ad-detail?slug=<slug>` links). Slugs are unique per ad, so a single
+/// match is expected; the first is returned if more ever coincide.
+static Future<AdModel?> getAdBySlug(String slug) async {
+  try {
+    final snap = await fireStore.collection(CollectionName.ads).where('slug', isEqualTo: slug).limit(1).get();
+    if (snap.docs.isNotEmpty) return AdModel.fromJson(snap.docs.first.data());
+  } catch (e) {
+    developer.log('getAdBySlug Error: $e');
+  }
+  return null;
+}
 
   static Future<bool> saveAd(AdModel ad) async {
     try {
@@ -879,138 +991,166 @@ class FireStoreUtils {
     DateTime? postedSinceCutoff,
     bool? verifiedOnly,
     bool? featuredOnly,
-    Map<String, String>? customFilters,
-  }) async {
-    try {
-      final isSectioned = section != null;
-      if (isSectioned) {
-        return _fetchForSection(limit: limit, section: section, categoryId: categoryId, searchQuery: searchQuery);
-      }
+     Map<String, Set<String>>? customFieldFilters,
+     }) async {
+   try {
+     final isSectioned = section != null;
+     if (isSectioned) {
+       return _fetchForSection(limit: limit, section: section, categoryId: categoryId, searchQuery: searchQuery);
+     }
 
-      final effectiveCategoryId = (categoryId != null && categoryId.isNotEmpty) ? categoryId : null;
-      final userLocation = Constant.currentLocation.value;
-      final hasLocation = userLocation?.location?.latitude != null && userLocation?.location?.longitude != null;
-      final maxRange = Constant.maxRange.toDouble();
-      final isUnlimitedRange = maxRange == 0;
-      final needsDistanceFilter = hasLocation && !isUnlimitedRange;
+     final effectiveCategoryId = (categoryId != null && categoryId.isNotEmpty) ? categoryId : null;
+     final userLocation = Constant.currentLocation.value;
+     final hasLocation = userLocation?.location?.latitude != null && userLocation?.location?.longitude != null;
+     final maxRange = Constant.maxRange.toDouble();
+     final isUnlimitedRange = maxRange == 0;
+     final needsDistanceFilter = hasLocation && !isUnlimitedRange;
 
-      Query baseQuery;
-      if (effectiveCategoryId != null) {
-        baseQuery = fireStore
-            .collection(CollectionName.ads)
-            .where('status', isEqualTo: 'active')
-            .where('categoryPath', arrayContains: effectiveCategoryId)
-            .orderBy('createdAt', descending: true);
-      } else {
-        baseQuery = fireStore.collection(CollectionName.ads).where('status', isEqualTo: 'active').orderBy('createdAt', descending: true);
-      }
+     Query baseQuery;
+     if (effectiveCategoryId != null) {
+       baseQuery = fireStore
+           .collection(CollectionName.ads)
+           .where('status', isEqualTo: 'active')
+           .where('categoryPath', arrayContains: effectiveCategoryId)
+           .orderBy('createdAt', descending: true);
+     } else {
+       baseQuery = fireStore.collection(CollectionName.ads).where('status', isEqualTo: 'active').orderBy('createdAt', descending: true);
+     }
 
-      final now = DateTime.now();
-      final List<AdModel> collected = [];
-      DocumentSnapshot? consumedCursor = lastDocument;
+     final now = DateTime.now();
+     final List<AdModel> collected = [];
+     DocumentSnapshot? consumedCursor = lastDocument;
       bool firestoreHasMore = true;
 
-      outer:
-      while (collected.length < limit && firestoreHasMore) {
-        Query q = baseQuery;
-        if (consumedCursor != null) q = q.startAfterDocument(consumedCursor);
+    // Snapshot only the ACTIVE (non-empty) custom field filters so we
+    // don't do redundant work in the hot loop.
+    final Map<String, Set<String>>? activeCustomFields =
+    (customFieldFilters != null && customFieldFilters.isNotEmpty)
+        ? {
+      for (final e in customFieldFilters.entries)
+        if (e.value.isNotEmpty) e.key: e.value,
+    }
+        : null;
 
-        final batchSize = needsDistanceFilter ? (limit * 3) : limit * 2;
-        final snap = await q.limit(batchSize).get();
+    outer:
+    while (collected.length < limit && firestoreHasMore) {
+      Query q = baseQuery;
+      if (consumedCursor != null) q = q.startAfterDocument(consumedCursor);
 
-        if (snap.docs.isEmpty) {
-          firestoreHasMore = false;
-          break;
+      final batchSize = needsDistanceFilter ? (limit * 3) : limit * 2;
+      final snap = await q.limit(batchSize).get();
+
+      if (snap.docs.isEmpty) {
+        firestoreHasMore = false;
+        break;
+      }
+      if (snap.docs.length < batchSize) firestoreHasMore = false;
+
+      for (final doc in snap.docs) {
+        consumedCursor = doc;
+
+        final ad = AdModel.fromJson(doc.data() as Map<String, dynamic>);
+        if (ad.expiryDate != null && ad.expiryDate!.toDate().isBefore(now)) continue;
+        if (ad.isFeatured == true && ad.featuredUntil != null && ad.featuredUntil!.toDate().isBefore(now)) {
+          ad.isFeatured = false;
         }
-        if (snap.docs.length < batchSize) firestoreHasMore = false;
 
-        for (final doc in snap.docs) {
-          consumedCursor = doc;
+        // Distance filter
+        if (needsDistanceFilter && ad.location?.latitude != null && ad.location?.longitude != null) {
+          final dist = DistanceUtils.haversineDistanceKm(userLocation!.location!.latitude!, userLocation.location!.longitude!, ad.location!.latitude!, ad.location!.longitude!);
+          if (dist > maxRange) continue;
+        }
 
-          final ad = AdModel.fromJson(doc.data() as Map<String, dynamic>);
-          if (ad.expiryDate != null && ad.expiryDate!.toDate().isBefore(now)) continue;
-          if (ad.isFeatured == true && ad.featuredUntil != null && ad.featuredUntil!.toDate().isBefore(now)) {
-            ad.isFeatured = false;
-          }
+        // Search filter
+        if (searchQuery != null && searchQuery.isNotEmpty) {
+          final sq = searchQuery.toLowerCase();
+          if (!((ad.title ?? '').toLowerCase().contains(sq) || (ad.description ?? '').toLowerCase().contains(sq))) continue;
+        }
 
-          // Distance filter
-          if (needsDistanceFilter && ad.location?.latitude != null && ad.location?.longitude != null) {
-            final dist = DistanceUtils.haversineDistanceKm(userLocation!.location!.latitude!, userLocation.location!.longitude!, ad.location!.latitude!, ad.location!.longitude!);
-            if (dist > maxRange) continue;
-          }
+        // Price filter
+        if (minPrice != null && (ad.price ?? 0) < minPrice) continue;
+        if (maxPrice != null && (ad.price ?? 0) > maxPrice) continue;
 
-          // Search filter
-          if (searchQuery != null && searchQuery.isNotEmpty) {
-            final sq = searchQuery.toLowerCase();
-            if (!((ad.title ?? '').toLowerCase().contains(sq) || (ad.description ?? '').toLowerCase().contains(sq))) continue;
-          }
+        // Posted-since filter
+        if (postedSinceCutoff != null) {
+          final created = ad.createdAt?.toDate();
+          if (created == null || created.isBefore(postedSinceCutoff)) continue;
+        }
 
-          // Price filter
-          if (minPrice != null && (ad.price ?? 0) < minPrice) continue;
-          if (maxPrice != null && (ad.price ?? 0) > maxPrice) continue;
+        // Tireda Custom: verified seller filter
+        if (verifiedOnly == true && ad.isSellerVerified != true) continue;
 
-          // Posted-since filter
-          if (postedSinceCutoff != null) {
-            final created = ad.createdAt?.toDate();
-            if (created == null || created.isBefore(postedSinceCutoff)) continue;
-          }
+        // Tireda Custom: promoted/featured ads filter
+        if (featuredOnly == true && ad.isFeatured != true) continue;
 
-          // Verified seller filter
-          if (verifiedOnly == true && ad.isSellerVerified != true) continue;
-
-          // Promoted ads filter
-          if (featuredOnly == true && ad.isFeatured != true) continue;
-
-          // Dynamic custom field filters
-          // Each entry in customFilters is { fieldName: selectedValue }
-          // The ad must have a matching customField entry for every active filter
-          if (customFilters != null && customFilters.isNotEmpty) {
-            bool passesAll = true;
-            for (final entry in customFilters.entries) {
-              if (entry.value.isEmpty) continue;
-              bool fieldMatched = false;
-              if (ad.customFields != null) {
-                for (final field in ad.customFields!) {
-                  final name = field['name']?.toString().toLowerCase() ?? '';
-                  final value = field['value']?.toString() ?? '';
-                  if (name == entry.key.toLowerCase() && value.toLowerCase() == entry.value.toLowerCase()) {
-                    fieldMatched = true;
-                    break;
-                  }
-                }
-              }
-              if (!fieldMatched) {
-                passesAll = false;
-                break;
-              }
+        // Custom-field filter (Radio / Dropdown / Checkboxes). An ad
+        // matches only if EVERY active field has at least one selected
+        // option present in the ad's stored value(s).
+        if (activeCustomFields != null && activeCustomFields.isNotEmpty) {
+          bool skip = false;
+          for (final entry in activeCustomFields.entries) {
+            final adFields = ad.customFields ?? const <Map<String, dynamic>>[];
+            final match = adFields.firstWhere(
+                  (m) => (m['name']?.toString() ?? '').toLowerCase() == entry.key.toLowerCase(),
+              orElse: () => const <String, dynamic>{},
+            );
+            final rawValue = (match['value']?.toString() ?? '').trim();
+            if (rawValue.isEmpty) {
+              skip = true;
+              break;
             }
-            if (!passesAll) continue;
+            // Checkboxes are stored comma-joined; single-select fields
+            // (Radio/Dropdown) carry a single value.
+            final adValues = rawValue
+                .split(',')
+                .map((s) => s.trim().toLowerCase())
+                .where((s) => s.isNotEmpty)
+                .toSet();
+            final wanted = entry.value.map((v) => v.toLowerCase()).toSet();
+            if (adValues.intersection(wanted).isEmpty) {
+              skip = true;
+              break;
+            }
           }
-
-          collected.add(ad);
-          if (collected.length >= limit) break outer;
+          if (skip) continue;
         }
+
+        collected.add(ad);
+        if (collected.length >= limit) break outer;
+      }
+    }
+
+    // Ranking: if the user has a location, sort by distance ASCENDING so
+    // the nearest products show up first. Featured ads still take
+    // priority — pinned on top but themselves sorted by distance. If no
+    // user location is available, fall back to featured-first + shuffle.
+    final featured = collected.where((a) => a.isFeatured == true).toList();
+    final others = collected.where((a) => a.isFeatured != true).toList();
+    if (hasLocation) {
+      final uLat = userLocation!.location!.latitude!;
+      final uLng = userLocation.location!.longitude!;
+      double distTo(AdModel a) {
+        if (a.location?.latitude == null || a.location?.longitude == null) return double.maxFinite;
+        return DistanceUtils.haversineDistanceKm(uLat, uLng, a.location!.latitude!, a.location!.longitude!);
       }
 
-      // Fairness: featured first, then shuffle the rest so older sellers
-      // in the same page aren't buried by strict chronological order.
-      final featured = collected.where((a) => a.isFeatured == true).toList();
-      final others = collected.where((a) => a.isFeatured != true).toList()..shuffle();
-      collected
-        ..clear()
-        ..addAll(featured)
-        ..addAll(others);
-
-      // hasMore: if we hit the limit, there may be more data (unconsumed
-      // docs in snap OR more in Firestore). If we exited the while without
-      // hitting limit, we've drained everything.
-      final hasMore = collected.length >= limit;
-      return PaginatedResult(items: collected, lastDocument: consumedCursor, hasMore: hasMore);
-    } catch (e) {
-      developer.log('getActiveAdsPaginated Error: $e');
-      return PaginatedResult(items: [], lastDocument: null, hasMore: false);
+      featured.sort((a, b) => distTo(a).compareTo(distTo(b)));
+      others.sort((a, b) => distTo(a).compareTo(distTo(b)));
+    } else {
+      others.shuffle();
     }
+    collected
+      ..clear()
+      ..addAll(featured)
+      ..addAll(others);
+
+    final hasMore = collected.length >= limit;
+    return PaginatedResult(items: collected, lastDocument: consumedCursor, hasMore: hasMore);
+  } catch (e) {
+    developer.log('getActiveAdsPaginated Error: $e');
+    return PaginatedResult(items: [], lastDocument: null, hasMore: false);
   }
+}
 
   /// Home-page feature section fetch — large pool, client-side filter, no
   /// cursor pagination (sections have their own ranking like most_liked,
@@ -1595,6 +1735,45 @@ class FireStoreUtils {
       developer.log('_sendOfferResponseNotification Error: $e');
     }
   }
+      /// Like [getOrDraftChatRoom] but lets the caller specify the OTHER
+     /// participant explicitly (used when the employer starts a chat with a
+    /// specific applicant, where the other user is the applicant, not the
+   /// ad's seller). Returns an existing room if one exists; otherwise builds
+  /// an in-memory draft — WITHOUT writing anything. Pair with
+   /// [persistDraftChatRoom] on first real message send.
+ static Future<ChatRoomModel> getOrDraftChatRoomWith({required AdModel ad, required UserModel currentUser, required UserModel otherUser}) async {
+   final existing = await findChatRoom(adId: ad.id!, senderId: currentUser.id!, receiverId: otherUser.id!);
+   if (existing != null) return existing;
+
+   final docRef = fireStore.collection(CollectionName.chatRooms).doc();
+    return ChatRoomModel(
+     id: docRef.id,
+     adId: ad.id,
+     adTitle: ad.title,
+     adImage: ad.mainImage,
+     adPrice: ad.price,
+     isJobCategory: ad.isJobCategory,
+     minSalary: ad.minSalary,
+     maxSalary: ad.maxSalary,
+     adCategory: ad.leafCategoryName,
+     adCurrencySymbol: ad.currency?.symbol,
+     adCurrencySymbolAtRight: ad.currency?.symbolAtRight,
+     adCurrencyDecimalDigits: ad.currency?.decimalDigits,
+     senderId: currentUser.id,
+     senderName: currentUser.fullNameString(),
+     senderProfile: currentUser.profilePic,
+     receiverId: otherUser.id,
+     receiverName: otherUser.fullNameString(),
+     receiverProfile: otherUser.profilePic,
+     lastMessage: '',
+     lastMessageType: 'text',
+     lastMessageTime: Timestamp.now(),
+     senderUnreadCount: 0,
+     receiverUnreadCount: 0,
+     createdAt: Timestamp.now(),
+     isDraft: true, // Tireda Custom
+  );
+}
 
   // ─── Block / Unblock User ───────────────────────────────────────────────────
 

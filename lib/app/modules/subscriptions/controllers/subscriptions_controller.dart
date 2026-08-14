@@ -24,6 +24,12 @@ class SubscriptionsController extends GetxController {
   // packages). The actual enforcement still happens in purchasePackage() via
   // FireStoreUtils.hasUsedFreePlan(); this is just so the button can reflect
   // that state without the user needing to tap first and get a toast.
+  //
+  // NOTE: 1.5 base replaced this with per-packageId tracking
+  // (usedFreePackageIds / hasUsedFreePackage). NOT taken — Tireda's model
+  // intentionally tracks free-plan usage per packageType, not per specific
+  // package, so switching to per-package tracking would let a user reclaim
+  // a "free" allowance by picking a different free package of the same type.
   RxBool usedFreeAdListing = false.obs;
   RxBool usedFreeFeaturedAds = false.obs;
 
@@ -102,15 +108,18 @@ class SubscriptionsController extends GetxController {
   Future<void> _directFreePurchase(SubscriptionPackageModel package) async {
     final uid = currentUserId;
     if (uid == null) {
-      ShowToastDialog.showError("Please login to continue");
+      ShowToastDialog.showError("Please login to continue".tr);
       return;
     }
 
-    ShowToastDialog.showLoader("Activating plan...");
+    ShowToastDialog.showLoader("Activating plan...".tr);
 
     // Tireda Custom: additive upgrade — merge unused allowance from any existing
     // active subscription of this type into the new one, instead of discarding it.
-   // See FireStoreUtils.mergeOrCreateSubscription() for full rationale.
+    // See FireStoreUtils.mergeOrCreateSubscription() for full rationale.
+    // NOTE: 1.5 base replaced this with cancelActiveSubscriptions() (destructive
+    // replace, discards unused allowance). NOT taken — conflicts directly with
+    // Tireda's additive subscription model.
     final carriedAllowance = await FireStoreUtils.mergeOrCreateSubscription(
       userId: uid,
       packageType: package.type ?? 'ad_listing',
@@ -119,7 +128,18 @@ class SubscriptionsController extends GetxController {
     try {
       final subscriptionId = Constant.getUuid();
       final transactionId = Constant.getUuid();
-      final packageName = package.name?.values.firstOrNull ?? '';
+      // Tireda Custom Merge (eSellify 1.5): snapshot the whole per-language
+      // name map from the package so downstream docs (user_subscriptions +
+      // transactions) can render in any language later. Flat `packageName`
+      // stays populated for legacy readers. Replaces the previous
+      // `package.name?.values.firstOrNull` (arbitrary language, no fallback
+      // order) with a proper default → en → first-non-empty resolution.
+      final Map<String, String>? packageNameMap = (package.name != null && package.name!.isNotEmpty)
+          ? Map<String, String>.from(package.name!)
+          : null;
+      final packageName = (packageNameMap?['default'] ?? '').isNotEmpty
+          ? packageNameMap!['default']!
+          : (packageNameMap?['en'] ?? packageNameMap?.values.firstOrNull ?? '');
 
       // Count current active ads
       final currentActiveAds = package.type == 'featured_ads'
@@ -136,6 +156,7 @@ class SubscriptionsController extends GetxController {
         userId: uid,
         packageId: package.id,
         packageName: packageName,
+        packageNameTranslations: packageNameMap,
         packageImage: package.image,
         packageType: package.type,
         price: 0,
@@ -163,6 +184,7 @@ class SubscriptionsController extends GetxController {
         userEmail: Constant.userModel?.email,
         packageId: package.id,
         packageName: packageName,
+        packageNameTranslations: packageNameMap,
         packageType: package.type,
         amount: 0,
         currency: Constant.currencyModel?.symbol ?? '\$',
@@ -179,11 +201,11 @@ class SubscriptionsController extends GetxController {
       ]);
 
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showSuccess("Plan activated successfully!");
+      ShowToastDialog.showSuccess("Plan activated successfully!".tr);
       await getData();
     } catch (e) {
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showError("Failed to activate plan: $e");
+      ShowToastDialog.showError("${"Failed to activate plan".tr}: $e");
     }
   }
 

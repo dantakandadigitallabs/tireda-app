@@ -33,6 +33,11 @@ class AiGeneratedAd {
   /// of options that the AI thinks apply.
   final Map<String, String> customFieldValues;
 
+  /// Per-language translations of [title] / [description], keyed by
+  /// language code — filled only when `translationLanguages` was passed.
+  final Map<String, String> titleTranslations;
+  final Map<String, String> descriptionTranslations;
+
   AiGeneratedAd({
     this.title,
     this.description,
@@ -40,6 +45,8 @@ class AiGeneratedAd {
     this.suggestedCategoryName,
     this.suggestedPrice,
     this.customFieldValues = const {},
+    this.titleTranslations = const {},
+    this.descriptionTranslations = const {},
   });
 }
 
@@ -77,6 +84,8 @@ class OpenAiService {
     CategoryModel? category,
     List<CustomFieldModel> customFields = const [],
     List<AiCategoryCandidate> availableCategories = const [],
+    // Language codes to also translate title/description into (one call).
+    List<String> translationLanguages = const [],
   }) async {
     if (!isEnabled) return null;
     if (images.isEmpty) return null;
@@ -136,8 +145,11 @@ Return ONLY this JSON object (no markdown fence, no commentary):
     final imgCountNote = attachedImages.length > 1
         ? '\n\nIMPORTANT: ${attachedImages.length} photos of the SAME product are attached, taken from different angles/views. Use ALL of them together when writing the description and filling custom fields (e.g. one photo may show condition, another the brand label, another the back).'
         : '';
+    final langNote = translationLanguages.isEmpty
+        ? ''
+        : '\n\nTRANSLATIONS: In the SAME JSON object also include:\n  "titleTranslations": {"<code>": "<the title translated into that language>", ...}\n  "descriptionTranslations": {"<code>": "<the description translated into that language>", ...}\nwith EXACTLY these language codes: ${translationLanguages.join(', ')}. Write native, natural translations of the same title/description you produced above (no transliteration).';
     final List<Map<String, dynamic>> userContent = [
-      {'type': 'text', 'text': promptText + imgCountNote},
+      {'type': 'text', 'text': promptText + imgCountNote + langNote},
     ];
     for (final img in attachedImages) {
       try {
@@ -158,20 +170,21 @@ Return ONLY this JSON object (no markdown fence, no commentary):
         {'role': 'user', 'content': userContent},
       ],
       'response_format': {'type': 'json_object'},
-      'max_tokens': 800,
+      // Translations inflate the response — scale the budget with count.
+      'max_tokens': translationLanguages.isEmpty ? 800 : (800 + translationLanguages.length * 260).clamp(800, 4000),
       'temperature': 0.7,
     });
 
     try {
       final resp = await http
           .post(
-            Uri.parse(_endpoint),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ${cfg.apiKey}',
-            },
-            body: body,
-          )
+        Uri.parse(_endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${cfg.apiKey}',
+        },
+        body: body,
+      )
           .timeout(const Duration(seconds: 60));
 
       if (resp.statusCode != 200) {
@@ -221,10 +234,25 @@ Return ONLY this JSON object (no markdown fence, no commentary):
         suggestedCategoryName: parsed['suggestedCategory']?.toString(),
         suggestedPrice: price,
         customFieldValues: cfMap,
+        titleTranslations: _stringMap(parsed['titleTranslations']),
+        descriptionTranslations: _stringMap(parsed['descriptionTranslations']),
       );
     } catch (e) {
       print('OpenAiService: error: $e');
       return null;
     }
+  }
+
+  /// Coerces a decoded JSON value into a String→String map, dropping
+  /// null/empty entries. Used for the AI translation maps.
+  static Map<String, String> _stringMap(dynamic raw) {
+    final out = <String, String>{};
+    if (raw is Map) {
+      raw.forEach((k, v) {
+        final t = v?.toString().trim() ?? '';
+        if (t.isNotEmpty) out[k.toString()] = t;
+      });
+    }
+    return out;
   }
 }

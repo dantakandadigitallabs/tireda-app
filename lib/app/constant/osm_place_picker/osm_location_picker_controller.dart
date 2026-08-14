@@ -223,11 +223,11 @@ class OsmLocationPickerController extends GetxController {
           // Draw route if current location exists
           if (currentLocation.value != null) getRoute(currentLocation.value!, destination.value!);
         } else {
-          Get.snackbar("Not Found", "Location not found");
+          Get.snackbar("Not Found".tr, "Location not found".tr);
         }
       }
     } catch (e) {
-      Get.snackbar("Error", "$e");
+      Get.snackbar("Error".tr, "$e");
     }
   }
 

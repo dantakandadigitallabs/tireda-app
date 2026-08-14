@@ -33,12 +33,12 @@ class NotificationsView extends GetView<NotificationsController> {
               onPressed: () => Get.back(),
               icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
             ),
-            title: TextCustom(title: "Notifications", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+            title: TextCustom(title: "Notifications".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
             actions: [
               if (controller.unreadCount > 0)
                 TextButton(
                   onPressed: () => controller.markAllAsRead(),
-                  child: TextCustom(title: "Read all", fontSize: 13, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
+                  child: TextCustom(title: "Read all".tr, fontSize: 13, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
                 ),
             ],
           ),
@@ -71,9 +71,9 @@ class NotificationsView extends GetView<NotificationsController> {
             child: Icon(Icons.notifications_none_rounded, size: 36, color: isDark ? AppThemeData.grey5 : AppThemeData.grey5),
           ),
           spaceH(height: 20),
-          TextCustom(title: "No notifications yet", fontSize: 16, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+          TextCustom(title: "No notifications yet".tr, fontSize: 16, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
           spaceH(height: 6),
-          TextCustom(title: "You'll see updates here", fontSize: 13, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+          TextCustom(title: "You'll see updates here".tr, fontSize: 13, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
         ],
       ),
     );
@@ -134,7 +134,7 @@ class NotificationsView extends GetView<NotificationsController> {
                         children: [
                           // Title
                           TextCustom(
-                            title: notification.title ?? 'Notification',
+                            title: notification.title ?? 'Notification'.tr,
                             fontSize: 14,
                             fontFamily: isUnread ? FontFamily.bold : FontFamily.medium,
                             color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
@@ -265,11 +265,11 @@ class NotificationsView extends GetView<NotificationsController> {
   String _timeAgo(Timestamp? ts) {
     if (ts == null) return '';
     final diff = DateTime.now().difference(ts.toDate());
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return 'Just now'.tr;
+    if (diff.inMinutes < 60) return '${diff.inMinutes}${'m ago'.tr}';
+    if (diff.inHours < 24) return '${diff.inHours}${'h ago'.tr}';
+    if (diff.inDays == 1) return 'Yesterday'.tr;
+    if (diff.inDays < 7) return '${diff.inDays}${'d ago'.tr}';
     final dt = ts.toDate();
     return '${dt.day}/${dt.month}/${dt.year}';
   }

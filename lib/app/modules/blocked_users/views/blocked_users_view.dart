@@ -30,7 +30,7 @@ class BlockedUsersView extends GetView<BlockedUsersController> {
           icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
         ),
         title: TextCustom(
-          title: "Blocked Users",
+          title: "Blocked Users".tr,
           fontSize: 18,
           fontFamily: FontFamily.bold,
           color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
@@ -57,14 +57,14 @@ class BlockedUsersView extends GetView<BlockedUsersController> {
                 ),
                 spaceH(height: 20),
                 TextCustom(
-                  title: "No blocked users",
+                  title: "No blocked users".tr,
                   fontSize: 16,
                   fontFamily: FontFamily.medium,
                   color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
                 ),
                 spaceH(height: 8),
                 TextCustom(
-                  title: "Users you block will appear here",
+                  title: "Users you block will appear here".tr,
                   fontSize: 13,
                   color: isDark ? AppThemeData.grey6 : AppThemeData.grey5,
                 ),
@@ -142,7 +142,7 @@ class BlockedUsersView extends GetView<BlockedUsersController> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                         ),
                         child: TextCustom(
-                          title: "Unblock",
+                          title: "Unblock".tr,
                           fontSize: 13,
                           fontFamily: FontFamily.semiBold,
                           color: AppThemeData.primary4,
@@ -235,9 +235,9 @@ class BlockedUsersView extends GetView<BlockedUsersController> {
                 ],
               ),
               spaceH(height: 16),
-              TextCustom(title: "Unblock $name?", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, textAlign: TextAlign.center),
+              TextCustom(title: "${'Unblock'.tr} $name?", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, textAlign: TextAlign.center),
               spaceH(height: 8),
-              TextCustom(title: "They will be able to\nmessage you again.", fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, textAlign: TextAlign.center),
+              TextCustom(title: "They will be able to\nmessage you again.".tr, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6, textAlign: TextAlign.center),
               spaceH(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -246,10 +246,10 @@ class BlockedUsersView extends GetView<BlockedUsersController> {
                   onPressed: () async {
                     Get.back();
                     await controller.unblockUser(userId);
-                    ShowToastDialog.showSuccess("$name has been unblocked");
+                    ShowToastDialog.showSuccess("user_unblocked".trParams({"name": name}));
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: AppThemeData.primary4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-                  child: const Text("Unblock", style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)),
+                  child: Text("Unblock".tr, style: const TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)),
                 ),
               ),
               spaceH(height: 10),
@@ -259,7 +259,7 @@ class BlockedUsersView extends GetView<BlockedUsersController> {
                 child: TextButton(
                   onPressed: () => Get.back(),
                   style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: TextCustom(title: "Cancel", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                  child: TextCustom(title: "Cancel".tr, fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
                 ),
               ),
             ],

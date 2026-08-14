@@ -13,17 +13,16 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-
   # firebase
-  firebase_core: ^4.11.0
-  firebase_auth: ^6.5.3
-  cloud_firestore: ^6.6.0
-  firebase_database: ^12.4.3
-  firebase_storage: ^13.4.3
-  firebase_messaging: ^16.4.0
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  cloud_firestore: ^6.7.1
+  firebase_database: ^12.4.6
+  firebase_storage: ^13.4.5
+  firebase_messaging: ^16.4.3
 
-  firebase_app_check: ^0.4.5
-  flutter_local_notifications: ^22.0.1
+  firebase_app_check: ^0.4.5+2
+  flutter_local_notifications: ^22.2.0
   flutter_native_splash: ^2.4.1
 
   google_sign_in: ^7.2.0
@@ -37,32 +36,42 @@ dependencies:
   provider: ^6.1.5+1
   hugeicons: ^0.0.7
 
-
   get: ^4.7.3
 
   cached_network_image: ^3.4.1
   country_code_picker: ^3.4.1
 
+  # Tireda Custom: still on v4 — eSellify 1.5 bumped to v5.0.0 (major, breaking).
+  # Do not bump until geocoding API changes are reviewed against our usage.
   geocoding: ^4.0.0
   http: ^1.6.0
   flutter_otp_text_field: ^1.5.1+1
   permission_handler: ^12.0.1
-  geolocator: ^14.0.2
-  flutter_map: ^8.3.0
-  google_maps_flutter: ^2.17.1
+  geolocator: ^14.0.3
+  flutter_map: ^8.3.1
+  google_maps_flutter: ^2.18.0
   flutter_google_places_hoc081098: ^2.0.0
 
   flutter_easyloading: ^3.0.5
-  image_picker: ^1.2.2
+  image_picker: ^1.2.3
   file_picker: ^11.0.2
   url_launcher: ^6.3.2
-  googleapis_auth: ^2.3.2
+  googleapis_auth: ^2.3.3
 
-  webview_flutter: ^4.13.1
-
+  webview_flutter: ^4.14.1
+  syncfusion_flutter_pdfviewer: ^28.1.33
 
   google_mobile_ads: ^9.0.0
-  cloud_functions: ^6.3.3
+  cloud_functions: ^6.3.5
+
+  # Tireda Custom: added for eSellify 1.5 share/deep-link feature
+  # Pinned to 12.x on purpose: share_plus >=13.1 requires win32 ^6, but the
+  # only stable file_picker (11.0.2) requires win32 ^5.9, and both compile
+  # their win32 code on every target. 12.x uses win32 ^5.5 so the two align
+  # with no override. (Revisit when a stable file_picker >=12 — which drops
+  # win32 entirely — is released.)
+  share_plus: ^12.0.0
+  app_links: ^7.2.1
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +81,13 @@ dev_dependencies:
 
 dependency_overrides:
   latlong2: ^0.10.1
+  # Tireda Custom: geolocator_linux (via geolocator 14.0.3) wants
+  # package_info_plus ^10 while google_api_headers wants ^8.
+  # geolocator_linux is Linux-desktop only and never compiles on
+  # Android/iOS. Pin to 8.x — it uses win32 ^5.5, keeping it aligned with
+  # file_picker 11.0.2 / share_plus 12.x on the win32 5 line, and it's the
+  # version google_api_headers (which DOES compile on mobile) needs.
+  package_info_plus: ^8.3.1
 
 # Native splash configuration
 flutter_native_splash:

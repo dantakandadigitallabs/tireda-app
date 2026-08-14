@@ -9,7 +9,7 @@ import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:eSellify/app/widgets/file_viewer_dialog.dart';
 
 import '../controllers/job_applications_controller.dart';
 
@@ -24,7 +24,7 @@ class JobApplicationsView extends GetView<JobApplicationsController> {
 
     return Scaffold(
       backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey2,
-      appBar: UiInterface.customAppBar(context, themeChange, "Job Applications"),
+      appBar: UiInterface.customAppBar(context, themeChange, "Job Applications".tr),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -58,9 +58,9 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.work_outline_rounded, size: 64, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
           spaceH(height: 16),
-          TextCustom(title: "No applications yet", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+          TextCustom(title: "No applications yet".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           spaceH(height: 8),
-          TextCustom(title: "Jobs you apply to will appear here.", fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7, textAlign: TextAlign.center),
+          TextCustom(title: "Jobs you apply to will appear here.".tr, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -87,7 +87,7 @@ class _ApplicationCard extends StatelessWidget {
             children: [
               Expanded(
                 child: TextCustom(
-                  title: application.adTitle ?? 'Job',
+                  title: application.adTitle ?? 'Job'.tr,
                   fontSize: 15,
                   fontFamily: FontFamily.semiBold,
                   maxLine: 2,
@@ -103,13 +103,13 @@ class _ApplicationCard extends StatelessWidget {
             children: [
               Icon(Icons.event_outlined, size: 14, color: AppThemeData.grey5),
               spaceW(width: 6),
-              TextCustom(title: "Applied on ${formatApplicationDate(application.createdAt)}", fontSize: 12, color: AppThemeData.grey5),
+              TextCustom(title: "${'Applied on'.tr} ${formatApplicationDate(application.createdAt)}", fontSize: 12, color: AppThemeData.grey5),
             ],
           ),
           if ((application.cvFileName ?? '').isNotEmpty) ...[
             spaceH(height: 12),
             GestureDetector(
-              onTap: () => openCvUrl(application.cvUrl),
+              onTap: () => openCvUrl(application.cvUrl, fileName: application.cvFileName),
               child: Row(
                 children: [
                   Icon(Icons.description_outlined, size: 16, color: AppThemeData.primary4),
@@ -138,17 +138,14 @@ String formatApplicationDate(dynamic ts) {
   return "${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}";
 }
 
-Future<void> openCvUrl(String? url) async {
+Future<void> openCvUrl(String? url, {String? fileName}) async {
   if (url == null || url.isEmpty) {
-    ShowToastDialog.showError("CV not available");
+    ShowToastDialog.showError("CV not available".tr);
     return;
   }
-  final uri = Uri.parse(url);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } else {
-    ShowToastDialog.showError("Could not open the CV");
-  }
+  // Open inside the app's file viewer instead of handing off to the external
+  // browser, so the CV opens in-app like the other attachment views.
+  await FileViewerDialog.open(url, title: (fileName ?? '').isNotEmpty ? fileName! : 'CV'.tr);
 }
 
 class JobApplicationStatusChip extends StatelessWidget {
@@ -164,23 +161,23 @@ class JobApplicationStatusChip extends StatelessWidget {
     switch (s) {
       case 'hired':
         color = const Color(0xff0F9D58);
-        label = 'Hired';
+        label = 'Hired'.tr;
         break;
       case 'shortlisted':
         color = AppThemeData.success300;
-        label = 'Shortlisted';
+        label = 'Shortlisted'.tr;
         break;
       case 'rejected':
         color = AppThemeData.danger300;
-        label = 'Rejected';
+        label = 'Rejected'.tr;
         break;
       case 'reviewed':
         color = AppThemeData.primary4;
-        label = 'Reviewed';
+        label = 'Reviewed'.tr;
         break;
       default:
         color = const Color(0xffF59E0B);
-        label = 'Pending';
+        label = 'Pending'.tr;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

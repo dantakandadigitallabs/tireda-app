@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:eSellify/app/widgets/file_viewer_dialog.dart';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/constant/round_shape_button.dart';
 import 'package:eSellify/app/data/nigeria_locations.dart';
@@ -16,6 +17,7 @@ import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/utils/screen_size.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
 import 'package:eSellify/widgets/network_image_widget.dart';
+import 'package:eSellify/widgets/localization_tab_section.dart';
 import 'package:eSellify/widgets/text_field_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
@@ -42,7 +44,7 @@ class AddProductsView extends GetView<AddProductsController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey2,
-          appBar: UiInterface.customAppBar(context, themeChange, controller.isEditing.value ? "Edit Ad" : "Post Your Ad"),
+          appBar: UiInterface.customAppBar(context, themeChange, controller.isEditing.value ? "Edit Ad".tr : "Post Your Ad".tr),
           body: Column(
             children: [
               _StepIndicator(currentStep: 1),
@@ -63,11 +65,12 @@ class AddProductsView extends GetView<AddProductsController> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _SectionTitle(title: "Main Picture *", isDark: isDark),
+                            _SectionTitle(title: "Main Picture *".tr, isDark: isDark),
                             spaceH(height: 10),
                             _MainImagePicker(controller: controller, context: context, themeChange: themeChange, isDark: isDark),
                             spaceH(height: 20),
-                            _SectionTitle(title: "Other Pictures", subtitle: "(max 6)", isDark: isDark),
+                            // Tireda Custom: limit kept at 7 (not 1.5's 6).
+                            _SectionTitle(title: "Other Pictures".tr, subtitle: "(max 7)".tr, isDark: isDark),
                             spaceH(height: 10),
                             _OtherImagesPicker(controller: controller, themeChange: themeChange, isDark: isDark),
                           ],
@@ -85,31 +88,16 @@ class AddProductsView extends GetView<AddProductsController> {
                             // OpenAI. Disabled-look until a main photo is added so the
                             // user discovers the feature even before uploading.
                             Obx(() {
-                              // Tireda Custom (bug fix): the AI button crashed
-                              // intermittently — specifically during network
-                              // hitches / Firestore reconnect bursts — with GetX's
-                              // "improper use of GetX" error. Root cause: this Obx
-                              // used to read controller.isEditing.value (via
-                              // isAiEnabled) and then EARLY-RETURN before ever
-                              // reading controller.mainImage.value / isAiGenerating.value
-                              // on some builds but not others. GetX's Obx tracks
-                              // exactly which Rx values were read during each build
-                              // to know what to subscribe to; a tracked-dependency
-                              // set that changes between builds — especially while a
-                              // burst of rapid Rx notifications is in flight (e.g. a
-                              // Firestore reconnect storm) — trips this exact guard.
-                              //
-                              // Fix: read every Rx this widget depends on
-                              // UNCONDITIONALLY, in the same order, on every single
-                              // build, before any branching/early-return. Visual
-                              // behavior is unchanged — only the read order was
-                              // restructured for a stable dependency set.
-                              final aiEnabled = controller.isAiEnabled; // reads isEditing.value
-                              final ready = controller.canUseAi; // reads mainImage.value
+                              // Touch reactive fields BEFORE any early return so Obx has
+                              // subscriptions to fire on and doesn't emit the "improper use"
+                              // warning when `isAiEnabled` (a plain getter, but one that
+                              // reads isEditing.value) is false. This guarantees the same
+                              // Rx dependency set is read on every build (isAiGenerating,
+                              // mainImage, isEditing) regardless of which branch below runs.
                               final busy = controller.isAiGenerating.value;
-
-                              if (!aiEnabled) return const SizedBox.shrink();
-
+                              final hasMainImage = controller.mainImage.value != null;
+                              if (!controller.isAiEnabled) return const SizedBox.shrink();
+                              final ready = controller.isAiEnabled && hasMainImage;
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 14),
                                 child: GestureDetector(
@@ -136,10 +124,10 @@ class AddProductsView extends GetView<AddProductsController> {
                                         const SizedBox(width: 8),
                                         Text(
                                           busy
-                                              ? "Generating..."
+                                              ? "Generating...".tr
                                               : ready
-                                              ? "Generate with AI from photos"
-                                              : "Add a photo to generate with AI",
+                                              ? "Generate with AI from photos".tr
+                                              : "Add a photo to generate with AI".tr,
                                           style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: FontFamily.semiBold),
                                         ),
                                       ],
@@ -148,9 +136,29 @@ class AddProductsView extends GetView<AddProductsController> {
                                 ),
                               );
                             }),
-                            TextFieldWidget(title: "Ad Title *", hintText: "What are you selling?", controller: controller.adTitleController, onPress: () {}),
-                            spaceH(height: 16),
-                            TextFieldWidget(title: "Description *", hintText: "Describe your item...", controller: controller.adDescriptionController, line: 4, onPress: () {}),
+                            // Multi-language title/description tabs — Default tab is
+                            // required (validated in controller.validateStep1()), the
+                            // rest are optional translations.
+                            LocalizationTabSection(
+                              selectedLanguageIndex: controller.selectedLanguageIndex,
+                              fields: [
+                                LocalizationField(
+                                  fieldLabel: 'Ad Title *'.tr,
+                                  defaultController: controller.adTitleController,
+                                  byLanguage: controller.titleByLanguage,
+                                  defaultHint: 'What are you selling?'.tr,
+                                  languageHint: 'Translate the title'.tr,
+                                ),
+                                LocalizationField(
+                                  fieldLabel: 'Description *'.tr,
+                                  defaultController: controller.adDescriptionController,
+                                  byLanguage: controller.descriptionByLanguage,
+                                  defaultHint: 'Describe your item...'.tr,
+                                  languageHint: 'Translate the description'.tr,
+                                  maxLines: 4,
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -175,14 +183,14 @@ class AddProductsView extends GetView<AddProductsController> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 TextFieldWidget(
-                                  title: "Price *",
+                                  title: "Price *".tr,
                                   hintText: "0",
                                   controller: controller.priceController,
                                   onPress: () {},
                                   textInputType: const TextInputType.numberWithOptions(decimal: true),
                                   inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), // Added comma here
-                                    ThousandsFormatter(), // Added your formatter here
+                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), // Tireda Custom: comma allowed
+                                    ThousandsFormatter(), // Tireda Custom: comma separator formatting
                                   ],
                                   prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
                                 ),
@@ -211,7 +219,7 @@ class AddProductsView extends GetView<AddProductsController> {
                         isDark: isDark,
                         child: Obx(
                               () => MobileNumberTextField(
-                            title: "Mobile Number *",
+                            title: "Mobile Number *".tr,
                             controller: controller.mobileController,
                             countryCode: controller.countryCode.value.toString(),
                             onCountryCodeChanged: (code) => controller.countryCode.value = code,
@@ -222,11 +230,13 @@ class AddProductsView extends GetView<AddProductsController> {
                       spaceH(height: 12),
 
                       // ── Location — Nigerian State / LGA Picker ────────
+                      // Tireda Custom: built from scratch, kept in place of
+                      // eSellify 1.5's Google Map / OSM + geocoding picker.
                       _SectionCard(
                         isDark: isDark,
                         child: TextFieldWidget(
-                          title: "Location *",
-                          hintText: "Select State & LGA",
+                          title: "Location *".tr,
+                          hintText: "Select State & LGA".tr,
                           controller: controller.locationController,
                           onPress: () async {
                             final result = await _showNigeriaLocationPicker(context, isDark);
@@ -253,7 +263,7 @@ class AddProductsView extends GetView<AddProductsController> {
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 10),
                       child: RoundShapeButton(
-                        title: "Next  →",
+                        title: "Next  →".tr,
                         buttonColor: AppThemeData.primary4,
                         buttonTextColor: AppThemeData.primaryWhite,
                         size: Size(double.infinity, ScreenSize.height(7, context)),
@@ -277,6 +287,7 @@ class AddProductsView extends GetView<AddProductsController> {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NIGERIA LOCATION PICKER (reusable within this file)
+// Tireda Custom: replaces eSellify 1.5's Google Map / OSM + geocoding flow.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _LocationResult {
@@ -339,7 +350,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          "Select State",
+          "Select State".tr,
           style: TextStyle(fontSize: 18, fontFamily: FontFamily.bold, color: textColor),
         ),
       ),
@@ -353,7 +364,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
               onChanged: _onSearch,
               style: TextStyle(color: textColor, fontSize: 14),
               decoration: InputDecoration(
-                hintText: "Find state...",
+                hintText: "Find state...".tr,
                 hintStyle: TextStyle(color: subColor, fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: subColor, size: 20),
                 filled: true,
@@ -394,7 +405,7 @@ class _NigeriaStatePickerState extends State<_NigeriaStatePicker> {
                             children: [
                               Text(state.state, style: TextStyle(fontSize: 15, fontFamily: FontFamily.medium, color: textColor)),
                               const SizedBox(height: 2),
-                              Text("${state.lgas.length} LGAs", style: TextStyle(fontSize: 12, color: subColor)),
+                              Text("${state.lgas.length} ${'LGAs'.tr}", style: TextStyle(fontSize: 12, color: subColor)),
                             ],
                           ),
                         ),
@@ -464,7 +475,7 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Select LGA", style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: textColor)),
+            Text("Select LGA".tr, style: TextStyle(fontSize: 16, fontFamily: FontFamily.bold, color: textColor)),
             Text(widget.state.state, style: TextStyle(fontSize: 12, color: AppThemeData.primary4)),
           ],
         ),
@@ -479,7 +490,7 @@ class _NigeriaLGAPickerState extends State<_NigeriaLGAPicker> {
               onChanged: _onSearch,
               style: TextStyle(color: textColor, fontSize: 14),
               decoration: InputDecoration(
-                hintText: "Find LGA...",
+                hintText: "Find LGA...".tr,
                 hintStyle: TextStyle(color: subColor, fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: subColor, size: 20),
                 filled: true,
@@ -538,7 +549,7 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey2,
-          appBar: UiInterface.customAppBar(context, themeChange, controller.isEditing.value ? "Edit Ad Details" : "Ad Details"),
+          appBar: UiInterface.customAppBar(context, themeChange, controller.isEditing.value ? "Edit Ad Details".tr : "Ad Details".tr),
           body: Column(
             children: [
               _StepIndicator(currentStep: 2),
@@ -556,7 +567,7 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             TextCustom(
-                              title: "Tell us more about your item",
+                              title: "Tell us more about your item".tr,
                               fontSize: 14,
                               fontFamily: FontFamily.medium,
                               color: isDark ? AppThemeData.grey3 : AppThemeData.grey7,
@@ -605,8 +616,8 @@ class AddProductsViewStep2 extends GetView<AddProductsController> {
                         padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 10),
                         child: RoundShapeButton(
                           title: controller.isSubmitting.value
-                              ? (controller.isEditing.value ? "Updating...".tr : "Posting...")
-                              : (controller.isEditing.value ? "Update Ad" : "Post Ad"),
+                              ? (controller.isEditing.value ? "Updating...".tr : "Posting...".tr)
+                              : (controller.isEditing.value ? "Update Ad".tr : "Post Ad".tr),
                           buttonColor: controller.isSubmitting.value ? AppThemeData.grey5 : AppThemeData.primary4,
                           buttonTextColor: AppThemeData.primaryWhite,
                           size: Size(double.infinity, ScreenSize.height(7, context)),
@@ -653,9 +664,9 @@ class _BoostAdCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: isDark ? AppThemeData.primary4.withOpacity(0.08) : AppThemeData.primary1,
+            color: isDark ? AppThemeData.primary4.withValues(alpha: 0.08) : AppThemeData.primary1,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppThemeData.primary4.withOpacity(0.25)),
+            border: Border.all(color: AppThemeData.primary4.withValues(alpha: 0.25)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,14 +681,14 @@ class _BoostAdCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         TextCustom(
-                          title: "Boost Your Ad",
+                          title: "Boost Your Ad".tr,
                           fontSize: 15,
                           fontFamily: FontFamily.bold,
                           color: AppThemeData.primary4,
                         ),
                         spaceH(height: 4),
                         TextCustom(
-                          title: "Feature your ad for better visibility and more views",
+                          title: "Feature your ad for better visibility and more views".tr,
                           fontSize: 12,
                           color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
                           maxLine: 3,
@@ -707,7 +718,7 @@ class _BoostAdCard extends StatelessWidget {
                     children: [
                       Icon(Icons.lock_outline_rounded, size: 13, color: AppThemeData.primaryWhite),
                       spaceW(width: 6),
-                      TextCustom(title: "Paid Plans", fontSize: 12, fontFamily: FontFamily.semiBold, color: AppThemeData.primaryWhite),
+                      TextCustom(title: "Paid Plans".tr, fontSize: 12, fontFamily: FontFamily.semiBold, color: AppThemeData.primaryWhite),
                     ],
                   ),
                 ),
@@ -763,8 +774,8 @@ class _StepIndicator extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextCustom(title: "Step $currentStep of 2", fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-              TextCustom(title: currentStep == 1 ? "Basic Details" : "More Details", fontSize: 13, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
+              TextCustom(title: "${'Step'.tr} $currentStep ${'of'.tr} 2", fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+              TextCustom(title: currentStep == 1 ? "Basic Details".tr : "More Details".tr, fontSize: 13, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
             ],
           ),
           spaceH(height: 8),
@@ -791,7 +802,7 @@ class _CategoryBreadcrumb extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: AppThemeData.primary4.withOpacity(0.08), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -804,7 +815,7 @@ class _CategoryBreadcrumb extends StatelessWidget {
               children: [
                 for (int i = 0; i < path.length; i++) ...[
                   TextCustom(
-                    title: path[i].categoryName ?? '',
+                    title: path[i].categoryNameFor(Get.locale?.languageCode),
                     fontSize: 12,
                     fontFamily: i == path.length - 1 ? FontFamily.semiBold : FontFamily.regular,
                     color: i == path.length - 1 ? AppThemeData.primary4 : (isDark ? AppThemeData.grey4 : AppThemeData.grey6),
@@ -876,9 +887,9 @@ class _SalarySection extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SalaryLoadingSkeleton(isDark: isDark, title: "Minimum Salary *"),
+              _SalaryLoadingSkeleton(isDark: isDark, title: "Minimum Salary *".tr),
               spaceH(height: 16),
-              _SalaryLoadingSkeleton(isDark: isDark, title: "Maximum Salary *"),
+              _SalaryLoadingSkeleton(isDark: isDark, title: "Maximum Salary *".tr),
             ],
           );
         }
@@ -886,7 +897,7 @@ class _SalarySection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextFieldWidget(
-              title: "Minimum Salary *",
+              title: "Minimum Salary *".tr,
               hintText: "0",
               controller: controller.minSalaryController,
               onPress: () {},
@@ -899,7 +910,7 @@ class _SalarySection extends StatelessWidget {
             ),
             spaceH(height: 16),
             TextFieldWidget(
-              title: "Maximum Salary *",
+              title: "Maximum Salary *".tr,
               hintText: "0",
               controller: controller.maxSalaryController,
               onPress: () {},
@@ -908,7 +919,8 @@ class _SalarySection extends StatelessWidget {
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ThousandsFormatter(),
               ],
-              prefix: controller.currencyList.isEmpty ? null : _CurrencyDropdown(controller: controller),
+              // Currency is chosen once on the Minimum Salary field — both
+              // bounds share the same currency, so no second picker here.
             ),
           ],
         );
@@ -978,7 +990,7 @@ class _NegotiableToggle extends StatelessWidget {
             ),
             spaceW(width: 10),
             TextCustom(
-              title: "Price is negotiable",
+              title: "Price is negotiable".tr,
               fontSize: 13,
               fontFamily: FontFamily.medium,
               color: isDark ? AppThemeData.grey2 : AppThemeData.grey8,
@@ -1000,7 +1012,7 @@ class _PriceLoadingSkeleton extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextCustom(title: "Price *", fontSize: 14, fontFamily: FontFamily.medium),
+        TextCustom(title: "Price *".tr, fontSize: 14, fontFamily: FontFamily.medium),
         spaceH(height: 8),
         Container(
           height: 48,
@@ -1016,6 +1028,7 @@ class _PriceLoadingSkeleton extends StatelessWidget {
   }
 }
 
+/// Currency dropdown — wrapped in Obx so it rebuilds when selectedCurrency changes
 class _CurrencyDropdown extends StatelessWidget {
   final AddProductsController controller;
 
@@ -1082,7 +1095,7 @@ class _MainImagePicker extends StatelessWidget {
               children: [
                 Icon(Icons.add_photo_alternate_outlined, size: 36, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 spaceH(height: 6),
-                TextCustom(title: "Tap to add main photo", fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+                TextCustom(title: "Tap to add main photo".tr, fontSize: 13, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
               ],
             ),
           )
@@ -1127,19 +1140,19 @@ class _MainImagePicker extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextCustom(title: "Select Image Source", fontSize: 16, fontFamily: FontFamily.bold),
+              TextCustom(title: "Select Image Source".tr, fontSize: 16, fontFamily: FontFamily.bold),
               spaceH(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _SourceOption(
                     icon: Icons.camera_alt,
-                    label: "Camera",
+                    label: "Camera".tr,
                     onTap: () => controller.pickMainImage(source: ImageSource.camera),
                   ),
                   _SourceOption(
                     icon: Icons.photo_library,
-                    label: "Gallery",
+                    label: "Gallery".tr,
                     onTap: () => controller.pickMainImage(source: ImageSource.gallery),
                   ),
                 ],
@@ -1168,7 +1181,7 @@ class _SourceOption extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppThemeData.primary4.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppThemeData.primary4.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: AppThemeData.primary4, size: 28),
           ),
           spaceH(height: 8),
@@ -1217,7 +1230,9 @@ class _OtherImagesPicker extends StatelessWidget {
               ],
             );
           }),
-          if (controller.otherImages.length < 6)
+          // Tireda Custom: limit kept at 7 (not 1.5's 6) — matches the
+          // controller's otherImages cap.
+          if (controller.otherImages.length < 7)
             GestureDetector(
               onTap: controller.pickOtherImages,
               child: DottedBorder(
@@ -1252,10 +1267,10 @@ class _EmptyCustomFields extends StatelessWidget {
         children: [
           Icon(Icons.check_circle_outline, size: 64, color: AppThemeData.success300),
           spaceH(height: 16),
-          TextCustom(title: "Looking good!", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+          TextCustom(title: "Looking good!".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           spaceH(height: 8),
           TextCustom(
-            title: "No additional details required\nfor this category.",
+            title: "No additional details required\nfor this category.".tr,
             fontSize: 14,
             color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
             textAlign: TextAlign.center,
@@ -1295,7 +1310,7 @@ class _RadioField extends StatelessWidget {
                     duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppThemeData.primary4.withOpacity(0.1) : (isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+                      color: isSelected ? AppThemeData.primary4.withValues(alpha: 0.1) : (isDark ? AppThemeData.grey9 : AppThemeData.grey2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4), width: isSelected ? 1.5 : 1),
                     ),
@@ -1336,7 +1351,7 @@ class _TextInputField extends StatelessWidget {
           _FieldHeader(field: field, isDark: isDark),
           spaceH(height: 10),
           CustomFieldTextField(
-            hintText: "Enter ${field.name}",
+            hintText: "${'Enter'.tr} ${field.nameFor(Get.locale?.languageCode)}",
             controller: controller.textControllers[field.id]!,
             onPress: () {},
             fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
@@ -1368,7 +1383,7 @@ class _DropdownField extends StatelessWidget {
           Obx(
                 () => DropdownButtonFormField<String>(
               initialValue: controller.selectedDropdownValues[field.id],
-              hint: Text("Select ${field.name}", style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
+              hint: Text("${'Select'.tr} ${field.nameFor(Get.locale?.languageCode)}", style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6)),
               // Selected value text — explicit theme color so it stays readable
               // in both light and dark mode (default was washed-out grey).
               style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
@@ -1409,13 +1424,13 @@ class _NumberInputField extends StatelessWidget {
     }
 
     // Build hint: e.g.  "Enter Year  (1990 – 2025)"
-    String hint = "Enter ${field.name}";
+    String hint = "${'Enter'.tr} ${field.nameFor(Get.locale?.languageCode)}";
     if (field.min != null && field.max != null) {
       hint += "  (${field.min} – ${field.max})";
     } else if (field.min != null) {
-      hint += "  (min ${field.min})";
+      hint += "  (${'min'.tr} ${field.min})";
     } else if (field.max != null) {
-      hint += "  (max ${field.max})";
+      hint += "  (${'max'.tr} ${field.max})";
     }
 
     return Padding(
@@ -1432,8 +1447,8 @@ class _NumberInputField extends StatelessWidget {
             fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
             textInputType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ThousandsFormatter(),
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), // Tireda Custom: comma allowed
+              ThousandsFormatter(), // Tireda Custom: comma separator formatting
             ],
           ),
           if (field.min != null || field.max != null)
@@ -1442,10 +1457,10 @@ class _NumberInputField extends StatelessWidget {
               child: Row(
                 children: [
                   if (field.min != null)
-                    TextCustom(title: "Min: ${field.min}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    TextCustom(title: "${'Min'.tr}: ${field.min}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                   if (field.min != null && field.max != null) spaceW(width: 12),
                   if (field.max != null)
-                    TextCustom(title: "Max: ${field.max}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                    TextCustom(title: "${'Max'.tr}: ${field.max}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 ],
               ),
             ),
@@ -1487,7 +1502,7 @@ class _CheckboxField extends StatelessWidget {
                     duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppThemeData.primary4.withOpacity(0.1) : (isDark ? AppThemeData.grey9 : AppThemeData.grey2),
+                      color: isSelected ? AppThemeData.primary4.withValues(alpha: 0.1) : (isDark ? AppThemeData.grey9 : AppThemeData.grey2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
@@ -1529,7 +1544,7 @@ class _CheckboxField extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FILE INPUT FIELD — pick image from gallery, show preview
+// FILE INPUT FIELD — pick a file (image or PDF), preview / view / replace it
 // ─────────────────────────────────────────────────────────────────────────────
 class _FileInputField extends StatelessWidget {
   final CustomFieldModel field;
@@ -1549,30 +1564,88 @@ class _FileInputField extends StatelessWidget {
           spaceH(height: 10),
           Obx(() {
             final file = controller.selectedFileValues[field.id];
+            // Edit mode: the ad already carries an uploaded file and none was
+            // re-picked — show it with Change / Remove instead of the empty
+            // "Tap to upload" zone.
+            final existingUrl = file == null ? (controller.existingFieldFileUrls[field.id] ?? '') : '';
+            final hasContent = file != null || existingUrl.isNotEmpty;
             return GestureDetector(
               onTap: () => controller.pickFileForField(field.id!),
               child: Container(
                 width: double.infinity,
-                height: file != null ? 140 : 80,
+                height: hasContent ? 140 : 80,
                 decoration: BoxDecoration(
                   color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: file != null ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
-                    width: file != null ? 1.5 : 1,
+                    color: hasContent ? AppThemeData.primary4 : (isDark ? AppThemeData.grey7 : AppThemeData.grey4),
+                    width: hasContent ? 1.5 : 1,
                     style: BorderStyle.solid,
                   ),
                 ),
-                child: file == null
+                child: !hasContent
                     ? Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.upload_file_outlined, size: 28, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     spaceH(height: 6),
                     TextCustom(
-                      title: "Tap to upload",
+                      title: "Tap to upload".tr,
                       fontSize: 13,
                       color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
+                    ),
+                  ],
+                )
+                    : file == null
+                    ? Stack(
+                  children: [
+                    // Tapping the preview opens the uploaded file in
+                    // the in-app viewer; the pencil overlay picks a
+                    // replacement.
+                    GestureDetector(
+                      onTap: () => FileViewerDialog.open(existingUrl, title: field.nameFor(Get.locale?.languageCode)),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: (Uri.tryParse(existingUrl)?.path ?? existingUrl).toLowerCase().endsWith('.pdf')
+                            ? SizedBox(
+                          width: double.infinity,
+                          height: 140,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.picture_as_pdf, size: 34, color: AppThemeData.danger300),
+                              spaceH(height: 6),
+                              TextCustom(title: "Uploaded file (PDF)".tr, fontSize: 12, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+                            ],
+                          ),
+                        )
+                            : Image.network(
+                          existingUrl,
+                          width: double.infinity,
+                          height: 140,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Icon(Icons.insert_drive_file_outlined, size: 34, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Row(
+                        children: [
+                          _FileActionButton(
+                            icon: Icons.edit_outlined,
+                            onTap: () => controller.pickFileForField(field.id!),
+                          ),
+                          spaceW(width: 8),
+                          _FileActionButton(
+                            icon: Icons.close,
+                            onTap: () => controller.existingFieldFileUrls.remove(field.id!),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 )
@@ -1649,7 +1722,7 @@ class _FieldHeader extends StatelessWidget {
         Expanded(
           child: Row(
             children: [
-              TextCustom(title: field.name.toString(), fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+              TextCustom(title: field.nameFor(Get.locale?.languageCode), fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               if (field.required == true) ...[spaceW(width: 4), TextCustom(title: "*", fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.danger300)],
             ],
           ),

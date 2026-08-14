@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/models/ad_model.dart';
-import 'package:eSellify/utils/navigation_helper.dart';
+import 'package:eSellify/app/modules/ad_listing_detail/views/ad_listing_detail_view.dart';
 import 'package:eSellify/app/modules/sub_category/views/sub_category_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
@@ -18,6 +18,8 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/search_controller.dart';
+import 'package:eSellify/utils/navigation_helper.dart';
+
 
 class SearchView extends GetView<AdSearchController> {
   const SearchView({super.key});
@@ -173,7 +175,7 @@ class SearchView extends GetView<AdSearchController> {
                 spaceH(height: 12),
                 ...controller.categories.map((cat) {
                   return InkWell(
-                    onTap: () => Get.to(() => const SubCategoryView(), arguments: {"category": cat}),
+                    onTap: () => Get.to(() => SubCategoryView(category: cat)),
                     borderRadius: BorderRadius.circular(10),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -197,7 +199,7 @@ class SearchView extends GetView<AdSearchController> {
                           ),
                           spaceW(width: 14),
                           Expanded(
-                            child: TextCustom(title: cat.categoryName ?? '', fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                            child: TextCustom(title: cat.categoryNameFor(Get.locale?.languageCode), fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                           ),
                           SvgPicture.asset("assets/icons/ic_arrow_right.svg", height: 14, colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey6 : AppThemeData.grey5, BlendMode.srcIn)),
                         ],
@@ -273,7 +275,7 @@ class SearchView extends GetView<AdSearchController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextCustom(
-                    title: ad.title ?? '',
+                    title: ad.titleFor(Get.locale?.languageCode),
                     fontSize: 14,
                     fontFamily: FontFamily.medium,
                     color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,

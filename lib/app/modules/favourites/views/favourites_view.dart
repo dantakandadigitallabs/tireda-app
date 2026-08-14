@@ -33,7 +33,7 @@ class FavouritesView extends GetView<FavouritesController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "Favourites", isBack: true),
+          appBar: UiInterface.customAppBar(context, themeChange, "Favourites".tr, isBack: true),
           body: Column(
             children: [
               const Center(child: AdBannerWidget()),
@@ -47,9 +47,9 @@ class FavouritesView extends GetView<FavouritesController> {
                     children: [
                       Icon(Icons.favorite_outline, size: 64, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                       spaceH(height: 16),
-                      TextCustom(title: "No Favourites Yet", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
+                      TextCustom(title: "No Favourites Yet".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
                       spaceH(height: 8),
-                      TextCustom(title: "Ads you like will appear here", fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      TextCustom(title: "Ads you like will appear here".tr, fontSize: 14, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     ],
                   ),
                 )
@@ -126,7 +126,7 @@ class _FavAdCard extends StatelessWidget {
                       ],
                     ),
                     spaceH(height: 4),
-                    TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
+                    TextCustom(title: ad.titleFor(Get.locale?.languageCode), fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
                     spaceH(height: 6),
                     if (ad.address != null && ad.address!.isNotEmpty)
                       Row(

@@ -34,7 +34,7 @@ class LanguageView extends GetView<LanguageController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: isFirstTime ? UiInterface.customAppBar(context, themeChange, "Language") : UiInterface.customAppBar(context, themeChange, "Language", isBack: true),
+          appBar: isFirstTime ? UiInterface.customAppBar(context, themeChange, "Language".tr) : UiInterface.customAppBar(context, themeChange, "Language".tr, isBack: true),
           body: Column(
             children: [
               Expanded(
@@ -61,51 +61,74 @@ class LanguageView extends GetView<LanguageController> {
                         child: SingleChildScrollView(
                           child: controller.isLoading.value
                               ? Constant.loader(context: context)
-                              : Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: ListView.separated(
-                                    shrinkWrap: true,
-                                    itemCount: controller.languageList.length,
-                                    physics: NeverScrollableScrollPhysics(),
-                                    padding: EdgeInsets.zero,
-                                    separatorBuilder: (context, index) =>
-                                        Divider(height: 12, thickness: 1, color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3),
-                                    itemBuilder: (context, index) {
-                                      return Obx(
-                                        () => Center(
-                                          child: RadioGroup<LanguageModel>(
-                                            groupValue: controller.selectedLanguage.value,
-                                            onChanged: (value) {
-                                              controller.selectedLanguage.value = value!;
-                                            },
-                                            child: RadioListTile(
-                                              dense: true,
-                                              value: controller.languageList[index],
-                                              contentPadding: EdgeInsets.zero,
-                                              controlAffinity: ListTileControlAffinity.trailing,
-                                              activeColor: AppThemeData.primary4,
-                                              title: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  TextCustom(
-                                                    title: controller.languageList[index].name.toString(),
-                                                    fontSize: 16,
-                                                    color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10,
-                                                    fontFamily: FontFamily.medium,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                              : controller.languageList.isEmpty
+                              ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
+                            child: Column(
+                              children: [
+                                Icon(Icons.language, size: 56, color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5),
+                                spaceH(height: 12),
+                                TextCustom(
+                                  title: "Couldn't load languages. Check your connection.".tr,
+                                  fontSize: 14,
+                                  color: themeChange.isDarkTheme() ? AppThemeData.grey5 : AppThemeData.grey6,
+                                  textAlign: TextAlign.center,
+                                  maxLine: 2,
                                 ),
+                                spaceH(height: 16),
+                                TextButton.icon(
+                                  onPressed: () => controller.getLanguage(),
+                                  icon: Icon(Icons.refresh, size: 18, color: AppThemeData.primary4),
+                                  label: TextCustom(title: "Retry".tr, fontSize: 14, color: AppThemeData.primary4, fontFamily: FontFamily.medium),
+                                ),
+                              ],
+                            ),
+                          )
+                              : Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: themeChange.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: controller.languageList.length,
+                              physics: NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              separatorBuilder: (context, index) =>
+                                  Divider(height: 12, thickness: 1, color: themeChange.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3),
+                              itemBuilder: (context, index) {
+                                return Obx(
+                                      () => Center(
+                                    child: RadioGroup<LanguageModel>(
+                                      groupValue: controller.selectedLanguage.value,
+                                      onChanged: (value) {
+                                        controller.selectedLanguage.value = value!;
+                                      },
+                                      child: RadioListTile(
+                                        dense: true,
+                                        value: controller.languageList[index],
+                                        contentPadding: EdgeInsets.zero,
+                                        controlAffinity: ListTileControlAffinity.trailing,
+                                        activeColor: AppThemeData.primary4,
+                                        title: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextCustom(
+                                              title: controller.languageList[index].name.toString(),
+                                              fontSize: 16,
+                                              color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10,
+                                              fontFamily: FontFamily.medium,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ],

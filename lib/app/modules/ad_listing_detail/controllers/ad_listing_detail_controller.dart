@@ -8,8 +8,8 @@ import 'package:eSellify/app/models/chat_message_model.dart';
 import 'package:eSellify/app/models/job_application_model.dart';
 import 'package:eSellify/app/modules/chats/views/chat_detail_view.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:eSellify/app/constant/show_toast.dart';
 
@@ -126,8 +126,7 @@ class AdListingDetailController extends ChangeNotifier {
       if (android.isNotEmpty) 'Android: $android',
       if (ios.isNotEmpty) 'iOS: $ios',
     ];
-    Clipboard.setData(ClipboardData(text: lines.join('\n')));
-    ShowToastDialog.showSuccess("Ad link copied to clipboard!".tr);
+    SharePlus.instance.share(ShareParams(text: lines.join('\n'), subject: ad.title ?? appName));
   }
 
   String _formatPrice() {

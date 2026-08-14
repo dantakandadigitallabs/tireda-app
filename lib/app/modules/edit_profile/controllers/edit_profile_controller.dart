@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/extension/string_extensions.dart';
 import 'package:eSellify/utils/fire_store_utils.dart';
-import 'package:eSellify/utils/permissions/permission_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -77,15 +76,9 @@ class EditProfileController extends GetxController {
   }
 
   Future<void> pickFile({required ImageSource source}) async {
-    final bool granted = source == ImageSource.camera
-        ? await PermissionService.requestCamera()
-        : await PermissionService.requestPhotos();
-
-    if (!granted) return;
-
     isLoading.value = true;
     try {
-      XFile? image = await imagePicker.pickImage(source: source, imageQuality: 100);
+      XFile? image = Constant.validatePickedImage(await imagePicker.pickImage(source: source, imageQuality: 100));
       if (image == null) return;
 
       Get.back();

@@ -31,7 +31,7 @@ class MyPurchasesView extends GetView<MyPurchasesController> {
             backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
             elevation: 0,
             leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10)),
-            title: TextCustom(title: "My Purchases", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+            title: TextCustom(title: "My Purchases".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           ),
           body: Column(
             children: [
@@ -64,9 +64,9 @@ class MyPurchasesView extends GetView<MyPurchasesController> {
         children: [
           Container(height: 80, width: 80, decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey2, shape: BoxShape.circle), child: Icon(Icons.shopping_bag_outlined, size: 36, color: isDark ? AppThemeData.grey5 : AppThemeData.grey5)),
           spaceH(height: 20),
-          TextCustom(title: "No purchases yet", fontSize: 16, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+          TextCustom(title: "No purchases yet".tr, fontSize: 16, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
           spaceH(height: 6),
-          TextCustom(title: "Products you buy will appear here", fontSize: 13, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+          TextCustom(title: "Products you buy will appear here".tr, fontSize: 13, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
         ],
       ),
     );
@@ -108,7 +108,7 @@ class _PurchaseCard extends StatelessWidget {
     final decimals = ad.currency?.decimalDigits ?? Constant.currencyModel?.decimalDigits ?? 2;
     final price = ad.isJobAd
         ? ad.formattedSalary()
-        : (ad.price != null ? '$currency${ad.price!.toStringAsFixed(decimals)}' : 'Negotiable');
+        : (ad.price != null ? '$currency${ad.price!.toStringAsFixed(decimals)}' : 'Negotiable'.tr);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -135,7 +135,7 @@ class _PurchaseCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextCustom(title: ad.title ?? '', fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
+                      TextCustom(title: ad.titleFor(Get.locale?.languageCode), fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
                       spaceH(height: 3),
                       TextCustom(title: price, fontSize: 14, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
                       spaceH(height: 3),
@@ -143,7 +143,7 @@ class _PurchaseCard extends StatelessWidget {
                         children: [
                           Icon(Icons.person_outline, size: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                           spaceW(width: 4),
-                          TextCustom(title: "Seller: ${ad.sellerName ?? ''}", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                          TextCustom(title: "${'Seller:'.tr} ${ad.sellerName ?? ''}", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
                         ],
                       ),
                     ],
@@ -153,7 +153,7 @@ class _PurchaseCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: const Color(0xff007AFF).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                  child: const TextCustom(title: "Purchased", fontSize: 10, fontFamily: FontFamily.bold, color: Color(0xff007AFF)),
+                  child: TextCustom(title: "Purchased".tr, fontSize: 10, fontFamily: FontFamily.bold, color: const Color(0xff007AFF)),
                 ),
               ],
             ),
@@ -170,7 +170,7 @@ class _PurchaseCard extends StatelessWidget {
                       children: [
                         Icon(Icons.check_circle, size: 16, color: const Color(0xff4CAF50)),
                         spaceW(width: 8),
-                        TextCustom(title: "Review submitted", fontSize: 13, fontFamily: FontFamily.medium, color: const Color(0xff4CAF50)),
+                        TextCustom(title: "Review submitted".tr, fontSize: 13, fontFamily: FontFamily.medium, color: const Color(0xff4CAF50)),
                       ],
                     )
                   : GestureDetector(
@@ -179,7 +179,7 @@ class _PurchaseCard extends StatelessWidget {
                         children: [
                           Icon(Icons.star_border_rounded, size: 18, color: const Color(0xffFF9500)),
                           spaceW(width: 8),
-                          TextCustom(title: "Rate this seller", fontSize: 13, fontFamily: FontFamily.semiBold, color: const Color(0xffFF9500)),
+                          TextCustom(title: "Rate this seller".tr, fontSize: 13, fontFamily: FontFamily.semiBold, color: const Color(0xffFF9500)),
                           const Spacer(),
                           Icon(Icons.chevron_right, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                         ],
@@ -213,9 +213,9 @@ class _PurchaseCard extends StatelessWidget {
                 child: (ad.sellerProfile == null || ad.sellerProfile!.isEmpty) ? Icon(Icons.person, size: 28, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6) : null,
               ),
               spaceH(height: 12),
-              TextCustom(title: "Rate ${ad.sellerName ?? 'Seller'}", fontSize: 17, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, textAlign: TextAlign.center),
+              TextCustom(title: "${'Rate'.tr} ${ad.sellerName ?? 'Seller'.tr}", fontSize: 17, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, textAlign: TextAlign.center),
               spaceH(height: 4),
-              TextCustom(title: "for \"${ad.title ?? ''}\"", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, textAlign: TextAlign.center, maxLine: 1),
+              TextCustom(title: "${'for'.tr} \"${ad.titleFor(Get.locale?.languageCode)}\"", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, textAlign: TextAlign.center, maxLine: 1),
               spaceH(height: 16),
 
               // Star rating
@@ -243,7 +243,7 @@ class _PurchaseCard extends StatelessWidget {
                 maxLines: 3,
                 style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                 decoration: InputDecoration(
-                  hintText: "Write your experience (optional)...",
+                  hintText: "Write your experience (optional)...".tr,
                   hintStyle: TextStyle(fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                   filled: true,
                   fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
@@ -260,14 +260,14 @@ class _PurchaseCard extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     if (rating.value == 0) {
-                      Get.snackbar("Rating Required", "Please select at least 1 star");
+                      Get.snackbar("Rating Required".tr, "Please select at least 1 star".tr);
                       return;
                     }
                     Get.back();
                     controller.submitReview(ad: ad, rating: rating.value, comment: commentController.text);
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffFF9500), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-                  child: const Text("Submit Review", style: TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)),
+                  child: Text("Submit Review".tr, style: const TextStyle(fontSize: 15, fontFamily: FontFamily.semiBold, color: Colors.white)),
                 ),
               ),
               spaceH(height: 8),
@@ -276,7 +276,7 @@ class _PurchaseCard extends StatelessWidget {
                 height: 44,
                 child: TextButton(
                   onPressed: () => Get.back(),
-                  child: TextCustom(title: "Cancel", fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey5),
+                  child: TextCustom(title: "Cancel".tr, fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey5),
                 ),
               ),
             ],

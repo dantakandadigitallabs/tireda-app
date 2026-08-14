@@ -402,7 +402,7 @@ class VerificationView extends GetView<VerificationController> {
               ),
               spaceW(width: 10),
               Expanded(
-                child: TextCustom(title: doc.name ?? '', fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                child: TextCustom(title: doc.nameFor(Get.locale?.languageCode), fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
               ),
               if (doc.isRequired == true)
                 Container(
@@ -418,11 +418,11 @@ class VerificationView extends GetView<VerificationController> {
                 ),
             ],
           ),
-          if (doc.description != null && doc.description!.isNotEmpty) ...[
+          if (doc.descriptionFor(Get.locale?.languageCode).isNotEmpty) ...[
             spaceH(height: 6),
             Padding(
               padding: const EdgeInsets.only(left: 42),
-              child: TextCustom(title: doc.description!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+              child: TextCustom(title: doc.descriptionFor(Get.locale?.languageCode), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
             ),
           ],
           spaceH(height: 14),
@@ -438,7 +438,7 @@ class VerificationView extends GetView<VerificationController> {
     return TextField(
       controller: controller.textControllers[doc.id],
       decoration: InputDecoration(
-        hintText: '${'Enter'.tr} ${doc.name ?? 'value'.tr}',
+        hintText: '${'Enter'.tr} ${doc.nameFor(Get.locale?.languageCode).isNotEmpty ? doc.nameFor(Get.locale?.languageCode) : 'value'.tr}',
         hintStyle: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
         filled: true,
         fillColor: isDark ? AppThemeData.grey9 : AppThemeData.grey1,
@@ -456,7 +456,7 @@ class VerificationView extends GetView<VerificationController> {
 
   Widget _buildImageInput(VerificationDocumentModel doc, VerificationController controller, bool isDark) {
     return Obx(
-      () => Column(
+          () => Column(
         children: [
           _buildImagePicker(
             label: doc.imageSides == 'two' ? "Front Side".tr : "Upload Image".tr,
@@ -497,50 +497,50 @@ class VerificationView extends GetView<VerificationController> {
         ),
         child: localPath != null && localPath.isNotEmpty
             ? Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: Image.file(File(localPath), fit: BoxFit.cover, width: double.infinity, height: 140),
-                  ),
-                  Positioned(
-                    bottom: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: AppThemeData.primaryBlack.withValues(alpha: 0.6), shape: BoxShape.circle),
-                      child: Icon(Icons.edit, size: 14, color: AppThemeData.primaryWhite),
-                    ),
-                  ),
-                ],
-              )
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: Image.file(File(localPath), fit: BoxFit.cover, width: double.infinity, height: 140),
+            ),
+            Positioned(
+              bottom: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: AppThemeData.primaryBlack.withValues(alpha: 0.6), shape: BoxShape.circle),
+                child: Icon(Icons.edit, size: 14, color: AppThemeData.primaryWhite),
+              ),
+            ),
+          ],
+        )
             : existingUrl != null && existingUrl.isNotEmpty
             ? Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: NetworkImageWidget(imageUrl: existingUrl, fit: BoxFit.cover, height: 140, width: double.infinity, borderRadius: 11),
-                  ),
-                  Positioned(
-                    bottom: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: AppThemeData.primaryBlack.withValues(alpha: 0.6), shape: BoxShape.circle),
-                      child: Icon(Icons.edit, size: 14, color: AppThemeData.primaryWhite),
-                    ),
-                  ),
-                ],
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset("assets/icons/ic_camera.svg", height: 28, colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey5 : AppThemeData.grey6, BlendMode.srcIn)),
-                  spaceH(height: 6),
-                  TextCustom(title: label, fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
-                  spaceH(height: 2),
-                  TextCustom(title: hint, fontSize: 11, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
-                ],
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: NetworkImageWidget(imageUrl: existingUrl, fit: BoxFit.cover, height: 140, width: double.infinity, borderRadius: 11),
+            ),
+            Positioned(
+              bottom: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: AppThemeData.primaryBlack.withValues(alpha: 0.6), shape: BoxShape.circle),
+                child: Icon(Icons.edit, size: 14, color: AppThemeData.primaryWhite),
               ),
+            ),
+          ],
+        )
+            : Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset("assets/icons/ic_camera.svg", height: 28, colorFilter: ColorFilter.mode(isDark ? AppThemeData.grey5 : AppThemeData.grey6, BlendMode.srcIn)),
+            spaceH(height: 6),
+            TextCustom(title: label, fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7),
+            spaceH(height: 2),
+            TextCustom(title: hint, fontSize: 11, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+          ],
+        ),
       ),
     );
   }
@@ -600,7 +600,7 @@ class VerificationView extends GetView<VerificationController> {
                       fontFamily: FontFamily.medium,
                       color: (hasFile || hasExisting) ? (isDark ? AppThemeData.grey1 : AppThemeData.grey10) : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                     ),
-                    TextCustom(title: "PDF, DOC, DOCX", fontSize: 11, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
+                    TextCustom(title: "PDF, DOC, DOCX".tr, fontSize: 11, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                   ],
                 ),
               ),
@@ -617,7 +617,7 @@ class VerificationView extends GetView<VerificationController> {
 
   Widget _buildSubmitButton(bool isDark, {required bool isRejected}) {
     return Obx(
-      () => SizedBox(
+          () => SizedBox(
         width: double.infinity,
         height: 50,
         child: ElevatedButton(

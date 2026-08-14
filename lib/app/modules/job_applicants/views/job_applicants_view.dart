@@ -25,7 +25,7 @@ class JobApplicantsView extends GetView<JobApplicantsController> {
 
     return Scaffold(
       backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey2,
-      appBar: UiInterface.customAppBar(context, themeChange, "Applicants"),
+      appBar: UiInterface.customAppBar(context, themeChange, "Applicants".tr),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -45,7 +45,7 @@ class JobApplicantsView extends GetView<JobApplicantsController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextCustom(
-                      title: "${controller.applicants.length} ${controller.applicants.length == 1 ? 'applicant' : 'applicants'} for \"${controller.adTitle ?? 'this job'}\"",
+                      title: "${controller.applicants.length} ${controller.applicants.length == 1 ? 'applicant'.tr : 'applicants'.tr} ${'for'.tr} \"${controller.adTitle ?? 'this job'.tr}\"",
                       fontSize: 13,
                       color: isDark ? AppThemeData.grey4 : AppThemeData.grey6,
                     ),
@@ -55,11 +55,11 @@ class JobApplicantsView extends GetView<JobApplicantsController> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _FilterChip(label: "All", count: controller.applicants.length, selected: controller.filter.value == 'all', isDark: isDark, onTap: () => controller.setFilter('all')),
-                        _FilterChip(label: "Shortlisted", count: controller.countFor('shortlisted'), selected: controller.filter.value == 'shortlisted', isDark: isDark, onTap: () => controller.setFilter('shortlisted')),
-                        _FilterChip(label: "Hired", count: controller.countFor('hired'), selected: controller.filter.value == 'hired', isDark: isDark, onTap: () => controller.setFilter('hired')),
-                        _FilterChip(label: "Pending", count: controller.countFor('pending'), selected: controller.filter.value == 'pending', isDark: isDark, onTap: () => controller.setFilter('pending')),
-                        _FilterChip(label: "Rejected", count: controller.countFor('rejected'), selected: controller.filter.value == 'rejected', isDark: isDark, onTap: () => controller.setFilter('rejected')),
+                        _FilterChip(label: "All".tr, count: controller.applicants.length, selected: controller.filter.value == 'all', isDark: isDark, onTap: () => controller.setFilter('all')),
+                        _FilterChip(label: "Shortlisted".tr, count: controller.countFor('shortlisted'), selected: controller.filter.value == 'shortlisted', isDark: isDark, onTap: () => controller.setFilter('shortlisted')),
+                        _FilterChip(label: "Hired".tr, count: controller.countFor('hired'), selected: controller.filter.value == 'hired', isDark: isDark, onTap: () => controller.setFilter('hired')),
+                        _FilterChip(label: "Pending".tr, count: controller.countFor('pending'), selected: controller.filter.value == 'pending', isDark: isDark, onTap: () => controller.setFilter('pending')),
+                        _FilterChip(label: "Rejected".tr, count: controller.countFor('rejected'), selected: controller.filter.value == 'rejected', isDark: isDark, onTap: () => controller.setFilter('rejected')),
                       ],
                     ),
                     spaceH(height: 12),
@@ -67,7 +67,7 @@ class JobApplicantsView extends GetView<JobApplicantsController> {
                       Padding(
                         padding: const EdgeInsets.only(top: 40),
                         child: Center(
-                          child: TextCustom(title: "No ${controller.filter.value} applicants", fontSize: 14, color: AppThemeData.grey5),
+                          child: TextCustom(title: "${'No'.tr} ${controller.filter.value} ${'applicants'.tr}", fontSize: 14, color: AppThemeData.grey5),
                         ),
                       ),
                   ],
@@ -131,9 +131,9 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.people_outline_rounded, size: 64, color: isDark ? AppThemeData.grey7 : AppThemeData.grey4),
           spaceH(height: 16),
-          TextCustom(title: "No applicants yet", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+          TextCustom(title: "No applicants yet".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           spaceH(height: 8),
-          TextCustom(title: "Applications for this job will appear here.", fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7, textAlign: TextAlign.center),
+          TextCustom(title: "Applications for this job will appear here.".tr, fontSize: 14, color: isDark ? AppThemeData.grey4 : AppThemeData.grey7, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -163,7 +163,7 @@ class _ApplicantCard extends StatelessWidget {
             children: [
               Expanded(
                 child: TextCustom(
-                  title: application.applicantName ?? 'Applicant',
+                  title: application.applicantName ?? 'Applicant'.tr,
                   fontSize: 15,
                   fontFamily: FontFamily.semiBold,
                   maxLine: 1,
@@ -175,7 +175,7 @@ class _ApplicantCard extends StatelessWidget {
             ],
           ),
           spaceH(height: 4),
-          TextCustom(title: "Applied on ${formatApplicationDate(application.createdAt)}", fontSize: 12, color: AppThemeData.grey5),
+          TextCustom(title: "${'Applied on'.tr} ${formatApplicationDate(application.createdAt)}", fontSize: 12, color: AppThemeData.grey5),
           spaceH(height: 12),
 
           // Contact rows
@@ -206,7 +206,7 @@ class _ApplicantCard extends StatelessWidget {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => openCvUrl(application.cvUrl),
+                  onTap: () => openCvUrl(application.cvUrl, fileName: application.cvFileName),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
@@ -218,7 +218,7 @@ class _ApplicantCard extends StatelessWidget {
                       children: [
                         Icon(Icons.description_outlined, size: 16, color: AppThemeData.primary4),
                         spaceW(width: 6),
-                        TextCustom(title: "View CV", fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
+                        TextCustom(title: "View CV".tr, fontSize: 13, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
                       ],
                     ),
                   ),
@@ -233,12 +233,12 @@ class _ApplicantCard extends StatelessWidget {
                     decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: AppThemeData.primary4),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.chat_bubble_outline_rounded, size: 16, color: Colors.white),
-                        SizedBox(width: 6),
+                      children: [
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: Colors.white),
+                        const SizedBox(width: 6),
                         Text(
-                          "Message",
-                          style: TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
+                          "Message".tr,
+                          style: const TextStyle(fontSize: 13, fontFamily: FontFamily.semiBold, color: Colors.white),
                         ),
                       ],
                     ),
@@ -254,7 +254,7 @@ class _ApplicantCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _ActionButton(
-                  label: "Shortlist",
+                  label: "Shortlist".tr,
                   color: AppThemeData.success300,
                   filled: application.status == 'shortlisted',
                   onTap: () => onStatusChange(application, 'shortlisted'),
@@ -263,7 +263,7 @@ class _ApplicantCard extends StatelessWidget {
               spaceW(width: 10),
               Expanded(
                 child: _ActionButton(
-                  label: "Reject",
+                  label: "Reject".tr,
                   color: AppThemeData.danger300,
                   filled: application.status == 'rejected',
                   onTap: () => onStatusChange(application, 'rejected'),
@@ -293,7 +293,7 @@ class _ApplicantCard extends StatelessWidget {
                   ),
                   spaceW(width: 6),
                   TextCustom(
-                    title: application.status == 'hired' ? "Hired" : "Mark as Hired",
+                    title: application.status == 'hired' ? "Hired".tr : "Mark as Hired".tr,
                     fontSize: 13,
                     fontFamily: FontFamily.semiBold,
                     color: application.status == 'hired' ? Colors.white : const Color(0xff0F9D58),
@@ -312,7 +312,7 @@ class _ApplicantCard extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      ShowToastDialog.showError("Could not open");
+      ShowToastDialog.showError("Could not open".tr);
     }
   }
 }

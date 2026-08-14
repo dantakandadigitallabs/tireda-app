@@ -1,7 +1,6 @@
 import 'package:eSellify/app/constant/constants.dart';
 import 'package:eSellify/app/dependency/shimmer.dart';
 import 'package:eSellify/app/models/subscription_package_model.dart';
-import 'package:eSellify/app/models/user_subscription_model.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/common_ui.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
@@ -28,35 +27,36 @@ class SubscriptionsView extends GetView<SubscriptionsController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "Subscription Plans"),
+          appBar: UiInterface.customAppBar(context, themeChange, "Subscription Plans".tr),
           body: controller.isLoading.value
               ? _buildShimmer(isDark)
               : Column(
-                  children: [
-                    // Tab switcher
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: _buildTabSection(controller, isDark),
-                    ),
-                    spaceH(height: 12),
-                    // Content
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                        child: Column(
-                          children: [
-                            // Active plan banner
-                            _buildActivePlanBanner(controller, isDark),
-                            // Package list
-                            controller.selectedTab.value == 0
-                                ? _buildPackageList(controller.adsListingPackages, controller, isDark)
-                                : _buildPackageList(controller.featuredAdsPackages, controller, isDark),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+            children: [
+              // Tab switcher (only when both tabs are visible)
+              if (controller.showAdListing && controller.showFeaturedAds)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _buildTabSection(controller, isDark),
                 ),
+              spaceH(height: 12),
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Column(
+                    children: [
+                      // Active plan banner
+                      _buildActivePlanBanner(controller, isDark),
+                      // Package list
+                      controller.selectedTab.value == 0
+                          ? _buildPackageList(controller.adsListingPackages, controller, isDark)
+                          : _buildPackageList(controller.featuredAdsPackages, controller, isDark),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -67,7 +67,7 @@ class SubscriptionsView extends GetView<SubscriptionsController> {
     return Container(
       height: 44,
       decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, borderRadius: BorderRadius.circular(30)),
-      child: Row(children: [_buildTabButton("Ad Listing", 0, controller, isDark), _buildTabButton("Featured Ads", 1, controller, isDark)]),
+      child: Row(children: [_buildTabButton("Ad Listing".tr, 0, controller, isDark), _buildTabButton("Featured Ads".tr, 1, controller, isDark)]),
     );
   }
 
@@ -116,7 +116,8 @@ class SubscriptionsView extends GetView<SubscriptionsController> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                child: Text(activeSub.packageName ?? '', style: const TextStyle(fontSize: 12, fontFamily: FontFamily.semiBold, color: Colors.white)),
+                // Tireda Custom Merge (eSellify 1.5): localized package name.
+                child: Text(activeSub.packageNameFor(Get.locale?.languageCode), style: const TextStyle(fontSize: 12, fontFamily: FontFamily.semiBold, color: Colors.white)),
               ),
             ],
           ),
@@ -131,7 +132,7 @@ class SubscriptionsView extends GetView<SubscriptionsController> {
                     Text("Ads Posted".tr, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
                     spaceH(height: 2),
                     Text(
-                      activeSub.isItemLimitUnlimited == true ? "${activeSub.adsPosted ?? 0} / Unlimited" : "${activeSub.adsPosted ?? 0} / ${activeSub.adLimit ?? 0}",
+                      activeSub.isItemLimitUnlimited == true ? "${activeSub.adsPosted ?? 0} / ${'Unlimited'.tr}" : "${activeSub.adsPosted ?? 0} / ${activeSub.adLimit ?? 0}",
                       style: const TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: Colors.white),
                     ),
                   ],
@@ -145,7 +146,7 @@ class SubscriptionsView extends GetView<SubscriptionsController> {
                     Text("Days Remaining".tr, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
                     spaceH(height: 2),
                     Text(
-                      activeSub.daysRemaining == -1 ? "Unlimited" : "${activeSub.daysRemaining} days",
+                      activeSub.daysRemaining == -1 ? "Unlimited".tr : "${activeSub.daysRemaining} ${'days'.tr}",
                       style: const TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: Colors.white),
                     ),
                   ],
@@ -243,10 +244,17 @@ class _PackageCard extends StatelessWidget {
     // usedFreeAdListing / usedFreeFeaturedAds. Tapping still shows the
     // explanatory toast from purchasePackage()'s guard clause; this is
     // purely a visual hint, not a second enforcement point.
+    //
+    // NOTE: 1.5 base replaced the whole button below with an inert
+    // "Current Plan" / "Already Used" state (via controller.isUsedFreePlan,
+    // which doesn't exist in Tireda's merged controller). NOT taken — this
+    // reintroduces the tier-replacement assumption Tireda's additive
+    // subscription model explicitly fixed; re-buying must stay tappable.
     final isFreePackage = (package.finalPrice ?? package.price ?? 0) <= 0;
     final alreadyUsedFree = isFreePackage &&
         (package.type == 'ad_listing' ? controller.usedFreeAdListing.value : controller.usedFreeFeaturedAds.value);
-    final name = package.name?['en'] ?? '';
+    // Tireda Custom Merge (eSellify 1.5): localized package name.
+    final name = package.nameFor(Get.locale?.languageCode);
     final price = package.price ?? 0;
     final finalPrice = package.finalPrice ?? price;
     final hasDiscount = (package.discountPercentage ?? 0) > 0;
@@ -288,8 +296,8 @@ class _PackageCard extends StatelessWidget {
                             spacing: 8,
                             runSpacing: 4,
                             children: [
-                              _infoChip(Icons.access_time, package.isUnlimited == true ? 'Unlimited' : '${package.packageDuration ?? 0} Days', isDark),
-                              _infoChip(Icons.inventory_2_outlined, package.isItemLimitUnlimited == true ? 'Unlimited Ads' : '${package.itemLimit ?? 0} Ads', isDark),
+                              _infoChip(Icons.access_time, package.isUnlimited == true ? 'Unlimited'.tr : '${package.packageDuration ?? 0} ${'Days'.tr}', isDark),
+                              _infoChip(Icons.inventory_2_outlined, package.isItemLimitUnlimited == true ? 'Unlimited Ads'.tr : '${package.itemLimit ?? 0} ${'Ads'.tr}', isDark),
                             ],
                           ),
                         ],
@@ -308,7 +316,7 @@ class _PackageCard extends StatelessWidget {
                             margin: const EdgeInsets.only(top: 2),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: const Color(0xff4CAF50).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                            child: Text('${package.discountPercentage!.toInt()}% OFF', style: const TextStyle(fontSize: 9, fontFamily: FontFamily.bold, color: Color(0xff4CAF50))),
+                            child: Text('${package.discountPercentage!.toInt()}% ${'OFF'.tr}', style: const TextStyle(fontSize: 9, fontFamily: FontFamily.bold, color: Color(0xff4CAF50))),
                           ),
                       ],
                     ),
@@ -318,36 +326,42 @@ class _PackageCard extends StatelessWidget {
             ),
           ),
 
-          // Key points
-          if (package.keyPoints != null && package.keyPoints!.isNotEmpty) ...[
-            Divider(height: 1, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Column(
-                children: package.keyPoints!.map((feature) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.check_circle, color: AppThemeData.success300, size: 15)),
-                      spaceW(width: 8),
-                      Expanded(child: TextCustom(title: feature, fontSize: 12, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6)),
-                    ],
+          // Tireda Custom Merge (eSellify 1.5): key points resolved per the
+          // app's currently selected locale (each entry is a per-language
+          // map in Firestore), replacing the flat package.keyPoints read.
+              () {
+            final points = package.keyPointsFor(Get.locale?.languageCode);
+            if (points.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Divider(height: 1, color: isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Column(
+                    children: points.map((feature) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.check_circle, color: AppThemeData.success300, size: 15)),
+                          spaceW(width: 8),
+                          Expanded(child: TextCustom(title: feature, fontSize: 12, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6)),
+                        ],
+                      ),
+                    )).toList(),
                   ),
-                )).toList(),
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          }(),
 
           // Tireda Custom: Buy button — always active/tappable, even for the
           // user's current plan. Subscriptions are additive/stackable
           // (see SubscriptionsController.purchasePackage / mergeOrCreateSubscription),
           // so re-buying the same package is a valid action (stacks more ad slots),
-          // not a no-op. Previously this rendered an inert "Current Plan" box
-          // instead of a button when isActivePlan() was true, which was correct
-          // for the old tier-replacement model but blocks legitimate re-purchases
-          // now. isActive is still used above for the card's border highlight —
-          // that's purely cosmetic and unaffected by this change.
+          // not a no-op. isActive is still used above for the card's border
+          // highlight only — that's purely cosmetic.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(

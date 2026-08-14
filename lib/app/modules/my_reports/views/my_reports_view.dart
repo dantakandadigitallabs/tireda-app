@@ -11,7 +11,6 @@ import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-
 import '../controllers/my_reports_controller.dart';
 
 class MyReportsView extends GetView<MyReportsController> {
@@ -27,7 +26,7 @@ class MyReportsView extends GetView<MyReportsController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "My Reports", isBack: true),
+          appBar: UiInterface.customAppBar(context, themeChange, "My Reports".tr, isBack: true),
           body: controller.isLoading.value
               ? _buildShimmer(isDark)
               : controller.reports.isEmpty
@@ -255,7 +254,7 @@ class _ReportCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: TextCustom(
-                        title: report.adTitle ?? 'Untitled Ad',
+                        title: report.adTitle ?? 'Untitled Ad'.tr,
                         fontSize: 14,
                         fontFamily: FontFamily.semiBold,
                         color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
@@ -272,7 +271,7 @@ class _ReportCard extends StatelessWidget {
                     Icon(Icons.flag_outlined, size: 13, color: AppThemeData.danger300),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: TextCustom(title: report.reasonTitle ?? '', fontSize: 12, fontFamily: FontFamily.medium, color: AppThemeData.danger300, maxLine: 1),
+                      child: TextCustom(title: report.reasonTitleFor(Get.locale?.languageCode), fontSize: 12, fontFamily: FontFamily.medium, color: AppThemeData.danger300, maxLine: 1),
                     ),
                   ],
                 ),
@@ -288,7 +287,7 @@ class _ReportCard extends StatelessWidget {
                     if (report.sellerName != null) ...[
                       TextCustom(title: "  \u2022  ", fontSize: 10, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                       Expanded(
-                        child: TextCustom(title: "Seller: ${report.sellerName}", fontSize: 10, color: isDark ? AppThemeData.grey5 : AppThemeData.grey5, maxLine: 1),
+                        child: TextCustom(title: "${'Seller:'.tr} ${report.sellerName}", fontSize: 10, color: isDark ? AppThemeData.grey5 : AppThemeData.grey5, maxLine: 1),
                       ),
                     ],
                   ],
@@ -326,15 +325,15 @@ class _ReportCard extends StatelessWidget {
     switch ((status ?? 'pending').toLowerCase()) {
       case 'reviewed':
         color = const Color(0xff4CAF50);
-        label = 'Reviewed';
+        label = 'Reviewed'.tr;
         break;
       case 'dismissed':
         color = const Color(0xff8E8E93);
-        label = 'Dismissed';
+        label = 'Dismissed'.tr;
         break;
       default:
         color = const Color(0xffFF9500);
-        label = 'Pending';
+        label = 'Pending'.tr;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -349,11 +348,11 @@ class _ReportCard extends StatelessWidget {
   String _timeAgo(Timestamp? ts) {
     if (ts == null) return '';
     final diff = DateTime.now().difference(ts.toDate());
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return 'Just now'.tr;
+    if (diff.inMinutes < 60) return '${diff.inMinutes}${'m ago'.tr}';
+    if (diff.inHours < 24) return '${diff.inHours}${'h ago'.tr}';
+    if (diff.inDays == 1) return 'Yesterday'.tr;
+    if (diff.inDays < 7) return '${diff.inDays}${'d ago'.tr}';
     final dt = ts.toDate();
     return '${dt.day}/${dt.month}/${dt.year}';
   }

@@ -35,7 +35,7 @@ class MyAdsView extends GetView<MyAdsController> {
           appBar: UiInterface.customAppBar(
             context,
             themeChange,
-            controller.featuredOnly.value ? "My Featured Ads" : "My Advertisement",
+            controller.featuredOnly.value ? "My Featured Ads".tr : "My Advertisement".tr,
             isBack: controller.featuredOnly.value ? true : false,
           ),
           body: Column(
@@ -82,6 +82,7 @@ class MyAdsView extends GetView<MyAdsController> {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SEARCH BAR
+// Tireda Custom: no counterpart in eSellify 1.5 base — pure Tireda addition.
 // ─────────────────────────────────────────────────────────────────────────────
 class _SearchBar extends StatelessWidget {
   final MyAdsController controller;
@@ -148,7 +149,7 @@ class _FilterBar extends StatelessWidget {
           // ── Sort (right) ──────────────────────────
           GestureDetector(
             onTap: () => _showSortSheet(context),
-            child: _FilterPill(label: "Sort", icon: Icons.sort_rounded, isDark: isDark, iconFirst: false),
+            child: _FilterPill(label: "Sort".tr, icon: Icons.sort_rounded, isDark: isDark, iconFirst: false),
           ),
         ],
       ),
@@ -196,25 +197,25 @@ class _FilterPill extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: iconFirst
             ? [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                  ),
-                ),
-                spaceW(width: 4),
-                Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-              ]
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
+            ),
+          ),
+          spaceW(width: 4),
+          Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+        ]
             : [
-                Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
-                spaceW(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
-                ),
-              ],
+          Icon(icon, size: 18, color: isDark ? AppThemeData.grey4 : AppThemeData.grey6),
+          spaceW(width: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey2 : AppThemeData.grey8),
+          ),
+        ],
       ),
     );
   }
@@ -354,7 +355,14 @@ class _AdCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Fix: Outer Container keeps the custom drop shadow and border...
+        // Tireda Custom: Outer Container keeps the custom drop shadow and
+        // border; inner Material handles the solid background so the
+        // InkWell ripple renders correctly on top, clipped to the rounded
+        // corners via clipBehavior: Clip.hardEdge. 1.5 base uses a different
+        // ordering (transparent Material > InkWell > decorated Container)
+        // aimed at a separate IntrinsicHeight semantics-tree bug that
+        // doesn't apply here — not taken, this structure fixes a real,
+        // currently-relevant ripple-bleed issue.
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -369,11 +377,10 @@ class _AdCard extends StatelessWidget {
               ),
             ],
           ),
-          // Fix: Inner Material handles the solid background color so the InkWell ripple renders correctly on top!
           child: Material(
             color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
             borderRadius: BorderRadius.circular(16),
-            clipBehavior: Clip.hardEdge, // Prevents the ripple from bleeding out of the rounded corners
+            clipBehavior: Clip.hardEdge,
             child: InkWell(
               onTap: () => Get.to(() => AdDetailView(ad: ad)),
               child: Row(
@@ -418,8 +425,9 @@ class _AdCard extends StatelessWidget {
                                 ),
                               ),
                               spaceH(height: 6),
+                              // Tireda Custom Merge (eSellify 1.5): localized title.
                               TextCustom(
-                                title: ad.title ?? 'Untitled',
+                                title: ad.titleFor(Get.locale?.languageCode).isNotEmpty ? ad.titleFor(Get.locale?.languageCode) : 'Untitled'.tr,
                                 fontSize: 14,
                                 fontFamily: FontFamily.semiBold,
                                 color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
@@ -486,13 +494,13 @@ class _Thumbnail extends StatelessWidget {
         borderRadius: const BorderRadius.only(topLeft: Radius.circular(15), bottomLeft: Radius.circular(15)),
         child: (ad.mainImage != null && ad.mainImage!.isNotEmpty)
             ? CachedNetworkImage(
-                imageUrl: ad.mainImage!,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => _placeholder(),
-                errorWidget: (_, _, _) => _placeholder(),
-              )
+          imageUrl: ad.mainImage!,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => _placeholder(),
+          errorWidget: (_, _, _) => _placeholder(),
+        )
             : _placeholder(),
       ),
     );
@@ -550,27 +558,27 @@ class _StatusBadge extends StatelessWidget {
     switch ((status ?? '').toLowerCase()) {
       case 'active':
       case 'approved':
-        return 'Live';
+        return 'Live'.tr;
       case 'pending':
       case 'under_review':
-        return 'Under Review';
+        return 'Under Review'.tr;
       case 'sold':
       case 'sold_out':
-        return 'Sold Out';
+        return 'Sold Out'.tr;
       case 'expired':
-        return 'Expired';
+        return 'Expired'.tr;
       case 'inactive':
-        return 'Deactivate';
+        return 'Deactivate'.tr;
       case 'soft_rejected':
-        return 'Soft Rejected';
+        return 'Soft Rejected'.tr;
       case 'permanent_rejected':
-        return 'Perm. Rejected';
+        return 'Perm. Rejected'.tr;
       case 'resubmitted':
-        return 'Resubmitted';
+        return 'Resubmitted'.tr;
       case 'featured':
-        return 'Featured';
+        return 'Featured'.tr;
       default:
-        return isActive == true ? 'Live' : 'Inactive';
+        return isActive == true ? 'Live'.tr : 'Inactive'.tr;
     }
   }
 }
@@ -723,7 +731,7 @@ class _AdActionsMenu extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: PopupMenuButton<String>(
-        tooltip: 'More',
+        tooltip: 'More'.tr,
         padding: EdgeInsets.zero,
         icon: Icon(Icons.more_vert_rounded, size: 18, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
         color: isDark ? AppThemeData.grey10 : AppThemeData.primaryWhite,

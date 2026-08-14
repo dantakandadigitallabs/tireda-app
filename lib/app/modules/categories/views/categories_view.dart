@@ -7,7 +7,7 @@ import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/font_family.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/network_image_widget.dart';
+import 'package:eSellify/widgets/category_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:flutter/material.dart';
 
@@ -29,7 +29,7 @@ class CategoriesView extends GetView<CategoriesController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "Categories"),
+          appBar: UiInterface.customAppBar(context, themeChange, "Categories".tr),
           body: Column(
             children: [
               const Center(child: AdBannerWidget()),
@@ -51,7 +51,7 @@ class CategoriesView extends GetView<CategoriesController> {
                     itemBuilder: (context, index) {
                       CategoryModel category = controller.categoryList[index];
                       return InkWell(
-                        onTap: () => Get.to(() => const SubCategoryView(), arguments: {"category": category}),
+                        onTap: () => Get.to(() => SubCategoryView(category: category)),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           decoration: BoxDecoration(
@@ -70,13 +70,13 @@ class CategoriesView extends GetView<CategoriesController> {
                                   color: isDark ? AppThemeData.grey9 : AppThemeData.grey2,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: NetworkImageWidget(imageUrl: category.image.toString(), fit: BoxFit.contain),
+                                child: CategoryImageWidget(imageUrl: category.image.toString(), isDark: isDark, radius: 6, fallbackIconSize: 20),
                               ),
                               spaceH(height: 8),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 6),
                                 child: TextCustom(
-                                  title: category.categoryName.toString(),
+                                  title: category.categoryNameFor(Get.locale?.languageCode),
                                   fontSize: 12,
                                   fontFamily: FontFamily.medium,
                                   maxLine: 2,
@@ -108,7 +108,7 @@ class CategoriesView extends GetView<CategoriesController> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextCustom(title: "No Categories Found", color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+          TextCustom(title: "No Categories Found".tr, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           spaceH(height: 12),
           InkWell(
             onTap: () => controller.retry(),

@@ -72,7 +72,7 @@ class OSMLocationPickerScreen extends StatelessWidget {
                                   decoration: InputDecoration(
                                     fillColor: Colors.black,
                                     filled: true,
-                                    hintText: 'Search location',
+                                    hintText: 'Search location'.tr,
                                     hintStyle: const TextStyle(color: Colors.white70),
                                     isDense: true,
                                     contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),

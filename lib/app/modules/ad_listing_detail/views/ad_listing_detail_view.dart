@@ -1498,7 +1498,6 @@ class _SimilarAdsSectionState extends State<_SimilarAdsSection> {
   bool _triggered = false;
 
   @override
-  @override
   void initState() {
     super.initState();
     // Deferred fetch — runs after the first frame so it does not block

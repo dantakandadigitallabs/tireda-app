@@ -97,10 +97,10 @@ class EnterMobileNumberScreenView extends GetView<EnterMobileNumberController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextCustom(title: "Sign In to Your Account", fontSize: 24, fontFamily: FontFamily.bold, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10),
+          TextCustom(title: "Sign In to Your Account".tr, fontSize: 24, fontFamily: FontFamily.bold, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10),
           spaceH(height: 4),
           TextCustom(
-            title: "Enter your phone number to continue buying and selling.",
+            title: "Enter your phone number to continue buying and selling.".tr,
             fontSize: 14,
             fontFamily: FontFamily.regular,
             color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5,

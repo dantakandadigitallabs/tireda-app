@@ -32,10 +32,10 @@ class ForgotPasswordView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TitleTextCustom(title: "Forgot Password", fontSize: 24, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.bold),
+                TitleTextCustom(title: "Forgot Password".tr, fontSize: 24, color: themeChange.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10, fontFamily: FontFamily.bold),
                 spaceH(height: 8),
                 TextCustom(
-                  title: "Enter your email address and we'll send you a link to reset your password.",
+                  title: "Enter your email address and we'll send you a link to reset your password.".tr,
                   fontFamily: FontFamily.regular,
                   fontSize: 16,
                   color: themeChange.isDarkTheme() ? AppThemeData.grey6 : AppThemeData.grey5,
@@ -57,7 +57,7 @@ class ForgotPasswordView extends StatelessWidget {
                               Icon(Icons.check_circle_outline, color: AppThemeData.success300, size: 24),
                               spaceW(width: 12),
                               Expanded(
-                                child: TextCustom(title: "Password reset email sent! Check your inbox.", fontSize: 14, color: AppThemeData.success500),
+                                child: TextCustom(title: "Password reset email sent! Check your inbox.".tr, fontSize: 14, color: AppThemeData.success500),
                               ),
                             ],
                           ),
@@ -69,7 +69,7 @@ class ForgotPasswordView extends StatelessWidget {
                 TextFieldWidget(
                   title: "Email Address",
                   validator: (value) => Constant.validateEmail(value),
-                  hintText: "Enter your email address",
+                  hintText: "Enter your email address".tr,
                   controller: controller.resetEmailController.value,
                   suffix: Icon(Icons.email_outlined, color: AppThemeData.grey6, size: 20),
                   onPress: () {},
@@ -94,7 +94,7 @@ class ForgotPasswordView extends StatelessWidget {
                     onTap: () {
                       Get.offAllNamed(Routes.LOGIN_SCREEN);
                     },
-                    child: TextCustom(title: "Back to Login", fontSize: 16, color: AppThemeData.primary4, fontFamily: FontFamily.medium, isUnderLine: true),
+                    child: TextCustom(title: "Back to Login".tr, fontSize: 16, color: AppThemeData.primary4, fontFamily: FontFamily.medium, isUnderLine: true),
                   ),
                 ),
 

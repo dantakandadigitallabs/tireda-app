@@ -31,7 +31,7 @@ class EditProfileView extends GetView<EditProfileController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "Edit Profile"),
+          appBar: UiInterface.customAppBar(context, themeChange, "Edit Profile".tr),
           body: Column(
             children: [
               Expanded(
@@ -101,7 +101,7 @@ class EditProfileView extends GetView<EditProfileController> {
                               children: [
                                 TextFieldWidget(
                                   title: "First Name",
-                                  hintText: "Enter First Name",
+                                  hintText: "Enter First Name".tr,
                                   controller: controller.firstNameController.value,
                                   validator: (value) => value != null && value.isNotEmpty ? null : "First Name is Required.",
                                   onPress: () {},
@@ -109,7 +109,7 @@ class EditProfileView extends GetView<EditProfileController> {
                                 spaceH(height: 20),
                                 TextFieldWidget(
                                   title: "Last Name",
-                                  hintText: "Enter Last Name",
+                                  hintText: "Enter Last Name".tr,
                                   controller: controller.lastNameController.value,
                                   validator: (value) => value != null && value.isNotEmpty ? null : "Last Name is Required.",
                                   onPress: () {},
@@ -117,7 +117,7 @@ class EditProfileView extends GetView<EditProfileController> {
                                 spaceH(height: 20),
                                 TextFieldWidget(
                                   title: "Email",
-                                  hintText: "Enter Email",
+                                  hintText: "Enter Email".tr,
                                   controller: controller.emailController.value,
                                   validator: (value) => value != null && value.isNotEmpty ? null : "Email is Required.",
                                   readOnly: Constant.userModel!.loginType != Constant.phoneLoginType ? true : false,

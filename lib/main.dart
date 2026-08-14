@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:eSellify/app/constant/constants.dart';
@@ -7,6 +9,8 @@ import 'package:eSellify/app/modules/splash/views/splash_view.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/dark_theme_provider.dart';
 import 'package:eSellify/utils/ad_service.dart';
+import 'package:eSellify/utils/deep_link_service.dart';
+import 'package:eSellify/utils/fire_store_utils.dart';
 import 'package:eSellify/utils/notifications/notification_service.dart';
 import 'package:eSellify/utils/preferences.dart';
 import 'package:eSellify/utils/styles.dart';
@@ -33,24 +37,44 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  FirebaseFirestore.instance.settings = const Settings(
+  // Apply Firestore settings to the resolved instance (default OR staging
+  // per Constant.useStagingDb). This must run AFTER Firebase.initializeApp.
+  FireStoreUtils.fireStore.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
-
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-    appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
   );
 
   configLoading();
   Constant.getAddress();
   NotificationService().initFirebaseCore();
   runApp(const MyApp());
+
   // Tireda Custom: moved AdService.init() to after runApp() and made it
-// fire-and-forget (was previously awaited mid-startup, blocking first frame
-// for ad SDK init even though ads aren't currently active in the app)
+  // fire-and-forget (was previously awaited mid-startup, blocking first frame
+  // for ad SDK init even though ads aren't currently active in the app)
   AdService.init();
+
+  // Firebase App Check — activated AFTER startup, deferred and non-fatal.
+  //
+  // Why: in a release build App Check uses Play Integrity. When the APK is
+  // installed outside the Play Store (sideloaded for testing), the FIRST
+  // Play Integrity attestation stalls for a very long time — and Firestore
+  // requests issued after activation wait on that token fetch. Activating
+  // before runApp therefore froze every first-launch read (the language
+  // list stayed empty, Retry included) until the app was killed and
+  // reopened (the failed attestation is cached across processes).
+  // Deferring activation lets the critical startup reads go out untouched;
+  // App Check still covers the rest of the session.
+  Future.delayed(const Duration(seconds: 10), () async {
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+      );
+    } catch (e) {
+      debugPrint('AppCheck activation failed (non-fatal): $e');
+    }
+  });
 }
 
 class MyApp extends StatefulWidget {
@@ -67,7 +91,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     getCurrentAppTheme();
     WidgetsBinding.instance.addObserver(this);
+    // Start listening for incoming share links. Safe on all platforms;
+    // becomes active once the platform-specific universal / app link
+    // config is deployed (see the Android manifest /ad-detail intent filter).
+    DeepLinkService.instance.init();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    DeepLinkService.instance.dispose();
+    super.dispose();
   }
 
   @override
@@ -108,7 +143,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ? ThemeMode.light
                   : ThemeMode.dark,
               localizationsDelegates: const [CountryLocalizations.delegate],
-              locale: LocalizationService.locale,
+              // Restore the previously-selected language on cold start.
+              // Falls back to English when nothing is persisted or the
+              // stored blob can't be parsed.
+              locale: _loadInitialLocale(),
               fallbackLocale: LocalizationService.locale,
               translations: LocalizationService(),
               builder: EasyLoading.init(),
@@ -126,6 +164,21 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+/// Rehydrates the saved language code from Preferences so a hot
+/// restart / reinstall boots the app in the user's last-picked
+/// language instead of the hard-coded English default.
+Locale _loadInitialLocale() {
+  try {
+    final raw = Preferences.getString(Preferences.languageCodeKey);
+    if (raw.isEmpty) return LocalizationService.locale;
+    final map = jsonDecode(raw);
+    if (map is Map && map['code'] is String && (map['code'] as String).isNotEmpty) {
+      return Locale(map['code'] as String);
+    }
+  } catch (_) {}
+  return LocalizationService.locale;
 }
 
 void configLoading() {

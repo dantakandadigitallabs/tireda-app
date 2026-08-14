@@ -65,15 +65,15 @@ class MyPurchasesController extends GetxController {
       createdAt: Timestamp.now(),
     );
 
-    ShowToastDialog.showLoader("Submitting review...");
+    ShowToastDialog.showLoader("Submitting review...".tr);
     final success = await FireStoreUtils.submitReview(review);
     ShowToastDialog.closeLoader();
 
     if (success) {
       reviewedAdIds.add(ad.id!);
-      ShowToastDialog.showSuccess("Review submitted!");
+      ShowToastDialog.showSuccess("Review submitted!".tr);
     } else {
-      ShowToastDialog.showError("Failed to submit review");
+      ShowToastDialog.showError("Failed to submit review".tr);
     }
   }
 }

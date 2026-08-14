@@ -55,6 +55,9 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
             // Tireda custom: Upgraded to Material 3 NavigationBar — soft pill
             // selection indicator (top-line removed), flat full-opacity icons,
             // semibold/bold label weights, and a slightly elevated Sell FAB.
+            // Tireda custom (design touch-up): bar height reduced 64 -> 56,
+            // Sell button now flush with the other destinations (see
+            // _buildSellButton below) instead of floating above the bar.
             bottomNavigationBar: Obx(
                   () => Container(
                 decoration: BoxDecoration(
@@ -88,7 +91,7 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
                   ),
                   child: NavigationBar(
                     elevation: 0,
-                    height: 64,
+                    height: 59, // Tireda custom: was 64
                     backgroundColor: barBg,
                     indicatorColor: Colors.transparent,
                     selectedIndex: controller.selectedIndex.value,
@@ -155,7 +158,7 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
     int unreadCount = 0,
   }) {
     final selectedColor = AppThemeData.primary4;
-    final unselectedColor = isDark ? AppThemeData.grey6 : AppThemeData.grey5;
+    final unselectedColor = isDark ? AppThemeData.grey7 : AppThemeData.grey6;
 
     Widget iconWidget = Icon(
       icon,
@@ -182,33 +185,35 @@ class _DashboardScreenViewState extends State<DashboardScreenView> {
     );
   }
 
-  // Tireda custom: Sell button raised slightly above the bar line with a
-  // ring matching the bar background, so it visually "pierces" through
-  // instead of just floating disconnected above it. Amber shadow retained.
+  // Tireda custom: Sell button — all original styling kept as-is (circle,
+  // amber/secondary4 fill, ring matching the bar background, drop shadow).
+  // Tireda custom (design touch-up): removed the Transform.translate(0, -8)
+  // that raised this above the bar line — it now sits at the same vertical
+  // position as the other nav icons, flush with the row. Circle size reduced
+  // 44 -> 38 (icon 24 -> 20) so it fits comfortably in the 58px bar row
+  // alongside its label without feeling cramped now that it's no longer
+  // floating clear of the row.
   Widget _buildSellButton(Color barBg) {
-    return Transform.translate(
-      offset: const Offset(0, -8),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppThemeData.secondary4,
-          border: Border.all(color: barBg, width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: AppThemeData.secondary4.withOpacity(0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: const Icon(
-          HugeIcons.strokeRoundedAdd01,
-          color: Colors.white,
-          size: 24,
-        ),
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppThemeData.secondary4,
+        border: Border.all(color: barBg, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: AppThemeData.secondary4.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: const Icon(
+        HugeIcons.strokeRoundedAdd01,
+        color: Colors.white,
+        size: 20,
       ),
     );
   }

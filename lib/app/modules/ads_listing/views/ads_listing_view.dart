@@ -2,6 +2,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eSellify/app/models/ad_model.dart';
+import 'package:eSellify/app/models/custom_field_model.dart';
 import 'package:eSellify/utils/app_colors.dart';
 import 'package:eSellify/utils/ad_service.dart';
 import 'package:eSellify/utils/price_formatter.dart';
@@ -56,7 +57,7 @@ class AdsListingView extends GetView<AdsListingController> {
                           controller: controller.searchController,
                           style: TextStyle(fontSize: 14, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                           decoration: InputDecoration(
-                            hintText: "Search any advertisement...",
+                            hintText: "Search any advertisement...".tr,
                             hintStyle: TextStyle(fontSize: 13, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                             prefixIcon: Icon(Icons.search, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14),
@@ -77,16 +78,16 @@ class AdsListingView extends GetView<AdsListingController> {
                       ),
                     ),
 
-                    // Row 2: Quick filter chips
+                    // Row 2: Quick filter chips (Tireda Customization)
                     SizedBox(
                       height: 36,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: [
-                          // Filters chip — opens full filter screen with active indicator
+                          // Filters chip
                           _QuickChip(
-                            label: "Filters",
+                            label: "Filters".tr,
                             icon: Icons.tune_rounded,
                             isActive: controller.hasActiveFilter,
                             isDark: isDark,
@@ -188,7 +189,7 @@ class AdsListingView extends GetView<AdsListingController> {
 
                           // Verified seller chip
                           _QuickChip(
-                            label: "Verified",
+                            label: "Verified".tr,
                             icon: Icons.verified_user_outlined,
                             isActive: controller.filterVerifiedOnly.value,
                             isDark: isDark,
@@ -201,7 +202,7 @@ class AdsListingView extends GetView<AdsListingController> {
 
                           // Promoted ads chip
                           _QuickChip(
-                            label: "Promoted",
+                            label: "Promoted".tr,
                             icon: Icons.star_outline_rounded,
                             isActive: controller.filterFeaturedOnly.value,
                             isDark: isDark,
@@ -223,8 +224,8 @@ class AdsListingView extends GetView<AdsListingController> {
                           Expanded(
                             child: TextCustom(
                               title: controller.isLoading.value
-                                  ? "Loading..."
-                                  : "Found ${controller.filteredAds.length} ad${controller.filteredAds.length == 1 ? '' : 's'}",
+                                  ? "Loading...".tr
+                                  : "Found ${controller.filteredAds.length} ad${controller.filteredAds.length == 1 ? '' : 's'}".tr,
                               fontSize: 13,
                               fontFamily: FontFamily.medium,
                               color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
@@ -250,7 +251,7 @@ class AdsListingView extends GetView<AdsListingController> {
                                   TextCustom(
                                     title: AdsListingController.sortOptions.firstWhere(
                                           (o) => o['key'] == controller.sortBy.value,
-                                      orElse: () => {'label': 'Sort'},
+                                      orElse: () => {'label': 'Sort'.tr},
                                     )['label']!,
                                     fontSize: 12,
                                     fontFamily: FontFamily.medium,
@@ -288,7 +289,7 @@ class AdsListingView extends GetView<AdsListingController> {
                     children: [
                       Icon(Icons.campaign_outlined, size: 64, color: isDark ? AppThemeData.grey6 : AppThemeData.grey5),
                       spaceH(height: 12),
-                      TextCustom(title: "No Ads Found", fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
+                      TextCustom(title: "No Ads Found".tr, fontSize: 16, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey3 : AppThemeData.grey8),
                     ],
                   ),
                 )
@@ -334,20 +335,15 @@ class AdsListingView extends GetView<AdsListingController> {
   // ─── Tireda Location Formatter ────────────────────────────
   String _formatShortLocation(String? address) {
     if (address == null || address.isEmpty) return '';
-
     final parts = address.split(',');
-
     if (parts.length < 2) {
       return address.replaceAll('State', '').trim();
     }
-
     final localGovt = parts.first.trim();
-
     String state = parts[1]
         .replaceAll('State', '')
         .replaceAll('(FCT)', '')
         .trim();
-
     return '$state, $localGovt';
   }
 
@@ -357,15 +353,12 @@ class AdsListingView extends GetView<AdsListingController> {
       if (ad.customFields == null || ad.customFields!.isEmpty) {
         return '';
       }
-
       for (final field in ad.customFields!) {
         final name = field['name']?.toString().toLowerCase() ?? '';
-
         if (name.contains('condition')) {
           return field['value']?.toString() ?? '';
         }
       }
-
       return '';
     } catch (e) {
       return '';
@@ -415,9 +408,9 @@ class AdsListingView extends GetView<AdsListingController> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(color: const Color(0xffFF9500), borderRadius: BorderRadius.circular(4)),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [Icon(Icons.star_rounded, size: 12, color: Colors.white), SizedBox(width: 2), Text("Featured", style: TextStyle(fontSize: 9, fontFamily: FontFamily.bold, color: Colors.white))],
+                      children: [const Icon(Icons.star_rounded, size: 12, color: Colors.white), const SizedBox(width: 2), Text("Featured".tr, style: const TextStyle(fontSize: 9, fontFamily: FontFamily.bold, color: Colors.white))],
                     ),
                   ),
                 ),
@@ -438,7 +431,8 @@ class AdsListingView extends GetView<AdsListingController> {
                     ],
                   ),
                   spaceH(height: 4),
-                  TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
+                  // Using v1.5 localized title logic
+                  TextCustom(title: ad.titleFor(Get.locale?.languageCode), fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
                   spaceH(height: 6),
                   Row(
                     children: [
@@ -505,7 +499,6 @@ class AdsListingView extends GetView<AdsListingController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           // Image
           Expanded(
             child: Stack(
@@ -519,7 +512,6 @@ class AdsListingView extends GetView<AdsListingController> {
                     width: double.infinity,
                   ),
                 ),
-
                 if (ad.isFeatured == true)
                   Positioned(
                     top: 6,
@@ -535,7 +527,7 @@ class AdsListingView extends GetView<AdsListingController> {
                         children: [
                           const Icon(Icons.star_rounded, size: 10, color: Colors.white),
                           const SizedBox(width: 2),
-                          Text("Featured", style: TextStyle(fontSize: 8, fontFamily: FontFamily.bold, color: Colors.white)),
+                          Text("Featured".tr, style: const TextStyle(fontSize: 8, fontFamily: FontFamily.bold, color: Colors.white)),
                         ],
                       ),
                     ),
@@ -551,7 +543,6 @@ class AdsListingView extends GetView<AdsListingController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-
                 // Price
                 TextCustom(
                   title: _formatPrice(ad),
@@ -560,24 +551,21 @@ class AdsListingView extends GetView<AdsListingController> {
                   color: AppThemeData.primary4,
                   maxLine: 1,
                 ),
-
                 spaceH(height: 2),
 
-                // Title
+                // Title (using v1.5 localized title logic)
                 TextCustom(
-                  title: ad.title ?? '',
+                  title: ad.titleFor(Get.locale?.languageCode),
                   fontSize: 12,
                   fontFamily: FontFamily.medium,
                   color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                   maxLine: 1,
                 ),
-
                 spaceH(height: 4),
 
-                // Condition + Verified ID
+                // Condition + Verified ID (Tireda custom logic)
                 Row(
                   children: [
-
                     if (condition.isNotEmpty) ...[
                       Flexible(
                         child: TextCustom(
@@ -589,7 +577,6 @@ class AdsListingView extends GetView<AdsListingController> {
                         ),
                       ),
                     ],
-
                     if (condition.isNotEmpty && ad.isSellerVerified == true) ...[
                       spaceW(width: 5),
                       TextCustom(
@@ -600,12 +587,11 @@ class AdsListingView extends GetView<AdsListingController> {
                       ),
                       spaceW(width: 5),
                     ],
-
                     if (ad.isSellerVerified == true) ...[
                       Icon(Icons.verified_user, size: 11, color: AppThemeData.primary4),
                       spaceW(width: 4),
                       TextCustom(
-                        title: "Verified ID",
+                        title: "Verified ID".tr,
                         fontSize: 10,
                         fontFamily: FontFamily.semiBold,
                         color: AppThemeData.primary4,
@@ -613,7 +599,6 @@ class AdsListingView extends GetView<AdsListingController> {
                     ],
                   ],
                 ),
-
                 spaceH(height: 4),
 
                 // Location
@@ -685,7 +670,7 @@ class AdsListingView extends GetView<AdsListingController> {
                   Get.back();
                 },
                 title: TextCustom(
-                  title: opt['label']!,
+                  title: opt['label']!.tr,
                   fontSize: 16,
                   fontFamily: isSelected ? FontFamily.bold : FontFamily.regular,
                   color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey1 : AppThemeData.grey10),
@@ -700,25 +685,21 @@ class AdsListingView extends GetView<AdsListingController> {
     );
   }
 
-  // ─── Filter Screen ─────────────────────────────────────────
-  void _showFilterSheet(BuildContext context, AdsListingController controller, bool isDark) {
-    Get.to(() => _FilterView(controller: controller));
-  }
-
   // ─── Helpers ───────────────────────────────────────────────
   String _formatPrice(AdModel ad) {
     return PriceFormatter.format(ad);
   }
 
+  // v1.5 Time ago formatting with explicit .tr translations
   String _timeAgo(AdModel ad) {
     if (ad.createdAt == null) return '';
     final diff = DateTime.now().difference(ad.createdAt!.toDate());
-    if (diff.inDays > 365) return '${(diff.inDays / 365).floor()} year${(diff.inDays / 365).floor() > 1 ? 's' : ''} ago';
-    if (diff.inDays > 30) return '${(diff.inDays / 30).floor()} month${(diff.inDays / 30).floor() > 1 ? 's' : ''} ago';
-    if (diff.inDays > 0) return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
-    if (diff.inHours > 0) return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes} min ago';
-    return 'Just now';
+    if (diff.inDays > 365) return '${(diff.inDays / 365).floor()} ${(diff.inDays / 365).floor() > 1 ? 'years ago'.tr : 'year ago'.tr}';
+    if (diff.inDays > 30) return '${(diff.inDays / 30).floor()} ${(diff.inDays / 30).floor() > 1 ? 'months ago'.tr : 'month ago'.tr}';
+    if (diff.inDays > 0) return '${diff.inDays} ${diff.inDays > 1 ? 'days ago'.tr : 'day ago'.tr}';
+    if (diff.inHours > 0) return '${diff.inHours} ${diff.inHours > 1 ? 'hours ago'.tr : 'hour ago'.tr}';
+    if (diff.inMinutes > 0) return '${diff.inMinutes} ${'min ago'.tr}';
+    return 'Just now'.tr;
   }
 }
 
@@ -811,7 +792,7 @@ class _LikeButton extends StatelessWidget {
   }
 }
 
-// ─── FILTER VIEW (full screen) ────────────────────────────────────────────────
+// ─── FILTER VIEW (Full Screen) ────────────────────────────────────────────────
 class _FilterView extends StatelessWidget {
   final AdsListingController controller;
 
@@ -827,7 +808,7 @@ class _FilterView extends StatelessWidget {
       appBar: UiInterface.customAppBar(
         context,
         themeChange,
-        "Filter",
+        "Filter".tr,
         isBack: true,
         actions: [
           TextButton(
@@ -835,7 +816,7 @@ class _FilterView extends StatelessWidget {
               controller.resetFilter();
               Get.back();
             },
-            child: TextCustom(title: "Reset", fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
+            child: TextCustom(title: "Reset".tr, fontSize: 15, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey3 : AppThemeData.grey7),
           ),
         ],
       ),
@@ -849,10 +830,9 @@ class _FilterView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── Category ──────────────────────────────────────
-                    _label("Category", isDark),
+                    // ── Category (Tireda 2-Level Picker) ──────────────────
+                    _label("Category".tr, isDark),
                     spaceH(height: 8),
-                    // Tappable category row — opens category picker
                     GestureDetector(
                       onTap: () => Get.to(() => _CategoryPickerView(controller: controller)),
                       child: Container(
@@ -873,7 +853,7 @@ class _FilterView extends StatelessWidget {
                                 children: [
                                   TextCustom(
                                     title: controller.filterCategoryId.value.isEmpty
-                                        ? "All Categories"
+                                        ? "All Categories".tr
                                         : controller.filterCategoryName.value,
                                     fontSize: 14,
                                     fontFamily: FontFamily.medium,
@@ -901,19 +881,19 @@ class _FilterView extends StatelessWidget {
                     spaceH(height: 20),
 
                     // ── Budget (Price) ────────────────────────────────
-                    _label("Budget (Price)", isDark),
+                    _label("Budget (Price)".tr, isDark),
                     spaceH(height: 8),
                     Row(
                       children: [
-                        Expanded(child: _priceField(controller.minPriceController, "Min", isDark)),
+                        Expanded(child: _priceField(controller.minPriceController, "Min".tr, isDark)),
                         spaceW(width: 12),
-                        Expanded(child: _priceField(controller.maxPriceController, "Max", isDark)),
+                        Expanded(child: _priceField(controller.maxPriceController, "Max".tr, isDark)),
                       ],
                     ),
                     spaceH(height: 20),
 
                     // ── Posted Since ──────────────────────────────────
-                    _label("Posted Since", isDark),
+                    _label("Posted Since".tr, isDark),
                     spaceH(height: 8),
                     Container(
                       width: double.infinity,
@@ -937,7 +917,7 @@ class _FilterView extends StatelessWidget {
                                 children: [
                                   Icon(Icons.calendar_today_outlined, size: 18, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                                   spaceW(width: 10),
-                                  TextCustom(title: opt['label']!, fontSize: 15, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                  TextCustom(title: opt['label']!.tr, fontSize: 15, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                                 ],
                               ),
                             ),
@@ -950,7 +930,7 @@ class _FilterView extends StatelessWidget {
                     spaceH(height: 20),
 
                     // ── Seller & Listing ──────────────────────────────
-                    _label("Seller & Listing", isDark),
+                    _label("Seller & Listing".tr, isDark),
                     spaceH(height: 8),
                     Container(
                       decoration: BoxDecoration(
@@ -971,8 +951,8 @@ class _FilterView extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      TextCustom(title: "Verified Seller", fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                                      TextCustom(title: "Show only ID-verified sellers", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                      TextCustom(title: "Verified Seller".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                      TextCustom(title: "Show only ID-verified sellers".tr, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                                     ],
                                   ),
                                 ),
@@ -996,8 +976,8 @@ class _FilterView extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      TextCustom(title: "Promoted Ads Only", fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
-                                      TextCustom(title: "Show only featured listings", fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                      TextCustom(title: "Promoted Ads Only".tr, fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                                      TextCustom(title: "Show only featured listings".tr, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                                     ],
                                   ),
                                 ),
@@ -1013,142 +993,26 @@ class _FilterView extends StatelessWidget {
                       ),
                     ),
 
-                    // ── Dynamic Custom Fields ─────────────────────────
-                    // Only shown when a subcategory is selected and has
-                    // filterable fields (dropdown or radio with options)
-                    if (controller.filterSubCategoryId.value.isNotEmpty) ...[
-                      spaceH(height: 20),
-                      if (controller.isLoadingCustomFields.value)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppThemeData.primary4),
+                    // ── Dynamic Custom Fields (v1.5 Multi-Select) ─────
+                    Obx(() {
+                      final fields = controller.filterableCustomFields;
+                      if (fields.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          spaceH(height: 20),
+                          _label("More Filters".tr, isDark),
+                          spaceH(height: 8),
+                          ...fields.map(
+                                (f) => _CustomFieldFilter(
+                              field: f,
+                              controller: controller,
+                              isDark: isDark,
                             ),
                           ),
-                        )
-                      else if (controller.filterableCustomFields.isNotEmpty) ...[
-                        _label("More Filters", isDark),
-                        ...controller.filterableCustomFields.map((field) {
-                          final fieldName = field.name ?? '';
-                          final options = field.options ?? [];
-                          final selectedValue = controller.activeCustomFilters[fieldName] ?? '';
-                          final useDropdown = options.length > 3;
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              spaceH(height: 16),
-                              TextCustom(
-                                title: fieldName,
-                                fontSize: 13,
-                                fontFamily: FontFamily.semiBold,
-                                color: isDark ? AppThemeData.grey3 : AppThemeData.grey8,
-                              ),
-                              spaceH(height: 8),
-                              if (useDropdown)
-                              // Dropdown for fields with more than 3 options
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: selectedValue.isNotEmpty
-                                          ? AppThemeData.primary4
-                                          : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                                    ),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: selectedValue.isNotEmpty ? selectedValue : null,
-                                      isExpanded: true,
-                                      dropdownColor: isDark ? AppThemeData.grey9 : AppThemeData.primaryWhite,
-                                      icon: Icon(
-                                        Icons.keyboard_arrow_down,
-                                        color: selectedValue.isNotEmpty
-                                            ? AppThemeData.primary4
-                                            : (isDark ? AppThemeData.grey5 : AppThemeData.grey6),
-                                      ),
-                                      hint: TextCustom(
-                                        title: "Select $fieldName",
-                                        fontSize: 14,
-                                        color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                                      ),
-                                      items: [
-                                        // Clear option at top
-                                        DropdownMenuItem<String>(
-                                          value: '',
-                                          child: TextCustom(
-                                            title: "Any $fieldName",
-                                            fontSize: 14,
-                                            color: isDark ? AppThemeData.grey4 : AppThemeData.grey7,
-                                          ),
-                                        ),
-                                        ...options.map(
-                                              (option) => DropdownMenuItem<String>(
-                                            value: option,
-                                            child: TextCustom(
-                                              title: option,
-                                              fontSize: 14,
-                                              color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      onChanged: (v) {
-                                        if (v == null || v.isEmpty) {
-                                          controller.activeCustomFilters.remove(fieldName);
-                                        } else {
-                                          controller.activeCustomFilters[fieldName] = v;
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                )
-                              else
-                              // Chips for fields with 3 or fewer options
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: options.map((option) {
-                                    final isSelected = selectedValue == option;
-                                    return GestureDetector(
-                                      onTap: () {
-                                        if (isSelected) {
-                                          controller.activeCustomFilters.remove(fieldName);
-                                        } else {
-                                          controller.activeCustomFilters[fieldName] = option;
-                                        }
-                                      },
-                                      child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 180),
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: isSelected ? AppThemeData.primary4 : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
-                                          ),
-                                        ),
-                                        child: TextCustom(
-                                          title: option,
-                                          fontSize: 13,
-                                          fontFamily: isSelected ? FontFamily.semiBold : FontFamily.medium,
-                                          color: isSelected ? Colors.white : (isDark ? AppThemeData.grey3 : AppThemeData.grey8),
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                            ],
-                          );
-                        }),
-                      ],
-                    ],
+                        ],
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -1169,9 +1033,9 @@ class _FilterView extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: const Text(
-                  "Apply Filter",
-                  style: TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
+                child: Text(
+                  "Apply Filter".tr,
+                  style: const TextStyle(fontSize: 16, fontFamily: FontFamily.semiBold, color: Colors.white),
                 ),
               ),
             ),
@@ -1208,7 +1072,7 @@ class _FilterView extends StatelessWidget {
   }
 }
 
-// ─── CATEGORY PICKER VIEW ─────────────────────────────────────────────────────
+// ─── TIREDA 2-LEVEL CATEGORY PICKER VIEWS ────────────────────────────────────
 class _CategoryPickerView extends StatelessWidget {
   final AdsListingController controller;
 
@@ -1221,13 +1085,13 @@ class _CategoryPickerView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
-      appBar: UiInterface.customAppBar(context, themeChange, "Select Category", isBack: true),
+      appBar: UiInterface.customAppBar(context, themeChange, "Select Category".tr, isBack: true),
       body: Obx(
             () => ListView(
           children: [
             // All Categories option
             _CategoryTile(
-              title: "All Categories",
+              title: "All Categories".tr,
               subtitle: null,
               isSelected: controller.filterCategoryId.value.isEmpty,
               hasChildren: false,
@@ -1251,14 +1115,14 @@ class _CategoryPickerView extends StatelessWidget {
               return Column(
                 children: [
                   _CategoryTile(
-                    title: cat.categoryName ?? '',
+                    title: cat.categoryNameFor(Get.locale?.languageCode),
                     subtitle: '${controller.countAdsForCategory(cat.id ?? '')} ads',
                     isSelected: isSelected,
                     hasChildren: true,
                     isDark: isDark,
                     onTap: () async {
                       controller.filterCategoryId.value = cat.id ?? '';
-                      controller.filterCategoryName.value = cat.categoryName ?? '';
+                      controller.filterCategoryName.value = cat.categoryNameFor(Get.locale?.languageCode);
                       // Clear subcategory and custom fields when parent changes
                       controller.filterSubCategoryId.value = '';
                       controller.filterSubCategoryName.value = '';
@@ -1280,7 +1144,6 @@ class _CategoryPickerView extends StatelessWidget {
   }
 }
 
-// ─── SUBCATEGORY PICKER VIEW ──────────────────────────────────────────────────
 class _SubCategoryPickerView extends StatelessWidget {
   final AdsListingController controller;
 
@@ -1304,18 +1167,23 @@ class _SubCategoryPickerView extends StatelessWidget {
             ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppThemeData.primary4))
             : ListView(
           children: [
-            // All option — selects parent category only, no subcategory
+            // All option — selects the parent category only. Tireda
+            // Custom: rather than clearing custom fields, this now loads
+            // them AGGREGATED across every subcategory of this parent
+            // (via loadAggregatedCustomFieldsForParent), so a filter like
+            // "Condition" is still available without drilling into one
+            // exact subcategory (e.g. "All in Cars" still surfaces
+            // Condition across every car brand).
             _CategoryTile(
-              title: "All in ${controller.filterCategoryName.value}",
+              title: "All in ".tr + controller.filterCategoryName.value,
               subtitle: null,
               isSelected: controller.filterSubCategoryId.value.isEmpty,
               hasChildren: false,
               isDark: isDark,
-              onTap: () {
+              onTap: () async {
                 controller.filterSubCategoryId.value = '';
                 controller.filterSubCategoryName.value = '';
-                controller.categoryCustomFields.clear();
-                controller.activeCustomFilters.clear();
+                await controller.loadAggregatedCustomFieldsForParent(controller.filterCategoryId.value);
                 // Pop back to filter view
                 Get.back();
                 Get.back();
@@ -1329,20 +1197,20 @@ class _SubCategoryPickerView extends StatelessWidget {
               return Column(
                 children: [
                   _CategoryTile(
-                    title: sub.categoryName ?? '',
+                    title: sub.categoryNameFor(Get.locale?.languageCode),
                     subtitle: '${controller.countAdsForCategory(sub.id ?? '')} ads',
                     isSelected: isSelected,
                     hasChildren: false,
                     isDark: isDark,
                     onTap: () async {
                       controller.filterSubCategoryId.value = sub.id ?? '';
-                      controller.filterSubCategoryName.value = sub.categoryName ?? '';
+                      controller.filterSubCategoryName.value = sub.categoryNameFor(Get.locale?.languageCode);
                       // Load custom fields for this subcategory
                       await controller.loadCategoryCustomFields(
                         subCategoryId: sub.id ?? '',
                         parentCategoryId: controller.filterCategoryId.value,
                       );
-                      // Pop back to filter view — close both picker screens
+                      // Pop back to filter view
                       Get.back();
                       Get.back();
                     },
@@ -1358,7 +1226,6 @@ class _SubCategoryPickerView extends StatelessWidget {
   }
 }
 
-// ─── CATEGORY TILE ────────────────────────────────────────────────────────────
 class _CategoryTile extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -1412,6 +1279,114 @@ class _CategoryTile extends StatelessWidget {
               Icon(Icons.chevron_right, size: 20, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── V1.5 CUSTOM FIELD FILTER (MULTI-SELECT) ─────────────────────────────────
+class _CustomFieldFilter extends StatelessWidget {
+  final CustomFieldModel field;
+  final AdsListingController controller;
+  final bool isDark;
+
+  const _CustomFieldFilter({
+    required this.field,
+    required this.controller,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final options = field.options ?? const <String>[];
+    if (options.isEmpty || (field.name ?? '').isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final fieldKey = field.name!;
+    final label = field.nameFor(Get.locale?.languageCode);
+    final displayLabel = label.isNotEmpty ? label : fieldKey;
+    final isMulti = field.type == 'Checkboxes';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextCustom(
+            title: displayLabel,
+            fontSize: 14,
+            fontFamily: FontFamily.semiBold,
+            color: isDark ? AppThemeData.grey2 : AppThemeData.grey9,
+          ),
+          spaceH(height: 8),
+          Obx(() {
+            final selected =
+                controller.activeCustomFilters[fieldKey] ?? <String>{};
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: options.map((opt) {
+                final isSelected = selected.contains(opt);
+                return FilterChip(
+                  label: Text(
+                    opt,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: isSelected
+                          ? FontFamily.semiBold
+                          : FontFamily.regular,
+                      color: isSelected
+                          ? AppThemeData.primary4
+                          : (isDark
+                          ? AppThemeData.grey1
+                          : AppThemeData.grey10),
+                    ),
+                  ),
+                  selected: isSelected,
+                  showCheckmark: false,
+                  backgroundColor:
+                  isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
+                  selectedColor: AppThemeData.primary4.withOpacity(0.12),
+                  side: BorderSide(
+                    color: isSelected
+                        ? AppThemeData.primary4
+                        : (isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  onSelected: (_) {
+                    final current = controller.activeCustomFilters[fieldKey] ??
+                        <String>{};
+                    final next = <String>{...current};
+                    if (isMulti) {
+                      if (isSelected) {
+                        next.remove(opt);
+                      } else {
+                        next.add(opt);
+                      }
+                    } else {
+                      if (isSelected) {
+                        next.clear();
+                      } else {
+                        next
+                          ..clear()
+                          ..add(opt);
+                      }
+                    }
+                    if (next.isEmpty) {
+                      controller.activeCustomFilters.remove(fieldKey);
+                    } else {
+                      controller.activeCustomFilters[fieldKey] = next;
+                    }
+                    // Refresh map so UI reactively updates the chips
+                    controller.activeCustomFilters.refresh();
+                  },
+                );
+              }).toList(),
+            );
+          }),
+        ],
       ),
     );
   }

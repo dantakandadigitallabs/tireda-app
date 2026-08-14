@@ -59,6 +59,7 @@ class LocationController extends GetxController {
 
   Future<void> getAddressFromLatLng(LatLng latLng) async {
     try {
+      // Removed Geocoding(). here
       List<Placemark> placemarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;

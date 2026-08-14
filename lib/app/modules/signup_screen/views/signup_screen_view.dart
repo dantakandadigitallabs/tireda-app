@@ -68,7 +68,11 @@ class SignupScreenView extends GetView<SignupScreenController> {
                           ShowToastDialog.showWarning("Please fill in all required fields.".tr);
                         }
                       },
-                      size: Size(358, ScreenSize.height(7, context)),
+                      // Full available width (screen minus the 16px side
+                      // padding each edge) so the button fills the form and
+                      // stays centred on every device, instead of a fixed
+                      // 358px that overflows / sits off-centre on narrow phones.
+                      size: Size(MediaQuery.of(context).size.width - 32, ScreenSize.height(7, context)),
                     ),
                   ],
                 ),

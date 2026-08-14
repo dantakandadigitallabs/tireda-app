@@ -1,4 +1,5 @@
 // ignore_for_file: depend_on_referenced_packages, non_constant_identifier_names, deprecated_member_use
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
@@ -31,6 +32,48 @@ import 'package:uuid/uuid.dart';
 enum Status { active, inactive }
 
 class Constant {
+
+  /// Raster-image extensions accepted anywhere the user picks an image.
+  static const List<String> allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif'];
+
+  /// True when [name] (file name or path) carries an allowed image extension.
+  static bool isAllowedImageFile(String name) {
+    final n = name.split('?').first.toLowerCase();
+    final dot = n.lastIndexOf('.');
+    if (dot < 0 || dot == n.length - 1) return false;
+    return allowedImageExtensions.contains(n.substring(dot + 1));
+  }
+
+  /// Gate for a single picked file: returns it when it is a real image,
+  /// otherwise shows an error toast and returns null so callers treat it
+  /// exactly like a cancelled pick.
+  static XFile? validatePickedImage(XFile? file) {
+    if (file == null) return null;
+    if (isAllowedImageFile(file.name.isNotEmpty ? file.name : file.path)) return file;
+    ShowToastDialog.showError("Only image files are allowed (JPG, PNG, GIF, WEBP).".tr);
+    return null;
+  }
+
+  /// Gate for a multi-pick: keeps only real images and warns when anything
+  /// was skipped.
+  static List<XFile> validatePickedImages(List<XFile> files) {
+    final ok = files.where((f) => isAllowedImageFile(f.name.isNotEmpty ? f.name : f.path)).toList();
+    if (ok.length != files.length) {
+      ShowToastDialog.showError("Some files were skipped — only image files are allowed.".tr);
+    }
+    return ok;
+  }
+  /// Toggle between Firestore databases. `false` → the project's `(default)`
+  /// database; `true` → the `staging` named database. All reads/writes go
+  /// through [FireStoreUtils.fireStore], which resolves this flag at
+  /// startup — flip once here, no per-call plumbing required.
+  static const bool useStagingDb = false;
+
+  /// Name of the named database used when [useStagingDb] is true. Must
+  /// match the database ID created in the Firebase console.
+  static const String stagingDbId = 'staging';
+
+
   static RxString appName = "Tireda".obs;
   static String? appIconLight;
   static String? appIconDark;
@@ -90,7 +133,31 @@ class Constant {
   static String termsAndConditions = "";
   static String privacyPolicy = "";
   static String aboutApp = "";
-  static List<String> safetyTips = [];
+  /// Each entry is the raw `tip` field from Firestore — either a flat
+  /// String (legacy) or `Map<code, String>` (localized). The bottom
+  /// sheet picks the right language at render time via [safetyTipFor]
+  /// so switching app language mid-session refreshes the tips without
+  /// re-fetching.
+  static List<dynamic> safetyTips = [];
+
+  /// Resolves one raw entry from [safetyTips] into a display string
+  /// using the app's currently selected locale, falling back
+  /// `default` → `en` → first non-empty.
+  static String safetyTipFor(dynamic raw, String? code) {
+    if (raw is String) return raw;
+    if (raw is Map) {
+      final map = <String, String>{};
+      raw.forEach((k, v) {
+        if (v is String && v.isNotEmpty) map[k.toString()] = v;
+      });
+      if (map.isEmpty) return '';
+      if (code != null && (map[code] ?? '').isNotEmpty) return map[code]!;
+      if ((map['default'] ?? '').isNotEmpty) return map['default']!;
+      if ((map['en'] ?? '').isNotEmpty) return map['en']!;
+      return map.values.first;
+    }
+    return '';
+  }
   static OpenAiConfigModel openAiConfig = OpenAiConfigModel(enabled: false);
 
   static const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
@@ -153,11 +220,28 @@ class Constant {
       final user = await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid().toString());
       if (user != null) {
         userModel = user;
+        // Prefer the address the user last SELECTED (persisted in prefs) over
+        // the one flagged isDefault — otherwise re-opening the app forgets the
+        // active selection and the Home Screen sorts by the wrong location.
+        AddAddressModel? preferred;
+        final savedRaw = Preferences.getString(Preferences.selectedAddressKey);
+        if (savedRaw.isNotEmpty) {
+          try {
+            final saved = AddAddressModel.fromJson(jsonDecode(savedRaw));
+            if (saved.id != null && (userModel?.addAddresses ?? []).any((a) => a.id == saved.id)) {
+              preferred = (userModel!.addAddresses!).firstWhere((a) => a.id == saved.id);
+            }
+          } catch (_) {}
+        }
+        preferred ??= (userModel?.addAddresses ?? []).firstWhere(
+              (element) => element.isDefault == true,
+          orElse: () => (userModel!.addAddresses!.isNotEmpty ? userModel!.addAddresses!.first : AddAddressModel()),
+        );
         if (userModel!.addAddresses!.isNotEmpty) {
-          currentLocation.value = userModel!.addAddresses!.where((element) => element.isDefault == true).first;
-        } else {
-          AddAddressModel addressModel = AddAddressModel.fromJson(jsonDecode(Preferences.getString(Preferences.selectedAddressKey)));
-          currentLocation.value = addressModel;
+          currentLocation.value = preferred;
+        } else if (savedRaw.isNotEmpty) {
+          currentLocation.value = AddAddressModel.fromJson(jsonDecode(savedRaw));
+
         }
       }
     }
@@ -307,7 +391,7 @@ class Constant {
         borderRadius: const BorderRadius.all(Radius.circular(4)),
         borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey2),
       ),
-      hintText: "Select Brand",
+      hintText: "Select Brand".tr,
       hintStyle: TextStyle(fontSize: 14, color: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey2, fontWeight: FontWeight.w500, fontFamily: FontFamily.medium),
     );
   }
@@ -340,7 +424,7 @@ class Constant {
         borderRadius: const BorderRadius.all(Radius.circular(4)),
         borderSide: BorderSide(color: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey2),
       ),
-      hintText: "Select Brand",
+      hintText: "Select Brand".tr,
       hintStyle: TextStyle(fontSize: 14, color: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey2, fontWeight: FontWeight.w500, fontFamily: FontFamily.medium),
     );
   }

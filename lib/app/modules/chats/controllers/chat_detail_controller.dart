@@ -210,7 +210,7 @@ class ChatDetailController extends GetxController {
       if (!granted) return;
 
       final picker = ImagePicker();
-      final XFile? picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 70, maxWidth: 1200);
+      final XFile? picked = Constant.validatePickedImage(await picker.pickImage(source: ImageSource.camera, imageQuality: 70, maxWidth: 1200));
       if (picked == null) return;
       await _uploadAndSendImages([picked]);
     } catch (e) {
@@ -224,7 +224,7 @@ class ChatDetailController extends GetxController {
       if (!granted) return;
 
       final picker = ImagePicker();
-      final List<XFile> picked = await picker.pickMultiImage(imageQuality: 70, maxWidth: 1200);
+      final List<XFile> picked = Constant.validatePickedImages(await picker.pickMultiImage(imageQuality: 70, maxWidth: 1200));
       if (picked.isEmpty) return;
       await _uploadAndSendImages(picked);
     } catch (e) {

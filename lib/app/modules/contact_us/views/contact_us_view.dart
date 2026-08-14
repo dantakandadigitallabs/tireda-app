@@ -24,7 +24,7 @@ class ContactUsView extends GetView<ContactUsController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "Contact Us"),
+          appBar: UiInterface.customAppBar(context, themeChange, "Contact Us".tr),
           body: Padding(
             padding: const EdgeInsets.all(16),
             child: controller.isLoading.value

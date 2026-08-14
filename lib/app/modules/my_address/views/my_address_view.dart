@@ -1,6 +1,10 @@
+// ignore_for_file: must_be_immutable
+
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:eSellify/app/constant/constants.dart';
+import 'package:eSellify/utils/preferences.dart';
 import 'package:eSellify/app/constant/osm_place_picker/osm_location_picker_screen.dart';
 import 'package:eSellify/app/constant/place_picker/location_picker_screen.dart';
 import 'package:eSellify/app/constant/round_shape_button.dart';
@@ -30,6 +34,35 @@ class MyAddressView extends GetView<MyAddressController> {
 
   const MyAddressView({super.key, this.isFromProfile = false});
 
+  /// Promote `address` to the user's default: set its `isDefault=true`, all
+  /// others `false`, persist to Firestore, and update the in-memory current
+  /// location. Called both from the profile "Set as Default" popup and from
+  /// the card body tap so tapping a card is enough on its own.
+  Future<void> _setDefaultAddress(MyAddressController controller, AddAddressModel address) async {
+    if (address.isDefault == true) return;
+    if (address.location == null) {
+      ShowToastDialog.showError("Invalid address location".tr);
+      return;
+    }
+    ShowToastDialog.showLoader("Please Wait..".tr);
+    for (var e in controller.addresses) {
+      e.isDefault = false;
+    }
+    address.isDefault = true;
+    controller.addressModel.value = address;
+    controller.addresses.refresh();
+
+    final userAddresses = Constant.userModel?.addAddresses;
+    if (userAddresses != null) {
+      for (var e in userAddresses) {
+        e.isDefault = e.id == address.id;
+      }
+      await FireStoreUtils.updateUser(Constant.userModel!);
+    }
+    Constant.currentLocation.value = address;
+    ShowToastDialog.closeLoader();
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
@@ -38,7 +71,7 @@ class MyAddressView extends GetView<MyAddressController> {
       builder: (controller) {
         return Scaffold(
           backgroundColor: themeChange.isDarkTheme() ? AppThemeData.grey10 : AppThemeData.grey1,
-          appBar: UiInterface.customAppBar(context, themeChange, "My Address"),
+          appBar: UiInterface.customAppBar(context, themeChange, "My Address".tr),
           body: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -122,10 +155,12 @@ class MyAddressView extends GetView<MyAddressController> {
                             itemCount: controller.addresses.length,
                             itemBuilder: (context, index) {
                               final address = controller.addresses[index];
+                              final isSelected = controller.selectedAddress.value?.id == address.id;
                               return _buildAddressCard(
                                 index: index,
                                 address: address,
                                 theme: themeChange,
+                                isSelected: isSelected,
                                 onEdit: () async {
                                   final value = await Get.dialog(
                                     Dialog(
@@ -145,16 +180,48 @@ class MyAddressView extends GetView<MyAddressController> {
                                     controller.getData();
                                   }
                                 },
-                                onDelete: () {
+                                onDelete: () async {
                                   if (controller.addresses.length == 1) {
                                     ShowToastDialog.showError("Unable to delete this address.".tr);
-                                  } else {
-                                    controller.deleteAddress(index);
-                                    ShowToastDialog.showSuccess("Address deleted successfully.".tr);
-                                    controller.getData();
+                                    return;
+                                  }
+                                  if (address.isDefault == true) {
+                                    ShowToastDialog.showError("Cannot delete the default address. Set another address as default first.".tr);
+                                    return;
+                                  }
+                                  await controller.deleteAddress(index);
+                                  ShowToastDialog.showSuccess("Address deleted successfully.".tr);
+                                  controller.getData();
+                                },
+                                onSelect: () {
+                                  // Tapping the card body selects the location for the
+                                  // current session so the Home Screen re-sorts products
+                                  // by distance from THIS address. It does NOT flip
+                                  // isDefault or write to Firestore — that's reserved
+                                  // for the explicit "Set as Default" popup action.
+                                  controller.selectedAddress.value = address;
+                                  // Force a real notification: an Rxn skips notifiers
+                                  // when reassigned to the same instance, and the home
+                                  // controller's `ever(Constant.currentLocation)` listener
+                                  // depends on this to re-sort the ad list by distance.
+                                  Constant.currentLocation.value = null;
+                                  Constant.currentLocation.value = address;
+                                  Constant.currentLocation.refresh();
+                                  // Persist the selection so re-opening the app keeps
+                                  // sorting by THIS location, not by whichever address
+                                  // is flagged isDefault.
+                                  try {
+                                    Preferences.setString(Preferences.selectedAddressKey, jsonEncode(address.toJson()));
+                                  } catch (_) {}
+                                  ShowToastDialog.showSuccess('Location updated'.tr);
+                                  // In picker mode we also return to the caller so the
+                                  // flow that opened the picker (Home, Add Ad, etc.)
+                                  // receives the choice.
+                                  if (!isFromProfile) {
+                                    Get.back(result: true);
                                   }
                                 },
-                                onSetDefault: () => {},
+                                onSetDefault: () => _setDefaultAddress(controller, address),
                               );
                             },
                           ),
@@ -172,16 +239,26 @@ class MyAddressView extends GetView<MyAddressController> {
     required int index,
     required AddAddressModel address,
     required DarkThemeProvider theme,
+    required bool isSelected,
     required VoidCallback onEdit,
     required VoidCallback onDelete,
+    required VoidCallback onSelect,
     required VoidCallback onSetDefault,
   }) {
     return GestureDetector(
-      onTap: onSetDefault,
-      child: Container(
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 12),
         padding: EdgeInsets.fromLTRB(12, 12, 0, 12),
-        decoration: BoxDecoration(color: theme.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (theme.isDarkTheme() ? AppThemeData.primary4.withValues(alpha: 0.14) : AppThemeData.primary1)
+              : (theme.isDarkTheme() ? AppThemeData.primaryBlack : AppThemeData.primaryWhite),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: isSelected ? AppThemeData.primary4 : (theme.isDarkTheme() ? AppThemeData.grey8 : AppThemeData.grey3), width: isSelected ? 2 : 1),
+          boxShadow: isSelected ? [BoxShadow(color: AppThemeData.primary4.withValues(alpha: 0.18), blurRadius: 12, offset: const Offset(0, 4))] : null,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -207,92 +284,39 @@ class MyAddressView extends GetView<MyAddressController> {
                     color: theme.isDarkTheme() ? AppThemeData.grey1 : AppThemeData.grey10,
                   ),
                 ),
-                isFromProfile
-                    ? address.isDefault!
-                          ? SizedBox()
-                          : PopupMenuButton(
-                              padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.more_vert),
-                              offset: const Offset(-15, 35),
-                              itemBuilder: (BuildContext context) {
-                                return [
-                                  PopupMenuItem<String>(
-                                    height: 24,
-                                    value: "Default".tr,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Set as Default".tr,
-                                          style: TextStyle(
-                                            fontFamily: FontFamily.regular,
-                                            color: theme.isDarkTheme() ? AppThemeData.primaryWhite : AppThemeData.primaryBlack,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ];
-                              },
-                              onSelected: (value) async {
-                                if (value == "Default") {
-                                  if (address.location == null) {
-                                    ShowToastDialog.showError("Invalid address location".tr);
-                                    return;
-                                  }
-                                  ShowToastDialog.showLoader("Please Wait..".tr);
-                                  for (var element in controller.addresses) {
-                                    element.isDefault = false;
-                                  }
-                                  address.isDefault = true;
-
-                                  controller.addressModel.value = address;
-                                  controller.addresses.refresh();
-                                  final userAddresses = Constant.userModel?.addAddresses;
-
-                                  if (userAddresses != null) {
-                                    for (var element in userAddresses) {
-                                      element.isDefault = element.id == address.id;
-                                    }
-
-                                    await FireStoreUtils.updateUser(Constant.userModel!);
-                                  }
-
-                                  Constant.currentLocation.value = address;
-
-                                  ShowToastDialog.closeLoader();
-                                }
-                              },
-                            )
-                    : Obx(
-                        () => Radio(
-                          value: controller.addresses[index],
-                          groupValue: controller.selectedAddress.value,
-                          fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-                            if (states.contains(WidgetState.selected)) {
-                              return AppThemeData.primary4;
-                            } else {
-                              return theme.isDarkTheme() ? AppThemeData.grey4 : AppThemeData.grey7;
-                            }
-                          }),
-                          onChanged: (selectedAddress) async {
-                            try {
-                              ShowToastDialog.showLoader("Please Wait..".tr);
-                              controller.selectedAddress.value = selectedAddress;
-                              Constant.currentLocation.value = selectedAddress;
-
-                              ShowToastDialog.closeLoader();
-                              log("====> ${Constant.currentLocation.value}");
-                              Get.back(result: true);
-                            } catch (e, stack) {
-                              log("Error in onChanged (address): $e", stackTrace: stack);
-                              ShowToastDialog.closeLoader();
-                            }
-                          },
-                        ),
+                // Top-right action: 3-dot popup menu. Selecting "Set as Default"
+                // is the ONLY action that flips isDefault on the addresses and
+                // writes to Firestore. Selection of the address itself (radio-
+                // like behaviour) happens by tapping the card body.
+                address.isDefault == true
+                    ? const SizedBox(width: 24)
+                    : PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.more_vert, color: theme.isDarkTheme() ? AppThemeData.grey3 : AppThemeData.grey7),
+                        offset: const Offset(-15, 35),
+                        // Explicit background so the menu doesn't inherit the app's
+                        // dark popup theme in light mode (which made "Set as
+                        // Default" text render black on a near-black card).
+                        color: theme.isDarkTheme() ? AppThemeData.grey9 : AppThemeData.primaryWhite,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        itemBuilder: (BuildContext context) {
+                          return [
+                            PopupMenuItem<String>(
+                              value: "SET_DEFAULT",
+                              child: Text(
+                                "Set as Default".tr,
+                                style: TextStyle(fontFamily: FontFamily.regular, color: theme.isDarkTheme() ? AppThemeData.primaryWhite : AppThemeData.primaryBlack, fontSize: 14),
+                              ),
+                            ),
+                          ];
+                        },
+                        onSelected: (value) {
+                          if (value == "SET_DEFAULT") {
+                            _setDefaultAddress(controller, address);
+                          }
+                        },
                       ),
               ],
             ),
@@ -324,22 +348,19 @@ class MyAddressView extends GetView<MyAddressController> {
                     ],
                   ),
                 ),
-                spaceW(width: 20),
-                GestureDetector(
-                  onTap: onDelete,
-                  child: Row(
-                    children: [
-                      SvgPicture.asset(
-                        "assets/icons/ic_delete.svg",
-                        colorFilter: ColorFilter.mode(theme.isDarkTheme() ? AppThemeData.grey5 : AppThemeData.grey6, BlendMode.srcIn),
-                        height: 18,
-                        width: 18,
-                      ),
-                      spaceW(width: 4),
-                      TextCustom(title: "Delete".tr, fontSize: 13, fontFamily: FontFamily.medium, color: theme.isDarkTheme() ? AppThemeData.grey5 : AppThemeData.grey6),
-                    ],
+                if (address.isDefault != true) ...[
+                  spaceW(width: 20),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Row(
+                      children: [
+                        SvgPicture.asset("assets/icons/ic_delete.svg", colorFilter: ColorFilter.mode(AppThemeData.danger300, BlendMode.srcIn), height: 18, width: 18),
+                        spaceW(width: 4),
+                        TextCustom(title: "Delete".tr, fontSize: 13, fontFamily: FontFamily.medium, color: AppThemeData.danger300),
+                      ],
+                    ),
                   ),
-                ),
+                ],
                 Spacer(),
                 !address.isDefault!
                     ? SizedBox()

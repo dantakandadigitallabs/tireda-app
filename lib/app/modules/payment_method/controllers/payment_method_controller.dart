@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart' hide Constant;
 import 'package:eSellify/app/constant/constants.dart';
@@ -19,6 +18,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
+// Tireda Custom: only PayStack and FlutterWave are wired up — Stripe,
+// PayPal, Razorpay, MercadoPago, Midtrans, Xendit, and PayFast are
+// intentionally not ported from eSellify 1.5. Nigerian market only needs
+// these two gateways; the rest are dead weight. Do not reintroduce them
+// on future merges without an explicit decision to do so.
 class PaymentMethodController extends GetxController {
   late SubscriptionPackageModel package;
   RxBool isProcessing = false.obs;
@@ -61,11 +65,11 @@ class PaymentMethodController extends GetxController {
 
   Future<void> processPayment() async {
     if (selectedMethod.value.isEmpty) {
-      ShowToastDialog.showError("Please select a payment method");
+      ShowToastDialog.showError("Please select a payment method".tr);
       return;
     }
     if (currentUserId == null) {
-      ShowToastDialog.showError("Please login to continue");
+      ShowToastDialog.showError("Please login to continue".tr);
       return;
     }
 
@@ -80,12 +84,12 @@ class PaymentMethodController extends GetxController {
           await _payWithFlutterWave();
           break;
         default:
-          ShowToastDialog.showError("Unsupported payment method");
+          ShowToastDialog.showError("Unsupported payment method".tr);
           isProcessing.value = false;
       }
     } catch (e) {
       developer.log('processPayment Error: $e');
-      ShowToastDialog.showError("Payment failed. Please try again.");
+      ShowToastDialog.showError("Payment failed. Please try again.".tr);
       isProcessing.value = false;
     }
   }
@@ -96,7 +100,7 @@ class PaymentMethodController extends GetxController {
   Future<void> _payWithPayStack() async {
     final payStack = Constant.paymentModel?.payStack;
     if (payStack == null || Constant.userModel == null) {
-      ShowToastDialog.showError("PayStack not configured");
+      ShowToastDialog.showError("PayStack not configured".tr);
       isProcessing.value = false;
       return;
     }
@@ -113,7 +117,7 @@ class PaymentMethodController extends GetxController {
 
       if (result != null && result is PayStackUrlModel) {
         final payResult = await Get.to(
-          () => PayStackScreen(
+              () => PayStackScreen(
             initialURl: result.data.authorizationUrl,
             reference: result.data.reference,
             amount: amount.toString(),
@@ -125,14 +129,14 @@ class PaymentMethodController extends GetxController {
         if (payResult == true) {
           await _onPaymentSuccess('paystack', result.data.reference);
         } else {
-          ShowToastDialog.showError("PayStack payment cancelled");
+          ShowToastDialog.showError("PayStack payment cancelled".tr);
         }
       } else {
-        ShowToastDialog.showError("Failed to initialize PayStack");
+        ShowToastDialog.showError("Failed to initialize PayStack".tr);
       }
     } catch (e) {
       developer.log('PayStack Error: $e');
-      ShowToastDialog.showError("PayStack payment failed");
+      ShowToastDialog.showError("PayStack payment failed".tr);
       isProcessing.value = false;
     }
   }
@@ -142,7 +146,7 @@ class PaymentMethodController extends GetxController {
   Future<void> _payWithFlutterWave() async {
     final fw = Constant.paymentModel?.flutterWave;
     if (fw == null) {
-      ShowToastDialog.showError("FlutterWave not configured");
+      ShowToastDialog.showError("FlutterWave not configured".tr);
       isProcessing.value = false;
       return;
     }
@@ -158,6 +162,8 @@ class PaymentMethodController extends GetxController {
           'tx_ref': txRef,
           'amount': amount.toString(),
           'currency': currencyCode,
+          // Tireda Custom: branded callback fallback (1.5 base reverted this
+          // to esellify.com — not taken).
           'redirect_url': fw.callBackUrl ?? 'https://tireda.ng/callback',
           'customer': {'email': user?.email ?? '', 'name': user?.fullNameString() ?? ''},
           'payment_options': 'card,banktransfer,ussd',
@@ -174,17 +180,17 @@ class PaymentMethodController extends GetxController {
           if (payResult == true) {
             await _onPaymentSuccess('flutterwave', txRef);
           } else {
-            ShowToastDialog.showError("FlutterWave payment cancelled");
+            ShowToastDialog.showError("FlutterWave payment cancelled".tr);
           }
         } else {
-          ShowToastDialog.showError(data['message'] ?? "FlutterWave initialization failed");
+          ShowToastDialog.showError(data['message'] ?? "FlutterWave initialization failed".tr);
         }
       } else {
-        ShowToastDialog.showError("FlutterWave API error");
+        ShowToastDialog.showError("FlutterWave API error".tr);
       }
     } catch (e) {
       developer.log('FlutterWave Error: $e');
-      ShowToastDialog.showError("FlutterWave payment failed");
+      ShowToastDialog.showError("FlutterWave payment failed".tr);
       isProcessing.value = false;
     }
   }
@@ -203,8 +209,11 @@ class PaymentMethodController extends GetxController {
       final subscriptionId = Constant.getUuid();
       final transactionId = Constant.getUuid();
 
-     // Tireda Custom: additive upgrade — see FireStoreUtils.mergeOrCreateSubscription().
-
+      // Tireda Custom: additive upgrade — see FireStoreUtils.mergeOrCreateSubscription().
+      // NOTE: 1.5 base replaced this with cancelActiveSubscriptions() (destructive
+      // replace, discards unused allowance). NOT taken — conflicts directly with
+      // Tireda's additive subscription model (same reasoning as
+      // SubscriptionsController._directFreePurchase).
       final carriedAllowance = await FireStoreUtils.mergeOrCreateSubscription(
         userId: uid,
         packageType: package.type ?? 'ad_listing',
@@ -221,7 +230,17 @@ class PaymentMethodController extends GetxController {
         expiryDate = Timestamp.fromDate(DateTime.now().add(Duration(days: package.packageDuration!)));
       }
 
-      final packageName = package.name?.values.firstOrNull ?? '';
+      // Tireda Custom Merge (eSellify 1.5): snapshot the whole per-language
+      // name map so downstream docs can render in any language later, with
+      // proper default → en → first-non-empty fallback (replaces the
+      // previous `package.name?.values.firstOrNull`, which grabbed an
+      // arbitrary language with no defined order).
+      final Map<String, String>? packageNameMap = (package.name != null && package.name!.isNotEmpty)
+          ? Map<String, String>.from(package.name!)
+          : null;
+      final packageName = (packageNameMap?['default'] ?? '').isNotEmpty
+          ? packageNameMap!['default']!
+          : (packageNameMap?['en'] ?? packageNameMap?.values.firstOrNull ?? '');
 
       // Create subscription
       final subscription = UserSubscriptionModel(
@@ -229,6 +248,7 @@ class PaymentMethodController extends GetxController {
         userId: uid,
         packageId: package.id,
         packageName: packageName,
+        packageNameTranslations: packageNameMap,
         packageImage: package.image,
         packageType: package.type,
         price: amount,
@@ -254,6 +274,7 @@ class PaymentMethodController extends GetxController {
         userEmail: user?.email,
         packageId: package.id,
         packageName: packageName,
+        packageNameTranslations: packageNameMap,
         packageType: package.type,
         amount: amount,
         currency: currencySymbol,
@@ -273,11 +294,11 @@ class PaymentMethodController extends GetxController {
       }
 
       isProcessing.value = false;
-      ShowToastDialog.showSuccess("Purchase successful!");
+      ShowToastDialog.showSuccess("Purchase successful!".tr);
       Get.back(result: true);
     } catch (e) {
       isProcessing.value = false;
-      ShowToastDialog.showError("Failed to save subscription: $e");
+      ShowToastDialog.showError("${"Failed to save subscription".tr}: $e");
     }
   }
 

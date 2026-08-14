@@ -1,5 +1,5 @@
-// ignore_for_file: deprecated_member_use
-
+import 'dart:ui' show ImageFilter;
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -21,7 +21,7 @@ import 'package:eSellify/utils/preferences.dart';
 import 'package:eSellify/utils/price_formatter.dart';
 import 'package:eSellify/widgets/ad_banner_widget.dart';
 import 'package:eSellify/widgets/global_widgets.dart';
-import 'package:eSellify/widgets/network_image_widget.dart';
+import 'package:eSellify/widgets/category_image_widget.dart';
 import 'package:eSellify/widgets/text_widget.dart';
 import 'package:eSellify/widgets/shimmer_widgets.dart';
 import 'package:flutter/material.dart';
@@ -37,16 +37,32 @@ import 'package:eSellify/utils/navigation_helper.dart';
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
+  // Tireda Custom: memoization caches for per-card derived text (condition
+  // label, short location string). Safe because DashboardScreenController
+  // holds a single const HomeView instance in pageList for the app's
+  // lifetime, so this cache persists correctly across rebuilds without ever
+  // going stale for a given ad/address — any cache miss just recomputes,
+  // identical output to before. _conditionCache is keyed by object identity
+  // since AdModel doesn't guarantee a stable equality/hashCode; _locationCache
+  // is keyed by the address String itself since Dart Strings compare by
+  // content (identityHashCode on a String is unreliable across instances
+  // with the same content).
+  static final Map<int, String> _conditionCache = {};
+  static final Map<String, String> _locationCache = {};
+
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);
     final isDark = themeChange.isDarkTheme();
 
-    return GetX<HomeController>(
+    return GetBuilder<HomeController>(
       init: HomeController(),
       builder: (controller) {
         return Scaffold(
           backgroundColor: isDark ? AppThemeData.grey10 : AppThemeData.grey1,
+          // Tireda Custom: profile avatar leading icon, Nigeria state/LGA location
+          // picker (see picker classes below), dark mode toggle, and unread
+          // notification dot — none of these exist in the eSellify 1.5 base.
           appBar: AppBar(
             backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
             automaticallyImplyLeading: false,
@@ -201,84 +217,117 @@ class HomeView extends StatelessWidget {
               ).paddingOnly(right: 16),
             ],
           ),
+          // Tireda Custom: scoped Obx wraps only the body content instead of
+          // the entire Scaffold rebuilding on every controller change. The
+          // AppBar (avatar, location text, dark-mode toggle, bell) and the
+          // Scaffold shell no longer rebuild when categories/banners/sections/
+          // all-ads independently finish loading.
           body: RefreshIndicator(
             onRefresh: () async {
               controller.getData();
             },
-            child: controller.isSectionsLoading.value && controller.categoryList.isEmpty
-                ? ShimmerWidgets.homeShimmer(isDark)
-                : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSearchBar(themeChange, controller),
-                    spaceH(height: 16),
-
-                    // Ad Banner
-                    const Center(child: AdBannerWidget()),
-                    spaceH(height: 8),
-
-                    // Banner Carousel
-                    if (controller.bannerList.isNotEmpty) ...[
-                      _buildBannerCarousel(controller, isDark),
+            child: Obx(() {
+              if (controller.isSectionsLoading.value && controller.categoryList.isEmpty) {
+                return ShimmerWidgets.homeShimmer(isDark);
+              }
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tireda Custom: two-part search bar (input + "Explore" button)
+                      _buildSearchBar(themeChange, controller),
                       spaceH(height: 16),
-                    ],
 
-                    // Categories
-                    if (controller.categoryList.isNotEmpty) ...[
-                      // _buildSectionHeader("Categories", isDark: isDark),
-                      // spaceH(height: 12),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 0.90,
-                        ),
-                        itemCount: controller.categoryList.length,
-                        itemBuilder: (context, index) {
-                          CategoryModel category = controller.categoryList[index];
-                          return _buildCategoryChip(category, themeChange);
-                        },
-                      ),
-                      spaceH(height: 20),
-                    ],
+                      // Ad Banner
+                      const Center(child: AdBannerWidget()),
+                      spaceH(height: 8),
 
-                    // Feature Sections
-                    ...controller.featureSections.map((section) {
-                      final ads = controller.sectionAds[section.id] ?? [];
-                      if (ads.isEmpty) return const SizedBox.shrink();
+                      // Banner Carousel — Tireda Custom: scoped Obx so a banner
+                      // reload doesn't rebuild categories/sections/all-ads below it.
+                      Obx(() {
+                        if (controller.bannerList.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            _buildBannerCarousel(controller, isDark),
+                            spaceH(height: 16),
+                          ],
+                        );
+                      }),
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionHeader(
-                            section.title ?? '',
-                            isDark: isDark,
-                            onViewAll: () => Get.to(() => const AdsListingView(), arguments: {"section": section}),
-                          ),
-                          if (section.description != null && section.description!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: TextCustom(title: section.description!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                      // Tireda Custom: full category list in a 4-column grid,
+                      // no section header (kept intentionally, do not restyle).
+                      // Tireda Custom: scoped Obx so category reload doesn't
+                      // rebuild banners/sections/all-ads.
+                      Obx(() {
+                        if (controller.categoryList.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            // _buildSectionHeader("Categories", isDark: isDark),
+                            // spaceH(height: 12),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                // Tireda Custom: raised from 0.90 to 1.05 to shrink
+                                // overall category card height (see _buildCategoryChip
+                                // for the matching icon/text size reduction).
+                                childAspectRatio: 1.05,
+                              ),
+                              itemCount: controller.categoryList.length,
+                              itemBuilder: (context, index) {
+                                CategoryModel category = controller.categoryList[index];
+                                return _buildCategoryChip(category, themeChange);
+                              },
                             ),
-                          spaceH(height: 8),
-                          _buildAdSection(ads, section.styleIndex ?? 0, isDark, context),
-                          spaceH(height: 20),
-                        ],
-                      );
-                    }),
+                            spaceH(height: 20),
+                          ],
+                        );
+                      }),
 
-                    // All Ads section
-                    _buildAllAdsSection(controller, isDark, context),
-                  ],
+                      // Feature Sections — Tireda Custom: scoped Obx so section
+                      // reload doesn't rebuild categories/banners/all-ads.
+                      Obx(
+                            () => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: controller.featureSections.map((section) {
+                            final ads = controller.sectionAds[section.id] ?? [];
+                            if (ads.isEmpty) return const SizedBox.shrink();
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                  // Tireda Custom Merge (eSellify 1.5): localized section title/description.
+                                  section.titleFor(Get.locale?.languageCode),
+                                  isDark: isDark,
+                                  onViewAll: () => Get.to(() => const AdsListingView(), arguments: {"section": section}),
+                                ),
+                                if (section.descriptionFor(Get.locale?.languageCode).isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: TextCustom(title: section.descriptionFor(Get.locale?.languageCode), fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                                  ),
+                                spaceH(height: 8),
+                                _buildAdSection(ads, section.styleIndex ?? 0, isDark, context),
+                                spaceH(height: 20),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      // All Ads section
+                      _buildAllAdsSection(controller, isDark, context),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
           ),
         );
       },
@@ -325,7 +374,7 @@ class HomeView extends StatelessWidget {
         if (onViewAll != null)
           GestureDetector(
             onTap: onViewAll,
-            child: TextCustom(title: "View All", fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
+            child: TextCustom(title: "View All".tr, fontSize: 14, fontFamily: FontFamily.medium, color: AppThemeData.primary4),
           ),
       ],
     );
@@ -341,6 +390,9 @@ class HomeView extends StatelessWidget {
       case 2:
         return _buildGridStyle(ads, isDark, context);
       case 3:
+      // Tireda Custom Merge (eSellify 1.5): adopted 1.5's auto-advancing
+      // blurred-background banner carousel, replacing Tireda's simpler
+      // PageView carousel style.
         return _buildCarouselStyle(ads, isDark, context);
       default:
         return _buildHorizontalList(ads, isDark);
@@ -348,18 +400,21 @@ class HomeView extends StatelessWidget {
   }
 
   // ─── Jiji-Style "Verified ID" Badge ───
+  // Tireda Custom: not present in eSellify 1.5.
   Widget _verifiedBadge() {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.verified_user, size: 10, color: AppThemeData.primary4),
         spaceW(width: 4),
-        TextCustom(title: "Verified ID", fontSize: 10, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
+        TextCustom(title: "Verified ID".tr, fontSize: 10, fontFamily: FontFamily.semiBold, color: AppThemeData.primary4),
       ],
     );
   }
 
   // ─── Style 0: Horizontal List ──────────────────────────────
+  // Tireda Custom: distinct card layout (condition + verified badges,
+  // PriceFormatter, goToAdDetail nav) vs. eSellify 1.5's simpler version.
   Widget _buildHorizontalList(List<AdModel> ads, bool isDark) {
     return SizedBox(
       height: 120,
@@ -407,9 +462,10 @@ class HomeView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          // Tireda Custom Merge (eSellify 1.5): localized title.
                           TextCustom(title: PriceFormatter.format(ad), fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
                           spaceH(height: 4),
-                          TextCustom(title: ad.title ?? '', fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
+                          TextCustom(title: ad.titleFor(Get.locale?.languageCode), fontSize: 13, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
                           spaceH(height: 4),
 
                           if (ad.isSellerVerified == true) ...[
@@ -440,6 +496,7 @@ class HomeView extends StatelessWidget {
   }
 
   // ─── Style 1: Vertical List ────────────────────────────────
+  // Tireda Custom: not present as a distinct style with this layout in eSellify 1.5.
   Widget _buildVerticalList(List<AdModel> ads, bool isDark) {
     return Column(
       children: ads.map((ad) {
@@ -482,7 +539,8 @@ class HomeView extends StatelessWidget {
                       children: [
                         TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: AppThemeData.primary4),
                         spaceH(height: 6),
-                        TextCustom(title: ad.title ?? '', fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
+                        // Tireda Custom Merge (eSellify 1.5): localized title.
+                        TextCustom(title: ad.titleFor(Get.locale?.languageCode), fontSize: 14, fontFamily: FontFamily.medium, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 2),
                         spaceH(height: 6),
 
                         if (ad.isSellerVerified == true) ...[
@@ -532,64 +590,70 @@ class HomeView extends StatelessWidget {
 
   // ─── Style 3: Carousel ─────────────────────────────────────
   Widget _buildCarouselStyle(List<AdModel> ads, bool isDark, BuildContext context) {
-    return SizedBox(
-      height: 200,
-      child: PageView.builder(
-        padEnds: false,
-        controller: PageController(viewportFraction: 0.88),
-        itemCount: ads.length,
-        itemBuilder: (_, index) => GestureDetector(
-          onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ads[index])),
-          child: Padding(padding: const EdgeInsets.only(right: 10), child: _buildCarouselCard(ads[index], isDark)),
-        ),
-      ),
-    );
+    return _SectionBannerCarousel(ads: ads, isDark: isDark);
   }
 
-
-
-// ─── Location Formatter ─────────────────────────────────────
+  // ─── Location Formatter ─────────────────────────────────────
+  // Tireda Custom: not present in eSellify 1.5.
+  // Tireda Custom: memoized — see _locationCache doc comment at class top.
   String _formatShortLocation(String? address) {
     if (address == null || address.isEmpty) return '';
 
+    final cached = _locationCache[address];
+    if (cached != null) return cached;
+
     final parts = address.split(',');
 
+    String result;
     if (parts.length < 2) {
-      return address.replaceAll('State', '').trim();
+      result = address.replaceAll('State', '').trim();
+    } else {
+      final localGovt = parts.first.trim();
+
+      String state = parts[1]
+          .replaceAll('State', '')
+          .replaceAll('(FCT)', '')
+          .trim();
+
+      result = '$state, $localGovt';
     }
 
-    final localGovt = parts.first.trim();
-
-    String state = parts[1]
-        .replaceAll('State', '')
-        .replaceAll('(FCT)', '')
-        .trim();
-
-    return '$state, $localGovt';
+    _locationCache[address] = result;
+    return result;
   }
 
-// ─── Condition Extractor ────────────────────────────────────
+  // ─── Condition Extractor ────────────────────────────────────
+  // Tireda Custom: not present in eSellify 1.5.
+  // Tireda Custom: memoized — see _conditionCache doc comment at class top.
   String _getCondition(AdModel ad) {
+    final key = identityHashCode(ad);
+    final cached = _conditionCache[key];
+    if (cached != null) return cached;
+
+    String result = '';
     try {
-      if (ad.customFields == null || ad.customFields!.isEmpty) {
-        return '';
-      }
+      if (ad.customFields != null && ad.customFields!.isNotEmpty) {
+        for (final field in ad.customFields!) {
+          final name = field['name']?.toString().toLowerCase() ?? '';
 
-      for (final field in ad.customFields!) {
-        final name = field['name']?.toString().toLowerCase() ?? '';
-
-        if (name.contains('condition')) {
-          return field['value']?.toString() ?? '';
+          if (name.contains('condition')) {
+            result = field['value']?.toString() ?? '';
+            break;
+          }
         }
       }
-
-      return '';
     } catch (e) {
-      return '';
+      result = '';
     }
+
+    _conditionCache[key] = result;
+    return result;
   }
 
-// ─── Ad Card (Grid) ────────────────────────────────────────
+  // ─── Ad Card (Grid) ────────────────────────────────────────
+  // Tireda Custom: condition + verified badges, PriceFormatter, no like icon
+  // (eSellify 1.5's grid card is simpler and adds a like/favorite icon —
+  // intentionally not adopted here).
   Widget _buildAdCard(AdModel ad, bool isDark) {
     final condition = _getCondition(ad);
 
@@ -655,8 +719,9 @@ class HomeView extends StatelessWidget {
                 spaceH(height: 2),
 
                 // TITLE
+                // Tireda Custom Merge (eSellify 1.5): localized title.
                 TextCustom(
-                  title: ad.title ?? '',
+                  title: ad.titleFor(Get.locale?.languageCode),
                   fontSize: 12,
                   fontFamily: FontFamily.medium,
                   color: isDark
@@ -710,7 +775,7 @@ class HomeView extends StatelessWidget {
                       spaceW(width: 4),
 
                       TextCustom(
-                        title: "Verified ID",
+                        title: "Verified ID".tr,
                         fontSize: 10,
                         fontFamily: FontFamily.semiBold,
                         color: AppThemeData.primary4,
@@ -766,7 +831,7 @@ class HomeView extends StatelessWidget {
         children: [
           Icon(HugeIcons.strokeRoundedStar, size: iconSize, color: Colors.white),
           const SizedBox(width: 2),
-          Text("Featured", style: TextStyle(fontSize: fontSize, fontFamily: FontFamily.bold, color: Colors.white)),
+          Text("Featured".tr, style: TextStyle(fontSize: fontSize, fontFamily: FontFamily.bold, color: Colors.white)),
         ],
       ),
     );
@@ -796,52 +861,8 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // ─── Carousel Card ─────────────────────────────────────────
-  Widget _buildCarouselCard(AdModel ad, bool isDark) {
-    return GestureDetector(
-      onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            (ad.mainImage != null && ad.mainImage!.isNotEmpty)
-                ? CachedNetworkImage(
-              imageUrl: ad.mainImage!,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-            )
-                : Container(color: isDark ? AppThemeData.grey9 : AppThemeData.grey2),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.7)]),
-              ),
-            ),
-            if (ad.isFeatured == true) Positioned(top: 10, left: 10, child: _featuredBadge(fontSize: 10, iconSize: 12)),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (ad.isSellerVerified == true) ...[
-                    _verifiedBadge(),
-                    spaceH(height: 6),
-                  ],
-                  TextCustom(title: PriceFormatter.format(ad), fontSize: 16, fontFamily: FontFamily.bold, color: Colors.white),
-                  const SizedBox(height: 2),
-                  TextCustom(title: ad.title ?? '', fontSize: 13, fontFamily: FontFamily.regular, color: Colors.white70, maxLine: 1),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ─── Category Card Background ───────────────────────────────
+  // Tireda Custom: not present in eSellify 1.5.
   Color _getCategoryCardBg(bool isDark) {
     if (isDark) {
       return AppThemeData.grey9;
@@ -850,6 +871,7 @@ class HomeView extends StatelessWidget {
   }
 
   // ─── Category Card Border ───────────────────────────────────
+  // Tireda Custom: not present in eSellify 1.5.
   Color _getCategoryCardBorderColor(bool isDark) {
     if (isDark) {
       return AppThemeData.grey8;
@@ -858,6 +880,14 @@ class HomeView extends StatelessWidget {
   }
 
   // ─── Category Chip ─────────────────────────────────────────
+  // Tireda Custom: haptic feedback + Material/InkWell splash styling not
+  // present in eSellify 1.5. Image widget, display name, and navigation
+  // updated to match the CategoryImageWidget/categoryNameFor/constructor-nav
+  // pattern already merged in CategoriesView and SubCategoryView.
+  // Tireda Custom (design): icon shrunk 40x40 -> 32x32, label 10 -> 9,
+  // icon/label gap 4 -> 3, paired with childAspectRatio 0.90 -> 1.05 on the
+  // GridView above, to reduce how much vertical space the category section
+  // takes on the home screen while keeping the 8px grid spacing unchanged.
   Widget _buildCategoryChip(CategoryModel category, DarkThemeProvider themeChange) {
     final isDark = themeChange.isDarkTheme();
     final cardBg = _getCategoryCardBg(isDark);
@@ -868,7 +898,7 @@ class HomeView extends StatelessWidget {
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
-          Get.to(() => const SubCategoryView(), arguments: {"category": category});
+          Get.to(() => SubCategoryView(category: category));
         },
         borderRadius: BorderRadius.circular(14),
         splashColor: AppThemeData.primary4.withOpacity(0.12),
@@ -886,19 +916,23 @@ class HomeView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ── Icon centered inside the card ──
-              NetworkImageWidget(
-                imageUrl: category.image.toString(),
-                fit: BoxFit.contain,
-                height: 32,
+              SizedBox(
                 width: 32,
+                height: 32,
+                child: CategoryImageWidget(
+                  imageUrl: category.image.toString(),
+                  isDark: isDark,
+                  radius: 6,
+                  fallbackIconSize: 16,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               // ── Text inside the card, below icon ──
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: TextCustom(
-                  title: category.categoryName.toString(),
-                  fontSize: 10,
+                  title: category.categoryNameFor(Get.locale?.languageCode),
+                  fontSize: 9,
                   fontFamily: FontFamily.semiBold,
                   color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                   textAlign: TextAlign.center,
@@ -971,6 +1005,8 @@ class HomeView extends StatelessWidget {
   }
 
   // ─── Search Bar ────────────────────────────────────────────
+  // Tireda Custom: two-part search bar (input + "Explore" button) — eSellify
+  // 1.5 uses a single simple search field.
   Widget _buildSearchBar(DarkThemeProvider themeChange, HomeController controller) {
     final isDark = themeChange.isDarkTheme();
     return Row(
@@ -1047,7 +1083,145 @@ class HomeView extends StatelessWidget {
   }
 }
 
+// Tireda Custom Merge (eSellify 1.5): adopted banner-type carousel for the
+// "Carousel Style" feature section — one full-width slide per ad (blurred
+// cover background + full-contain product image + gradient + title/price
+// overlay), auto-advancing with dot indicators. Navigation and price
+// formatting adapted to use Tireda's goToAdDetail() helper and
+// PriceFormatter.format() instead of 1.5's inline equivalents.
+class _SectionBannerCarousel extends StatefulWidget {
+  const _SectionBannerCarousel({required this.ads, required this.isDark});
+  final List<AdModel> ads;
+  final bool isDark;
+
+  @override
+  State<_SectionBannerCarousel> createState() => _SectionBannerCarouselState();
+}
+
+class _SectionBannerCarouselState extends State<_SectionBannerCarousel> {
+  // 80% width per slide so the next ad peeks in from the right.
+  final PageController _controller = PageController(viewportFraction: 0.8);
+  Timer? _timer;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || widget.ads.length < 2 || !_controller.hasClients) return;
+      _controller.animateToPage((_page + 1) % widget.ads.length, duration: const Duration(milliseconds: 450), curve: Curves.easeInOut);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ads = widget.ads;
+    return SizedBox(
+      height: 210,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            padEnds: false,
+            itemCount: ads.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (_, i) {
+              final ad = ads[i];
+              return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: GestureDetector(
+                        onTap: () => AdService.showInterstitial(onDismissed: () => goToAdDetail(ad)),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Product photos have arbitrary aspect ratios — a plain cover fit
+                            // crops/zooms them into a stretched-looking mess. Show the FULL image
+                            // (contain) over a blurred cover of itself so the banner stays filled
+                            // without distorting the product.
+                            if (ad.mainImage != null && ad.mainImage!.isNotEmpty) ...[
+                              ImageFiltered(
+                                imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                child: CachedNetworkImage(imageUrl: ad.mainImage!, fit: BoxFit.cover),
+                              ),
+                              Container(color: Colors.black.withValues(alpha: 0.25)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                child: CachedNetworkImage(imageUrl: ad.mainImage!, fit: BoxFit.contain),
+                              ),
+                            ] else
+                              Container(color: widget.isDark ? AppThemeData.grey8 : AppThemeData.grey3),
+                            Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: [0.4, 1.0],
+                                  colors: [Colors.transparent, Colors.black87],
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 14,
+                              right: 14,
+                              bottom: 24,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ad.titleFor(Get.locale?.languageCode),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 17, fontFamily: FontFamily.bold, color: Colors.white),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(PriceFormatter.format(ad), style: TextStyle(fontSize: 15, fontFamily: FontFamily.bold, color: AppThemeData.primary2)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )));
+            },
+          ),
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (int i = 0; i < ads.length; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == _page ? 18 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i == _page ? AppThemeData.primary4 : Colors.white.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Nigeria Location Picker ──────────────────────────────────────────────────
+// Tireda Custom: entire section below is not present in eSellify 1.5, which
+// uses a generic MyAddressView/EnterLocationView flow instead.
 
 class _LocationResult {
   final NigeriaLocation state;

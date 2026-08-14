@@ -32,7 +32,7 @@ class PaymentHistoryView extends GetView<PaymentHistoryController> {
             backgroundColor: isDark ? AppThemeData.primaryBlack : AppThemeData.primaryWhite,
             elevation: 0,
             leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10)),
-            title: TextCustom(title: "Payment History", fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+            title: TextCustom(title: "Payment History".tr, fontSize: 18, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           ),
           body: Column(
             children: [
@@ -50,8 +50,8 @@ class PaymentHistoryView extends GetView<PaymentHistoryController> {
                         decoration: BoxDecoration(color: isDark ? AppThemeData.grey8 : AppThemeData.grey3, borderRadius: BorderRadius.circular(30)),
                         child: Row(
                           children: [
-                            _tabButton("My Plans", 0, controller, isDark),
-                            _tabButton("Transactions", 1, controller, isDark),
+                            _tabButton("My Plans".tr, 0, controller, isDark),
+                            _tabButton("Transactions".tr, 1, controller, isDark),
                           ],
                         ),
                       ),
@@ -90,7 +90,7 @@ class PaymentHistoryView extends GetView<PaymentHistoryController> {
   // ─── Subscriptions Tab ─────────────────────────────────────────────────────
   Widget _buildSubscriptionsList(PaymentHistoryController controller, bool isDark) {
     if (controller.subscriptions.isEmpty) {
-      return _emptyState("No subscriptions yet", Icons.card_membership_outlined, isDark);
+      return _emptyState("No subscriptions yet".tr, Icons.card_membership_outlined, isDark);
     }
 
     return ListView.builder(
@@ -106,7 +106,7 @@ class PaymentHistoryView extends GetView<PaymentHistoryController> {
   // ─── Transactions Tab ──────────────────────────────────────────────────────
   Widget _buildTransactionsList(PaymentHistoryController controller, bool isDark) {
     if (controller.transactions.isEmpty) {
-      return _emptyState("No transactions yet", Icons.receipt_long_outlined, isDark);
+      return _emptyState("No transactions yet".tr, Icons.receipt_long_outlined, isDark);
     }
 
     return ListView.builder(
@@ -201,9 +201,9 @@ class _SubscriptionCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextCustom(title: sub.packageName ?? 'Package', fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
+                          TextCustom(title: () { final n = sub.packageNameFor(Get.locale?.languageCode); return n.isNotEmpty ? n : 'Package'.tr; }(), fontSize: 15, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
                           TextCustom(
-                            title: sub.packageType == 'featured_ads' ? 'Featured Ads' : 'Ad Listing',
+                            title: sub.packageType == 'featured_ads' ? 'Featured Ads'.tr : 'Ad Listing'.tr,
                             fontSize: 12,
                             color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
                           ),
@@ -217,10 +217,10 @@ class _SubscriptionCard extends StatelessWidget {
                 // Stats row
                 Row(
                   children: [
-                    _statItem("Price", "$currency${(sub.price ?? 0).toStringAsFixed(2)}", isDark),
-                    _statItem("Ads", sub.isItemLimitUnlimited == true ? "${sub.adsPosted ?? 0}/\u221E" : "${sub.adsPosted ?? 0}/${sub.adLimit ?? 0}", isDark),
-                    _statItem("Days", sub.daysRemaining == -1 ? "\u221E" : "${sub.daysRemaining}", isDark),
-                    _statItem("Via", (sub.paymentMethod ?? '-').capitalizeFirst ?? '-', isDark),
+                    _statItem("Price".tr, "$currency${(sub.price ?? 0).toStringAsFixed(2)}", isDark),
+                    _statItem("Ads".tr, sub.isItemLimitUnlimited == true ? "${sub.adsPosted ?? 0}/\u221E" : "${sub.adsPosted ?? 0}/${sub.adLimit ?? 0}", isDark),
+                    _statItem("Days".tr, sub.daysRemaining == -1 ? "\u221E" : "${sub.daysRemaining}", isDark),
+                    _statItem("Via".tr, (sub.paymentMethod ?? '-').capitalizeFirst ?? '-', isDark),
                   ],
                 ),
                 // Progress bar
@@ -250,14 +250,14 @@ class _SubscriptionCard extends StatelessWidget {
               children: [
                 Icon(Icons.calendar_today_outlined, size: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 spaceW(width: 6),
-                TextCustom(title: "Purchased: ${_formatDate(sub.purchaseDate)}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                TextCustom(title: "${'Purchased:'.tr} ${_formatDate(sub.purchaseDate)}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 const Spacer(),
                 if (sub.expiryDate != null) ...[
                   Icon(Icons.timer_outlined, size: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                   spaceW(width: 6),
-                  TextCustom(title: "Expires: ${_formatDate(sub.expiryDate)}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  TextCustom(title: "${'Expires:'.tr} ${_formatDate(sub.expiryDate)}", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
                 ] else
-                  TextCustom(title: "No Expiry", fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
+                  TextCustom(title: "No Expiry".tr, fontSize: 11, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
               ],
             ),
           ),
@@ -344,7 +344,7 @@ class _TransactionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextCustom(title: txn.packageName ?? 'Package', fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
+                TextCustom(title: () { final n = txn.packageNameFor(Get.locale?.languageCode); return n.isNotEmpty ? n : 'Package'.tr; }(), fontSize: 14, fontFamily: FontFamily.semiBold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
                 spaceH(height: 3),
                 Row(
                   children: [
@@ -376,11 +376,11 @@ class _TransactionCard extends StatelessWidget {
   String _timeAgo(Timestamp? ts) {
     if (ts == null) return '';
     final diff = DateTime.now().difference(ts.toDate());
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return 'Just now'.tr;
+    if (diff.inMinutes < 60) return '${diff.inMinutes}${'m ago'.tr}';
+    if (diff.inHours < 24) return '${diff.inHours}${'h ago'.tr}';
+    if (diff.inDays == 1) return 'Yesterday'.tr;
+    if (diff.inDays < 7) return '${diff.inDays}${'d ago'.tr}';
     final dt = ts.toDate();
     return '${dt.day}/${dt.month}/${dt.year}';
   }

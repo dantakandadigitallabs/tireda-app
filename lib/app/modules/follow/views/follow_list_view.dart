@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
+import '../../../routes/app_pages.dart';
+
 enum FollowListMode { followers, following }
 
 class FollowListView extends StatefulWidget {
@@ -33,9 +35,7 @@ class _FollowListViewState extends State<FollowListView> {
   }
 
   Future<void> _load() async {
-    final list = widget.mode == FollowListMode.followers
-        ? await FireStoreUtils.getFollowers(widget.uid)
-        : await FireStoreUtils.getFollowing(widget.uid);
+    final list = widget.mode == FollowListMode.followers ? await FireStoreUtils.getFollowers(widget.uid) : await FireStoreUtils.getFollowing(widget.uid);
     if (!mounted) return;
     setState(() => _users = list);
   }
@@ -58,15 +58,9 @@ class _FollowListViewState extends State<FollowListView> {
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(isDark, isFollowers)),
             if (_users == null)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _buildSkeleton(isDark),
-              )
+              SliverFillRemaining(hasScrollBody: false, child: _buildSkeleton(isDark))
             else if (_users!.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _buildEmpty(isDark, isFollowers),
-              )
+              SliverFillRemaining(hasScrollBody: false, child: _buildEmpty(isDark, isFollowers))
             else
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -86,11 +80,7 @@ class _FollowListViewState extends State<FollowListView> {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [accent.withValues(alpha: 0.14), accent.withValues(alpha: 0.04)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: LinearGradient(colors: [accent.withValues(alpha: 0.14), accent.withValues(alpha: 0.04)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: accent.withValues(alpha: 0.25), width: 0.8),
       ),
@@ -101,11 +91,7 @@ class _FollowListViewState extends State<FollowListView> {
             height: 44,
             decoration: BoxDecoration(color: accent.withValues(alpha: 0.18), shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: Icon(
-              isFollowers ? Icons.people_alt_rounded : Icons.person_add_alt_1_rounded,
-              color: accent,
-              size: 22,
-            ),
+            child: Icon(isFollowers ? Icons.people_alt_rounded : Icons.person_add_alt_1_rounded, color: accent, size: 22),
           ),
           spaceW(width: 12),
           Expanded(
@@ -113,18 +99,14 @@ class _FollowListViewState extends State<FollowListView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextCustom(
-                  title: _users == null
-                      ? (isFollowers ? 'Followers'.tr : 'Following'.tr)
-                      : '$count ${_pluralLabel(count, isFollowers)}',
+                  title: _users == null ? (isFollowers ? 'Followers'.tr : 'Following'.tr) : '$count ${_pluralLabel(count, isFollowers)}',
                   fontSize: 16,
                   fontFamily: FontFamily.bold,
                   color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
                 ),
                 spaceH(height: 2),
                 TextCustom(
-                  title: isFollowers
-                      ? 'People who follow this account'.tr
-                      : 'People this account follows'.tr,
+                  title: isFollowers ? 'People who follow this account'.tr : 'People this account follows'.tr,
                   fontSize: 12,
                   color: isDark ? AppThemeData.grey4 : AppThemeData.grey6,
                 ),
@@ -166,61 +148,47 @@ class _FollowListViewState extends State<FollowListView> {
 
   Widget _buildUserRow(UserModel user, bool isDark) {
     final pic = user.profilePic ?? '';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          // Avatar with subtle ring
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppThemeData.primary4.withValues(alpha: 0.25), width: 1.2),
+    return InkWell(
+      onTap: (user.id == null || user.id!.isEmpty) ? null : () => Get.toNamed(Routes.SELLER_PROFILE, arguments: {'sellerId': user.id, 'sellerName': user.fullNameString()}),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            // Avatar with subtle ring
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppThemeData.primary4.withValues(alpha: 0.25), width: 1.2),
+              ),
+              child: CircleAvatar(
+                radius: 22,
+                backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey2,
+                backgroundImage: pic.isNotEmpty ? CachedNetworkImageProvider(pic) : null,
+                child: pic.isEmpty ? Icon(Icons.person, color: AppThemeData.grey5, size: 22) : null,
+              ),
             ),
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: isDark ? AppThemeData.grey8 : AppThemeData.grey2,
-              backgroundImage: pic.isNotEmpty ? CachedNetworkImageProvider(pic) : null,
-              child: pic.isEmpty ? Icon(Icons.person, color: AppThemeData.grey5, size: 22) : null,
-            ),
-          ),
-          spaceW(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextCustom(
-                  title: user.fullNameString(),
-                  fontSize: 15,
-                  fontFamily: FontFamily.bold,
-                  color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-                  maxLine: 1,
-                ),
-                if ((user.email ?? '').isNotEmpty) ...[
-                  spaceH(height: 3),
-                  TextCustom(
-                    title: user.email!,
-                    fontSize: 12,
-                    color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-                    maxLine: 1,
-                  ),
+            spaceW(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextCustom(title: user.fullNameString(), fontSize: 15, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10, maxLine: 1),
+                  if ((user.email ?? '').isNotEmpty) ...[
+                    spaceH(height: 3),
+                    TextCustom(title: user.email!, fontSize: 12, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6, maxLine: 1),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          spaceW(width: 8),
-          if ((user.id ?? '').isNotEmpty)
-            widget.mode == FollowListMode.followers
-                ? _FollowerActions(
-                    targetUid: user.id!,
-                    onRemoved: () => _removeUserLocally(user.id!),
-                  )
-                : _UnfollowButton(
-                    targetUid: user.id!,
-                    onUnfollowed: () => _removeUserLocally(user.id!),
-                  ),
-        ],
+            spaceW(width: 8),
+            if ((user.id ?? '').isNotEmpty)
+              widget.mode == FollowListMode.followers
+                  ? _FollowerActions(targetUid: user.id!, onRemoved: () => _removeUserLocally(user.id!))
+                  : _UnfollowButton(targetUid: user.id!, onUnfollowed: () => _removeUserLocally(user.id!)),
+          ],
+        ),
       ),
     );
   }
@@ -233,9 +201,7 @@ class _FollowListViewState extends State<FollowListView> {
   // ─── Empty state ────────────────────────────────────────────────────────
   Widget _buildEmpty(bool isDark, bool isFollowers) {
     final title = isFollowers ? 'No followers yet'.tr : 'Not following anyone yet'.tr;
-    final subtitle = isFollowers
-        ? "When someone follows this account, they'll show up here.".tr
-        : 'Discover sellers and follow them to see updates here.'.tr;
+    final subtitle = isFollowers ? "When someone follows this account, they'll show up here.".tr : 'Discover sellers and follow them to see updates here.'.tr;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
       child: Column(
@@ -244,29 +210,13 @@ class _FollowListViewState extends State<FollowListView> {
           Container(
             width: 92,
             height: 92,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppThemeData.primary4.withValues(alpha: 0.1),
-            ),
-            child: Icon(
-              isFollowers ? Icons.people_outline_rounded : Icons.person_search_rounded,
-              size: 44,
-              color: AppThemeData.primary4,
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: AppThemeData.primary4.withValues(alpha: 0.1)),
+            child: Icon(isFollowers ? Icons.people_outline_rounded : Icons.person_search_rounded, size: 44, color: AppThemeData.primary4),
           ),
           spaceH(height: 18),
-          TextCustom(
-            title: title,
-            fontSize: 17,
-            fontFamily: FontFamily.bold,
-            color: isDark ? AppThemeData.grey1 : AppThemeData.grey10,
-          ),
+          TextCustom(title: title, fontSize: 17, fontFamily: FontFamily.bold, color: isDark ? AppThemeData.grey1 : AppThemeData.grey10),
           spaceH(height: 8),
-          TextCustom(
-            title: subtitle,
-            fontSize: 13,
-            color: isDark ? AppThemeData.grey5 : AppThemeData.grey6,
-          ),
+          TextCustom(title: subtitle, fontSize: 13, color: isDark ? AppThemeData.grey5 : AppThemeData.grey6),
         ],
       ),
     );
@@ -301,14 +251,26 @@ class _FollowListViewState extends State<FollowListView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(height: 12, width: 140, decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4))),
+                        Container(
+                          height: 12,
+                          width: 140,
+                          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+                        ),
                         spaceH(height: 8),
-                        Container(height: 10, width: 100, decoration: BoxDecoration(color: highlight, borderRadius: BorderRadius.circular(4))),
+                        Container(
+                          height: 10,
+                          width: 100,
+                          decoration: BoxDecoration(color: highlight, borderRadius: BorderRadius.circular(4)),
+                        ),
                       ],
                     ),
                   ),
                   spaceW(width: 12),
-                  Container(height: 28, width: 92, decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20))),
+                  Container(
+                    height: 28,
+                    width: 92,
+                    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                  ),
                 ],
               ),
             );
@@ -323,6 +285,7 @@ class _FollowListViewState extends State<FollowListView> {
 class _UnfollowButton extends StatefulWidget {
   final String targetUid;
   final VoidCallback onUnfollowed;
+
   const _UnfollowButton({required this.targetUid, required this.onUnfollowed});
 
   @override
@@ -343,13 +306,7 @@ class _UnfollowButtonState extends State<_UnfollowButton> {
 
   @override
   Widget build(BuildContext context) {
-    return _ActionPill(
-      label: 'Unfollow'.tr,
-      icon: Icons.person_remove_alt_1_outlined,
-      filled: false,
-      busy: _busy,
-      onTap: _onTap,
-    );
+    return _ActionPill(label: 'Unfollow'.tr, icon: Icons.person_remove_alt_1_outlined, filled: false, busy: _busy, onTap: _onTap);
   }
 }
 
@@ -357,6 +314,7 @@ class _UnfollowButtonState extends State<_UnfollowButton> {
 class _FollowerActions extends StatefulWidget {
   final String targetUid;
   final VoidCallback onRemoved;
+
   const _FollowerActions({required this.targetUid, required this.onRemoved});
 
   @override
@@ -385,9 +343,7 @@ class _FollowerActionsState extends State<_FollowerActions> {
     setState(() => _followBusy = true);
     final next = !_isFollowing!;
     setState(() => _isFollowing = next);
-    final ok = next
-        ? await FireStoreUtils.followUser(widget.targetUid)
-        : await FireStoreUtils.unfollowUser(widget.targetUid);
+    final ok = next ? await FireStoreUtils.followUser(widget.targetUid) : await FireStoreUtils.unfollowUser(widget.targetUid);
     if (!mounted) return;
     setState(() {
       _followBusy = false;
@@ -416,21 +372,8 @@ class _FollowerActionsState extends State<_FollowerActions> {
     }
     // Mutually exclusive: Follow Back when not following, Remove once following.
     return following
-        ? _ActionPill(
-            label: 'Remove'.tr,
-            icon: Icons.close_rounded,
-            filled: false,
-            danger: true,
-            busy: _removeBusy,
-            onTap: _remove,
-          )
-        : _ActionPill(
-            label: 'Follow Back'.tr,
-            icon: Icons.person_add_alt_1,
-            filled: true,
-            busy: _followBusy,
-            onTap: _toggleFollow,
-          );
+        ? _ActionPill(label: 'Remove'.tr, icon: Icons.close_rounded, filled: false, danger: true, busy: _removeBusy, onTap: _remove)
+        : _ActionPill(label: 'Follow Back'.tr, icon: Icons.person_add_alt_1, filled: true, busy: _followBusy, onTap: _toggleFollow);
   }
 }
 
@@ -443,14 +386,7 @@ class _ActionPill extends StatelessWidget {
   final bool danger;
   final VoidCallback onTap;
 
-  const _ActionPill({
-    required this.label,
-    required this.icon,
-    required this.filled,
-    required this.busy,
-    required this.onTap,
-    this.danger = false,
-  });
+  const _ActionPill({required this.label, required this.icon, required this.filled, required this.busy, required this.onTap, this.danger = false});
 
   @override
   Widget build(BuildContext context) {
@@ -471,15 +407,14 @@ class _ActionPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (busy)
-              SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(strokeWidth: 1.6, valueColor: AlwaysStoppedAnimation(fg)),
-              )
+              SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.6, valueColor: AlwaysStoppedAnimation(fg)))
             else
               Icon(icon, size: 14, color: fg),
             const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 12, fontFamily: FontFamily.bold, color: fg)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, fontFamily: FontFamily.bold, color: fg),
+            ),
           ],
         ),
       ),

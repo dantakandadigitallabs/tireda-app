@@ -8,8 +8,22 @@ import 'package:intl/intl.dart';
 
 class AdModel {
   String? id;
+
+  /// Default-language title. See [titleFor] for a localised read.
   String? title;
+
+  /// Per-language title map (e.g. `{ default: "...", ar: "..." }`).
+  /// Null on legacy documents where `title` was written as a flat String.
+  // Tireda Custom Merge (eSellify 1.5): dynamic localization support.
+  Map<String, String>? titleTranslations;
+
+  /// Default-language description.
   String? description;
+
+  /// Per-language description map.
+  // Tireda Custom Merge (eSellify 1.5): dynamic localization support.
+  Map<String, String>? descriptionTranslations;
+
   String? slug;
   double? price;
   bool? isPriceOptional;
@@ -40,16 +54,16 @@ class AdModel {
   bool get isJobAd =>
       isJobCategory == true || minSalary != null || maxSalary != null;
 
-  /// Formats the salary range using the ad's currency, e.g. "$1000 – $2000".
-  /// Falls back gracefully when only one bound is present.
   /// Formats the salary range using the ad's currency, e.g. "$1,000 – $2,000".
+  // Tireda Custom: uses NumberFormat for thousands separators.
+  // eSellify 1.5 base reverted this to plain toStringAsFixed — intentionally
+  // NOT taken, this version is preserved as-is.
   String formattedSalary() {
     final c = currency;
     final s = c?.symbol ?? '';
     final d = c?.decimalDigits ?? 0;
     final atRight = c?.symbolAtRight == true;
 
-    // Add the thousands separator using NumberFormat
     final formatter = NumberFormat.currency(
       locale: 'en_US',
       symbol: '',
@@ -72,7 +86,8 @@ class AdModel {
   String? sellerId;
   String? sellerName;
   String? sellerProfile;
-  bool? isSellerVerified; // Added Verified Flag
+  // Tireda Custom: not present in eSellify 1.5 base.
+  bool? isSellerVerified;
   String? countryCode;
   String? phoneNumber;
   String? address;
@@ -99,7 +114,9 @@ class AdModel {
   AdModel({
     this.id,
     this.title,
+    this.titleTranslations,
     this.description,
+    this.descriptionTranslations,
     this.slug,
     this.price,
     this.isPriceOptional,
@@ -113,7 +130,7 @@ class AdModel {
     this.sellerId,
     this.sellerName,
     this.sellerProfile,
-    this.isSellerVerified, // Added to constructor
+    this.isSellerVerified,
     this.countryCode,
     this.phoneNumber,
     this.address,
@@ -138,10 +155,29 @@ class AdModel {
     this.searchKeywords,
   });
 
+  /// Reads a Firestore document. `title` and `description` are normalised
+  /// against both shapes — legacy flat String and new-format Map<code, String>
+  /// (as written by the admin panel's Localization Tab). Downstream reads
+  /// of the flat [title] / [description] still work; localised reads should
+  /// use [titleFor] / [descriptionFor].
   AdModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
-    title = json['title'];
-    description = json['description'];
+    final rawTitle = json['title'];
+    if (rawTitle is Map) {
+      titleTranslations = _coerceToStringMap(Map<String, dynamic>.from(rawTitle));
+      title = _extractDefault(titleTranslations!);
+    } else {
+      title = rawTitle is String ? rawTitle : null;
+      titleTranslations = null;
+    }
+    final rawDesc = json['description'];
+    if (rawDesc is Map) {
+      descriptionTranslations = _coerceToStringMap(Map<String, dynamic>.from(rawDesc));
+      description = _extractDefault(descriptionTranslations!);
+    } else {
+      description = rawDesc is String ? rawDesc : null;
+      descriptionTranslations = null;
+    }
     slug = json['slug'];
     price = json['price'] != null ? (json['price'] as num).toDouble() : null;
     isPriceOptional = json['isPriceOptional'];
@@ -163,7 +199,7 @@ class AdModel {
     sellerId = json['sellerId'];
     sellerName = json['sellerName'];
     sellerProfile = json['sellerProfile'];
-    isSellerVerified = json['isSellerVerified'] ?? false; // Maps from JSON
+    isSellerVerified = json['isSellerVerified'] ?? false;
     countryCode = json['countryCode'];
     phoneNumber = json['phoneNumber'];
     address = json['address'];
@@ -202,8 +238,12 @@ class AdModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'title': title,
-      'description': description,
+      'title': (titleTranslations != null && titleTranslations!.isNotEmpty)
+          ? titleTranslations
+          : title,
+      'description': (descriptionTranslations != null && descriptionTranslations!.isNotEmpty)
+          ? descriptionTranslations
+          : description,
       'slug': slug,
       'price': price,
       'isPriceOptional': isPriceOptional,
@@ -217,7 +257,7 @@ class AdModel {
       'sellerId': sellerId,
       'sellerName': sellerName,
       'sellerProfile': sellerProfile,
-      'isSellerVerified': isSellerVerified ?? false, // Maps to JSON
+      'isSellerVerified': isSellerVerified ?? false,
       'countryCode': countryCode,
       'phoneNumber': phoneNumber,
       'address': address,
@@ -241,5 +281,41 @@ class AdModel {
       'expiryDate': expiryDate,
       'searchKeywords': searchKeywords ?? [],
     };
+  }
+
+  /// Returns the localised title for [code] with graceful fallback:
+  /// requested → `default` → `en` → the flat [title].
+  String titleFor(String? code) => _lookup(titleTranslations, code, title);
+
+  /// Returns the localised description for [code]. Same fallback rules as
+  /// [titleFor].
+  String descriptionFor(String? code) => _lookup(descriptionTranslations, code, description);
+
+  static String _lookup(Map<String, String>? map, String? code, String? fallback) {
+    if (map != null && code != null && (map[code] ?? '').isNotEmpty) return map[code]!;
+    if (map != null && (map['default'] ?? '').isNotEmpty) return map['default']!;
+    if (map != null && (map['en'] ?? '').isNotEmpty) return map['en']!;
+    return fallback ?? '';
+  }
+
+  static Map<String, String> _coerceToStringMap(Map<String, dynamic> raw) {
+    final Map<String, String> out = {};
+    raw.forEach((code, value) {
+      if (value is String) {
+        out[code] = value;
+      } else if (value is Map && value['name'] is String) {
+        out[code] = value['name'] as String;
+      }
+    });
+    return out;
+  }
+
+  static String _extractDefault(Map<String, String> map) {
+    if ((map['default'] ?? '').isNotEmpty) return map['default']!;
+    if ((map['en'] ?? '').isNotEmpty) return map['en']!;
+    for (final v in map.values) {
+      if (v.isNotEmpty) return v;
+    }
+    return '';
   }
 }

@@ -33,6 +33,12 @@ class AdDetailController extends GetxController {
 
   List<String> get images => [if (ad.mainImage != null && ad.mainImage!.isNotEmpty) ad.mainImage!, ...?ad.otherImages?.where((u) => u.isNotEmpty)];
 
+  // KNOWN GAP (not introduced by this merge, confirmed identical in both
+  // Tireda 1.4 and eSellify 1.5): this never checks ad.isNegotiable, the
+  // Tireda-only "Price Negotiable" toggle. A fixed-price ad marked
+  // negotiable still just renders its price with no indicator — only
+  // isPriceOptional (no price at all) or job ads show "Negotiable". Needs
+  // its own fix, separate from this merge pass.
   String formatPrice() {
     if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
@@ -51,14 +57,14 @@ class AdDetailController extends GetxController {
   }
 
   Future<bool> deleteAd() async {
-    ShowToastDialog.showLoader("Deleting...");
+    ShowToastDialog.showLoader("Deleting...".tr);
     final success = await FireStoreUtils.deleteAd(ad.id!);
     ShowToastDialog.closeLoader();
 
     if (success) {
-      ShowToastDialog.showSuccess("Ad deleted successfully!");
+      ShowToastDialog.showSuccess("Ad deleted successfully!".tr);
     } else {
-      ShowToastDialog.showError("Failed to delete. Please try again.");
+      ShowToastDialog.showError("Failed to delete. Please try again.".tr);
     }
     return success;
   }
@@ -69,9 +75,9 @@ class AdDetailController extends GetxController {
     ShowToastDialog.closeLoader();
 
     if (success) {
-      ShowToastDialog.showSuccess("Ad marked as sold!");
+      ShowToastDialog.showSuccess("Ad marked as sold!".tr);
     } else {
-      ShowToastDialog.showError("Failed to update. Please try again.");
+      ShowToastDialog.showError("Failed to update. Please try again.".tr);
     }
     return success;
   }
@@ -82,15 +88,15 @@ class AdDetailController extends GetxController {
     if (uid == null || ad.id == null) return;
 
     if (Constant.freeAdFeaturing) {
-      ShowToastDialog.showLoader("Featuring ad...");
+      ShowToastDialog.showLoader("Featuring ad...".tr);
       final success = await FireStoreUtils.markAdAsFeatured(ad.id!, null);
       ShowToastDialog.closeLoader();
       if (success) {
         isFeatured.value = true;
         ad.isFeatured = true;
-        ShowToastDialog.showSuccess("Ad is now featured!");
+        ShowToastDialog.showSuccess("Ad is now featured!".tr);
       } else {
-        ShowToastDialog.showError("Failed to feature ad");
+        ShowToastDialog.showError("Failed to feature ad".tr);
       }
       return;
     }
@@ -137,7 +143,7 @@ class AdDetailController extends GetxController {
     }
 
     // All checks passed — feature the ad
-    ShowToastDialog.showLoader("Featuring ad...");
+    ShowToastDialog.showLoader("Featuring ad...".tr);
 
     Timestamp? featuredUntil;
     if (activeSub.expiryDate != null) {
@@ -150,10 +156,10 @@ class AdDetailController extends GetxController {
       isFeatured.value = true;
       ad.isFeatured = true;
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showSuccess("Ad is now featured!");
+      ShowToastDialog.showSuccess("Ad is now featured!".tr);
     } else {
       ShowToastDialog.closeLoader();
-      ShowToastDialog.showError("Failed to feature ad");
+      ShowToastDialog.showError("Failed to feature ad".tr);
     }
   }
 
@@ -246,15 +252,15 @@ class AdDetailController extends GetxController {
   /// Remove featured status
   Future<void> removeFeature() async {
     if (ad.id == null) return;
-    ShowToastDialog.showLoader("Removing featured...");
+    ShowToastDialog.showLoader("Removing featured...".tr);
     final success = await FireStoreUtils.removeAdFeatured(ad.id!);
     ShowToastDialog.closeLoader();
     if (success) {
       isFeatured.value = false;
       ad.isFeatured = false;
-      ShowToastDialog.showSuccess("Featured status removed");
+      ShowToastDialog.showSuccess("Featured status removed".tr);
     } else {
-      ShowToastDialog.showError("Failed to remove featured status");
+      ShowToastDialog.showError("Failed to remove featured status".tr);
     }
   }
 
@@ -308,13 +314,14 @@ class WhoBoughtController extends GetxController {
     ShowToastDialog.closeLoader();
 
     if (success) {
-      ShowToastDialog.showSuccess("Ad marked as sold!");
+      ShowToastDialog.showSuccess("Ad marked as sold!".tr);
     } else {
-      ShowToastDialog.showError("Failed to update. Please try again.");
+      ShowToastDialog.showError("Failed to update. Please try again.".tr);
     }
     return success;
   }
 
+  // Same known gap as AdDetailController.formatPrice() — see comment above.
   String formatPrice() {
     if (ad.isJobAd) return ad.formattedSalary();
     if (ad.isPriceOptional == true || ad.price == null) return "Negotiable";
